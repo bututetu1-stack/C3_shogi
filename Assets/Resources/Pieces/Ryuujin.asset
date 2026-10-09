@@ -1,0 +1,66 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01e8fb0f6e3e9d54297b027b2b9c6457, type: 3}
+  m_Name: Ryuujin
+  m_EditorClassIdentifier: Assembly-CSharp::PieceData
+  pieceType: 30
+  displayName: "\u9F8D\u795E"
+  pieceName: "\u9F8D\u795E"
+  description: "\u53E4\u4EE3\u306E\u9F8D\u795E\u3002\u7E26\u6A2A\u7121\u9650\u3068\u659C\u30812\u30DE\u30B9\u306E\u5F37\u529B\u306A\u5236\u5727\u529B\u3092\u8A87\u308B\u3002\u4E2D\u7D1A\u30DC\u30B9\u3002"
+  baseATK: 4
+  baseDEF: 2
+  baseHP: 4
+  rarity: 2
+  moveDirections:
+  - direction: {x: 0, y: 1}
+    maxDistance: 9
+    canJump: 0
+  - direction: {x: 0, y: -1}
+    maxDistance: 9
+    canJump: 0
+  - direction: {x: 1, y: 0}
+    maxDistance: 9
+    canJump: 0
+  - direction: {x: -1, y: 0}
+    maxDistance: 9
+    canJump: 0
+  - direction: {x: 1, y: 1}
+    maxDistance: 2
+    canJump: 0
+  - direction: {x: -1, y: 1}
+    maxDistance: 2
+    canJump: 0
+  - direction: {x: 1, y: -1}
+    maxDistance: 2
+    canJump: 0
+  - direction: {x: -1, y: -1}
+    maxDistance: 2
+    canJump: 0
+  canPromote: 0
+  promotedDisplayName:
+  promotedName:
+  promotedDescription:
+  promotedATK: 0
+  promotedDEF: 0
+  promotedHP: 0
+  promotedMoveDirections: []
+  hasPromotedRarity: 0
+  promotedRarity: 0
+  isAutoMove: 0
+  isManualControllable: 0
+  excludeFromDraft: 1
+  isImmovable: 0
+  immuneToFlip: 0
+  losesHPOnMove: 0
+  diesOnPromotion: 0
+  isImmovableWhenPromoted: 0
+  isTauntPiece: 0

@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01e8fb0f6e3e9d54297b027b2b9c6457, type: 3}
+  m_Name: Lance
+  m_EditorClassIdentifier: Assembly-CSharp::PieceData
+  pieceType: 1
+  displayName: "\u9999\u8ECA"
+  pieceName: "\u9999\u8ECA"
+  description: "\u524D\u65B9\u306B\u4F55\u30DE\u30B9\u3067\u3082\u9032\u3081\u308B\u7A81\u6483\u578B\u306E\u99D2\u3002\u6210\u308B\u3068\u91D1\u5C06\u306E\u52D5\u304D\u306B\u306A\u308B\u3002"
+  baseATK: 1
+  baseDEF: 0
+  baseHP: 1
+  rarity: 0
+  moveDirections:
+  - direction: {x: 0, y: 1}
+    maxDistance: 9
+    canJump: 0
+  canPromote: 1
+  promotedDisplayName: "\u6210\u9999"
+  promotedName: "\u6210\u9999"
+  promotedDescription: "\u9999\u8ECA\u304C\u6210\u3063\u305F\u59FF\u3002\u91D1\u5C06\u3068\u540C\u3058\u52D5\u304D\u304C\u3067\u304D\u308B\u3002"
+  promotedATK: 1
+  promotedDEF: 0
+  promotedHP: 1
+  promotedMoveDirections:
+  - direction: {x: 0, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: -1, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 1, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: -1, y: 0}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 1, y: 0}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 0, y: -1}
+    maxDistance: 1
+    canJump: 0

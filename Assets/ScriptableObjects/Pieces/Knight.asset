@@ -1,0 +1,55 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01e8fb0f6e3e9d54297b027b2b9c6457, type: 3}
+  m_Name: Knight
+  m_EditorClassIdentifier: Assembly-CSharp::PieceData
+  pieceType: 2
+  displayName: "\u6842\u99AC"
+  pieceName: "\u6842\u99AC"
+  description: "\u524D\u65B9\u306BL\u5B57\u578B\u306B\u98DB\u3073\u8D8A\u3048\u3066\u79FB\u52D5\u3059\u308B\u7279\u6B8A\u306A\u99D2\u3002\u6210\u308B\u3068\u91D1\u5C06\u306E\u52D5\u304D\u306B\u306A\u308B\u3002"
+  baseATK: 1
+  baseDEF: 0
+  baseHP: 1
+  rarity: 0
+  moveDirections:
+  - direction: {x: 1, y: 2}
+    maxDistance: 1
+    canJump: 1
+  - direction: {x: -1, y: 2}
+    maxDistance: 1
+    canJump: 1
+  canPromote: 1
+  promotedDisplayName: "\u6210\u6842"
+  promotedName: "\u6210\u6842"
+  promotedDescription: "\u6842\u99AC\u304C\u6210\u3063\u305F\u59FF\u3002\u91D1\u5C06\u3068\u540C\u3058\u52D5\u304D\u304C\u3067\u304D\u308B\u3002"
+  promotedATK: 1
+  promotedDEF: 0
+  promotedHP: 1
+  promotedMoveDirections:
+  - direction: {x: 0, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: -1, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 1, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: -1, y: 0}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 1, y: 0}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 0, y: -1}
+    maxDistance: 1
+    canJump: 0

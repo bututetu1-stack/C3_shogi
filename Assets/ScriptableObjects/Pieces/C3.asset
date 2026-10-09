@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01e8fb0f6e3e9d54297b027b2b9c6457, type: 3}
+  m_Name: C3
+  m_EditorClassIdentifier: Assembly-CSharp::PieceData
+  pieceType: 7
+  displayName: C3
+  pieceName: "\u30B5\u30FC\u30AF\u30EB"
+  description: "\u6211\u3089\u304C\u30B5\u30FC\u30AF\u30EB\u3002\u52D5\u3051\u306A\u3044\u304C\u3001\u305D\u306E\u4EE3\u308F\u308A\u306B\u4F53\u529B\u304C\u9AD8\u304F\u3001\u4ED6\u306E\u30B3\u30DE\u306E\u80FD\u529B\u3092\u7121\u52B9\u5316\u3059\u308B"
+  baseATK: 0
+  baseDEF: 0
+  baseHP: 10
+  rarity: 0
+  moveDirections: []
+  canPromote: 0
+  promotedDisplayName: 
+  promotedName: 
+  promotedDescription: 
+  promotedATK: 0
+  promotedDEF: 0
+  promotedHP: 0
+  promotedMoveDirections: []

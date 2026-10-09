@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01e8fb0f6e3e9d54297b027b2b9c6457, type: 3}
+  m_Name: Gold
+  m_EditorClassIdentifier: Assembly-CSharp::PieceData
+  pieceType: 4
+  displayName: "\u91D1\u5C06"
+  pieceName: "\u91D1\u5C06"
+  description: "\u524D3\u65B9\u5411\u30FB\u6A2A\u30FB\u5F8C\u306B\u52D5\u3051\u308B\u983C\u308C\u308B\u99D2\u3002\u6210\u308A\u306F\u306A\u3044\u3002"
+  baseATK: 1
+  baseDEF: 0
+  baseHP: 1
+  rarity: 0
+  moveDirections:
+  - direction: {x: 0, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 1, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: -1, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 1, y: 0}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: -1, y: 0}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 0, y: -1}
+    maxDistance: 1
+    canJump: 0
+  canPromote: 0
+  promotedDisplayName: 
+  promotedName: 
+  promotedDescription: 
+  promotedATK: 0
+  promotedDEF: 0
+  promotedHP: 0
+  promotedMoveDirections: []

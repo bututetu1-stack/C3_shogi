@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01e8fb0f6e3e9d54297b027b2b9c6457, type: 3}
+  m_Name: Enmashi
+  m_EditorClassIdentifier: Assembly-CSharp::PieceData
+  pieceType: 25
+  displayName: "\u95BB\u9B54"
+  pieceName: "\u95BB\u9B54"
+  description: "\u5730\u7344\u306E\u88C1\u5B9A\u8005\u3002\u6BCE\u30BF\u30FC\u30F3\u7D42\u4E86\u6642\u3001\u96A3\u63A5\u3059\u308B\u5473\u65B9\u306E\u4F53\u529B\u30921\u56DE\u5FA9\u3059\u308B\u3002\u6D88\u6EC5\u305B\u305A\u56DE\u5FA9\u3057\u7D9A\u3051\u308B\u3002"
+  baseATK: 1
+  baseDEF: 2
+  baseHP: 3
+  rarity: 1
+  moveDirections:
+  - direction: {x: 0, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 1, y: 0}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: -1, y: 0}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 1, y: -1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: -1, y: -1}
+    maxDistance: 1
+    canJump: 0
+  canPromote: 0
+  promotedDisplayName:
+  promotedName:
+  promotedDescription:
+  promotedATK: 0
+  promotedDEF: 0
+  promotedHP: 0
+  promotedMoveDirections: []
+  hasPromotedRarity: 0
+  promotedRarity: 0
+  isAutoMove: 0
+  isManualControllable: 0
+  excludeFromDraft: 1
+  isImmovable: 0
+  immuneToFlip: 0
+  losesHPOnMove: 0
+  diesOnPromotion: 0
+  isImmovableWhenPromoted: 0
+  isTauntPiece: 0

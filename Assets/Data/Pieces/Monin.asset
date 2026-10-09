@@ -1,0 +1,74 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01e8fb0f6e3e9d54297b027b2b9c6457, type: 3}
+  m_Name: Monin
+  m_EditorClassIdentifier: Assembly-CSharp::PieceData
+  pieceType: 8
+  displayName: "\u9580\u4EBA"
+  pieceName: "\u9580\u4EBA"
+  description: "\u6012\u6D9B\u306E\u52E2\u3044\u3067\u7F75\u5012\u3059\u308B\u3002\u305D\u306E\u30EF\u30FC\u30C9\u30BB\u30F3\u30B9\u306B\u306F\u820C\u3092\u5DFB\u304F\u3002\u305D\u306E\u52E2\u3044\u306E\u307E\u307E\u7A81\u304D\u9032\u3093\u3067\u3044\u304F\u3002\u624B\u756A\u958B\u59CB\u6642\u3001\u81EA\u52D5\u3067\u52D5\u304F\uFF08\u7BC4\u56F2\u5185\u306E\u6575\u3092\u512A\u5148\uFF09\u3002\u624B\u52D5\u64CD\u4F5C\u4E0D\u53EF\u3002"
+  baseATK: 4
+  baseDEF: 1
+  baseHP: 1
+  rarity: 1
+  moveDirections:
+  - direction: {x: 1, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 0, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: -1, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 1, y: 0}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: -1, y: 0}
+    maxDistance: 1
+    canJump: 0
+  canPromote: 1
+  promotedDisplayName: "\u9580\u4EBA"
+  promotedName: "\u9580\u4EBA"
+  promotedDescription: "\u899A\u9192\u3057\u305F\u9584\u3002\u3082\u306E\u3059\u3054\u3044\u52E2\u3044\u3067\u52D5\u304F\u3002\u624B\u756A\u958B\u59CB\u6642\u3001\u81EA\u52D5\u3067\u52D5\u304F\uFF08\u7BC4\u56F2\u5185\u306E\u6575\u3092\u512A\u5148\uFF09\u3002\u624B\u52D5\u64CD\u4F5C\u4E0D\u53EF\u3002\u3057\u304B\u305750%\u306E\u78BA\u7387\u3067\u7D76\u8D77\u3057\u3001\u79FB\u52D5\u3057\u306A\u3044\u3002"
+  promotedATK: 4
+  promotedDEF: 4
+  promotedHP: 1
+  promotedMoveDirections:
+  - direction: {x: 0, y: 1}
+    maxDistance: 9
+    canJump: 0
+  - direction: {x: 0, y: -1}
+    maxDistance: 9
+    canJump: 0
+  - direction: {x: 1, y: 0}
+    maxDistance: 9
+    canJump: 0
+  - direction: {x: -1, y: 0}
+    maxDistance: 9
+    canJump: 0
+  - direction: {x: 1, y: 1}
+    maxDistance: 9
+    canJump: 0
+  - direction: {x: -1, y: 1}
+    maxDistance: 9
+    canJump: 0
+  - direction: {x: 1, y: -1}
+    maxDistance: 9
+    canJump: 0
+  - direction: {x: -1, y: -1}
+    maxDistance: 9
+    canJump: 0
+  isAutoMove: 1
+  isManualControllable: 0
+  excludeFromDraft: 0
+  isImmovable: 0
