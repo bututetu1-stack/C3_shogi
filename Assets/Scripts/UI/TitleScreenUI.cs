@@ -92,7 +92,7 @@ public class TitleScreenUI : MonoBehaviour
         line.style.marginBottom = 12;
         column.Add(line);
 
-        var subtitle = UIFactory.Label("サークル部員たちの盤上ローグライク", 22, Palette.Gold, "c3-mincho");
+        var subtitle = UIFactory.Label("C3部員たちの盤上ローグライク", 22, Palette.Gold, "c3-mincho");
         subtitle.style.letterSpacing = 6;
         subtitle.style.marginBottom = 48;
         column.Add(subtitle);

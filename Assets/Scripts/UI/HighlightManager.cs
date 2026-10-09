@@ -5,7 +5,9 @@ using TMPro;
 /// <summary>盤上のハイライト（移動先・攻撃対象とダメージ予測・選択・直前の手・ホバー）</summary>
 public class HighlightManager : MonoBehaviour
 {
-    public static HighlightManager Instance { get; private set; }
+    private static HighlightManager instance;
+    /// <summary>盤のハイライト（自動プレイの Headless 中は null）</summary>
+    public static HighlightManager Instance { get { return GameSim.Headless ? null : instance; } }
 
     private readonly List<BoardCell> markedCells = new List<BoardCell>();
     private readonly List<BoardCell> lastMoveCells = new List<BoardCell>();
@@ -15,7 +17,7 @@ public class HighlightManager : MonoBehaviour
 
     void Awake()
     {
-        if (Instance == null) Instance = this;
+        if (instance == null) instance = this;
         else Destroy(this);
     }
 

@@ -75,8 +75,8 @@ public class BoardManager : MonoBehaviour
         if (HighlightManager.Instance != null)
             HighlightManager.Instance.ResetBoard();
 
-        // 盤の描画とカメラ合わせ
-        boardRenderer.BuildBoard(size);
+        // 盤の描画とカメラ合わせ（自動プレイ中は描かない）
+        if (!GameSim.Headless) boardRenderer.BuildBoard(size);
         BuildPlacementOrder();
     }
 
@@ -108,7 +108,14 @@ public class BoardManager : MonoBehaviour
         return null;
     }
 
+    /// <summary>駒を置き、見た目のオブジェクトを返す（置けなければ null。自動プレイ中は見た目を作らないので常に null）</summary>
     public PieceController SpawnPiece(PieceData data, Team team, Vector2Int pos)
+    {
+        return Spawn(data, team, pos) != null ? GetPieceController(pos) : null;
+    }
+
+    /// <summary>駒を置く。置けなければ null（自動プレイ中も駒そのものは返る）</summary>
+    public PieceInstance Spawn(PieceData data, Team team, Vector2Int pos)
     {
         if (data == null)
         {
@@ -129,6 +136,7 @@ public class BoardManager : MonoBehaviour
 
         var instance = new PieceInstance(data, team, pos);
         PlacePiece(instance, pos);
+        if (GameSim.Headless) return instance;
 
         GameObject obj = new GameObject(team + "_" + data.displayName + "_" + pos.x + "_" + pos.y);
         obj.transform.position = new Vector3(pos.x, pos.y, 0);
@@ -140,7 +148,7 @@ public class BoardManager : MonoBehaviour
         pc.Init(instance);
 
         pieceObjects[pos] = pc;
-        return pc;
+        return instance;
     }
 
     public PieceController GetPieceController(Vector2Int pos)

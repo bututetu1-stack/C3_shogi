@@ -21,6 +21,12 @@ public class PieceController : MonoBehaviour
     private float liftTarget;
     private float spawnScale = 1f;
     private float flipScale = 1f;
+    private float nodY = 1f;
+
+    // 残像（なこの突撃・門人の突進）
+    private Color trailTint;
+    private float trailUntil;
+    private Vector3 lastTrailPos;
 
     private Coroutine moveRoutine;
     private bool isShaking;
@@ -31,7 +37,8 @@ public class PieceController : MonoBehaviour
     public enum ExitStyle
     {
         Retreat,  // 帰投（自陣側へ去っていく）
-        Sink      // 沈没（泡を出して沈む）
+        Sink,     // 沈没（泡を出して沈む）
+        Eaten     // 食べられた（中華。湯気とともにふわっと消える）
     }
 
     public void Init(PieceInstance piece)
@@ -56,7 +63,7 @@ public class PieceController : MonoBehaviour
         transform.position = homePos + shakeOffset + lungeOffset;
 
         float s = pieceRenderer.BaseScale * spawnScale * (1f + 0.08f * up);
-        pieceRenderer.Visual.localScale = new Vector3(s * flipScale, s, 1f);
+        pieceRenderer.Visual.localScale = new Vector3(s * flipScale, s * nodY, 1f);
         // 海の駒（艦娘・深海）は波に揺られる
         float bob = pieceRenderer.IsFloating ? Mathf.Sin(Time.time * 2.1f + bobPhase) * 0.03f : 0f;
         pieceRenderer.Visual.localPosition = new Vector3(0f, 0.04f * up + bob, 0f);
@@ -65,6 +72,62 @@ public class PieceController : MonoBehaviour
         pieceRenderer.ShadowHolder.localScale = new Vector3(s * flipScale, s, 1f);
         pieceRenderer.ShadowHolder.localPosition = ShadowOffset * (1f + 1.6f * up);
         pieceRenderer.Stats.localScale = Vector3.one * spawnScale;
+
+        if (Time.time < trailUntil && BattleEffects.Instance != null && (transform.position - lastTrailPos).sqrMagnitude > 0.12f * 0.12f)
+        {
+            lastTrailPos = transform.position;
+            BattleEffects.Instance.PlayAfterimage(pieceRenderer.Body, trailTint);
+        }
+    }
+
+    /// <summary>しばらくのあいだ、動いた跡に残像を残す</summary>
+    public void SetTrail(Color tint, float seconds)
+    {
+        trailTint = tint;
+        trailUntil = Time.time + seconds;
+        lastTrailPos = transform.position;
+    }
+
+    /// <summary>うんうんと頷く（僕）</summary>
+    public void Nod()
+    {
+        if (!isDying) StartCoroutine(NodRoutine());
+    }
+
+    private IEnumerator NodRoutine()
+    {
+        const float duration = 0.55f;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            nodY = 1f - 0.1f * Mathf.Abs(Mathf.Sin(elapsed / duration * Mathf.PI * 2f));
+            yield return null;
+        }
+        nodY = 1f;
+    }
+
+    /// <summary>origin から今の位置へ放物線を描いて飛んでくる（ヲツが作った中華）</summary>
+    public void FlyFrom(Vector3 origin, float duration)
+    {
+        if (moveRoutine != null) StopCoroutine(moveRoutine);
+        moveRoutine = StartCoroutine(FlyRoutine(origin, homePos, duration));
+    }
+
+    private IEnumerator FlyRoutine(Vector3 from, Vector3 target, float duration)
+    {
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            homePos = Vector3.Lerp(from, target, t) + new Vector3(0f, Ease.Arc(t) * 0.8f, 0f);
+            hop = Ease.Arc(t);
+            yield return null;
+        }
+        homePos = target;
+        hop = 0f;
+        moveRoutine = null;
     }
 
     // ------------------------------------------------------------
@@ -261,7 +324,7 @@ public class PieceController : MonoBehaviour
         for (int i = 0; i < renderers.Length; i++) baseColors[i] = renderers[i].color;
 
         Vector3 start = transform.position;
-        float duration = style == ExitStyle.Retreat ? 0.9f : 0.8f;
+        float duration = style == ExitStyle.Retreat ? 0.9f : (style == ExitStyle.Eaten ? 0.5f : 0.8f);
         float elapsed = 0f;
         float wakeTimer = 0f;
         while (elapsed < duration)
@@ -281,6 +344,12 @@ public class PieceController : MonoBehaviour
                     wakeTimer = 0f;
                     BattleEffects.Instance.PlayWakePuff(transform.position + new Vector3(0f, 0.25f, 0f));
                 }
+            }
+            else if (style == ExitStyle.Eaten)
+            {
+                // ふわっと浮いて小さくなる
+                transform.position = start + new Vector3(0f, 0.25f * Ease.OutCubic(t), 0f);
+                if (pieceRenderer != null) pieceRenderer.Visual.localScale = Vector3.one * pieceRenderer.BaseScale * (1f - 0.5f * t);
             }
             else
             {

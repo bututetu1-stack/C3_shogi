@@ -31,6 +31,9 @@ public class PieceRenderer : MonoBehaviour
     private SpriteRenderer shadowRenderer;
     private SpriteRenderer emblemRenderer;
     private SpriteRenderer auraRenderer;
+    private Color auraColor;
+    private bool auraRing;
+    private float auraPhase;
     private TextMeshPro labelTop;
     private TextMeshPro labelBottom;
 
@@ -92,6 +95,7 @@ public class PieceRenderer : MonoBehaviour
         auraRenderer.sprite = SpriteFactory.SoftCircle;
         auraRenderer.sortingOrder = OrderShadow - 1;
         auraRenderer.enabled = false;
+        auraPhase = Random.value * 6.28f;
 
         // ステータスは駒から見て 左肩=攻撃、右肩=防御、右下=体力（数字は常に正立）
         stats = CreateChild("Stats", transform);
@@ -230,6 +234,9 @@ public class PieceRenderer : MonoBehaviour
         emblemRenderer.color = look.emblemColor;
         emblemRenderer.enabled = look.emblem != null;
         auraRenderer.enabled = look.aura;
+        auraRenderer.sprite = look.auraRing ? SpriteFactory.Ring : SpriteFactory.SoftCircle;
+        auraColor = look.auraColor;
+        auraRing = look.auraRing;
         IsFloating = look.floating;
 
         // 紋章がある駒は文字を少し下げる
@@ -256,11 +263,22 @@ public class PieceRenderer : MonoBehaviour
 
     void Update()
     {
-        // 提督の足元の光はゆっくり明滅
         if (auraRenderer != null && auraRenderer.enabled)
         {
-            float a = 0.22f + 0.12f * Mathf.Sin(Time.time * 2.2f);
-            auraRenderer.color = new Color(Palette.Gold.r, Palette.Gold.g, Palette.Gold.b, a);
+            if (auraRing)
+            {
+                // 挑発の輪は広がりながら薄れ、また足元から広がる
+                float k = Mathf.Repeat(Time.time * 0.9f + auraPhase, 1f);
+                auraRenderer.transform.localScale = Vector3.one * Mathf.Lerp(0.9f, 1.3f, k);
+                auraRenderer.color = new Color(auraColor.r, auraColor.g, auraColor.b, 0.75f * (1f - k));
+            }
+            else
+            {
+                // 足元の光はゆっくり明滅
+                auraRenderer.transform.localScale = new Vector3(1.5f, 1.5f, 1f);
+                float a = 0.3f + 0.12f * Mathf.Sin(Time.time * 2.2f + auraPhase);
+                auraRenderer.color = new Color(auraColor.r, auraColor.g, auraColor.b, a);
+            }
         }
     }
     private static bool IsAscii(string s)

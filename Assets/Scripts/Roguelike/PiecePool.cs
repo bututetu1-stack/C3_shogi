@@ -32,7 +32,7 @@ public class DraftOption
                 case UpgradeKind.AllATK: return "士気高揚";
                 case UpgradeKind.AllDEF: return "鉄壁の構え";
                 case UpgradeKind.AllHP: return "部室の差し入れ";
-                case UpgradeKind.C3HP: return "サークルの結束";
+                case UpgradeKind.C3HP: return "部の結束";
                 default: return "";
             }
         }

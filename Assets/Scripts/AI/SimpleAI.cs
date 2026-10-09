@@ -34,8 +34,10 @@ public class SimpleAI : MonoBehaviour
     // この点差以内の手は同じくらい良いとみなしてランダムに選ぶ
     private int randomMargin = 25;
 
-    private void ConfigureDifficulty()
+    private void ConfigureDifficulty(Team team)
     {
+        // 自動プレイで自軍を指すときは、いちばん強い設定で指す
+        if (team == Team.Player) { searchDepths = FullDepths; randomMargin = 15; return; }
         int stage = StageManager.Instance != null ? StageManager.Instance.currentStage : 5;
         if (stage <= 2) { searchDepths = ShallowDepths; randomMargin = 140; }
         else if (stage <= 4) { searchDepths = ShallowDepths; randomMargin = 60; }
@@ -99,7 +101,7 @@ public class SimpleAI : MonoBehaviour
         if (gm == null || gm.currentPhase != GamePhase.Battle || gm.currentTurn != Team.Enemy)
             yield break;
 
-        MoveEntry? choice = ChooseMove();
+        MoveEntry? choice = ChooseMove(Team.Enemy, thinkBudgetMs);
         if (choice.HasValue)
             yield return CombatResolver.ExecuteMove(choice.Value.piece, choice.Value.move);
         else if (BattleLogUI.Instance != null)
@@ -122,32 +124,51 @@ public class SimpleAI : MonoBehaviour
     private System.Diagnostics.Stopwatch clock;
     private bool timeUp;
     private int nodes;
+    private float budgetMs;
+
+    /// <summary>直前の手で読み切れた深さ（2 = 自分の手と相手の応手、4 = その先まで）。統計用</summary>
+    public int LastCompletedDepth { get; private set; }
 
     // 深さごとに使い回すバッファ
     private readonly List<List<MoveEntry>> moveBuffers = new List<List<MoveEntry>>();
     private readonly List<List<PieceInstance>> pieceBuffers = new List<List<PieceInstance>>();
     private readonly List<MoveValidator.MoveResult> moveScratch = new List<MoveValidator.MoveResult>();
 
-    private MoveEntry? ChooseMove()
+    /// <summary>
+    /// 自動プレイ用: team の手を1つ選ぶ（指せる手がなければ false＝パス）。
+    /// 敵は本番と同じ強さ設定、自軍はいちばん強い設定で読む。budget は1手の思考時間（ミリ秒）
+    /// </summary>
+    public bool TryChooseMove(Team team, float budget, out PieceInstance piece, out MoveValidator.MoveResult move)
+    {
+        MoveEntry? choice = ChooseMove(team, budget);
+        piece = choice.HasValue ? choice.Value.piece : null;
+        move = choice.HasValue ? choice.Value.move : default(MoveValidator.MoveResult);
+        return choice.HasValue;
+    }
+
+    private MoveEntry? ChooseMove(Team team, float budget)
     {
         clock = System.Diagnostics.Stopwatch.StartNew();
         timeUp = false;
         nodes = 0;
-        ConfigureDifficulty();
+        budgetMs = budget;
+        ConfigureDifficulty(team);
+        bool forEnemy = team == Team.Enemy;
+        Team opponent = forEnemy ? Team.Player : Team.Enemy;
 
         BoardManager bm = BoardManager.Instance;
         List<MoveEntry> root = new List<MoveEntry>();
-        GenerateOrderedMoves(Team.Enemy, root, GetPieceBuffer(0));
+        GenerateOrderedMoves(team, root, GetPieceBuffer(0));
         if (root.Count == 0) return null;
 
-        // 即勝ち: プレイヤーのC3を倒せるなら迷わず指す
-        PieceInstance playerC3 = bm.FindC3(Team.Player);
-        if (playerC3 != null)
+        // 即勝ち: 相手のC3を倒せるなら迷わず指す
+        PieceInstance targetC3 = bm.FindC3(opponent);
+        if (targetC3 != null)
         {
             foreach (var e in root)
             {
-                if (e.move.isAttack && e.move.position == playerC3.boardPosition
-                    && CombatResolver.CalcDamage(e.piece, playerC3) >= playerC3.currentHP)
+                if (e.move.isAttack && e.move.position == targetC3.boardPosition
+                    && CombatResolver.CalcDamage(e.piece, targetC3) >= targetC3.currentHP)
                     return e;
             }
         }
@@ -158,17 +179,21 @@ public class SimpleAI : MonoBehaviour
         foreach (int depth in searchDepths)
         {
             var scored = new List<MoveEntry>(root.Count);
-            int alpha = -WinScore * 2;
+            // 評価値は「敵が有利なほど正」。自軍の手番では小さいほど良い
+            int bestRaw = forEnemy ? -WinScore * 2 : WinScore * 2;
             for (int i = 0; i < root.Count; i++)
             {
                 MoveEntry e = root[i];
                 int mark = Simulate(e.piece, e.move);
-                // 最善候補との差を見るため、alphaより少し下までは正確に読む
-                e.score = AlphaBeta(depth - 1, false, alpha - randomMargin, WinScore * 2, 1);
+                // 最善候補との差を見るため、最善より少し悪い手までは正確に読む
+                int raw = forEnemy
+                    ? AlphaBeta(depth - 1, false, bestRaw - randomMargin, WinScore * 2, 1)
+                    : AlphaBeta(depth - 1, true, -WinScore * 2, bestRaw + randomMargin, 1);
                 Restore(mark);
                 if (timeUp) break;
+                e.score = forEnemy ? raw : -raw;   // 手番側から見た点
                 scored.Add(e);
-                if (e.score > alpha) alpha = e.score;
+                if (forEnemy ? raw > bestRaw : raw < bestRaw) bestRaw = raw;
             }
 
             if (scored.Count > 0 && (!timeUp || best == null || scored.Count >= root.Count / 2))
@@ -187,6 +212,7 @@ public class SimpleAI : MonoBehaviour
             if (timeUp) break;
         }
 
+        LastCompletedDepth = completedDepth;
         if (best == null || best.Count == 0) return root[0];
 
         // ほぼ同点の手からランダムに選ぶ
@@ -211,7 +237,7 @@ public class SimpleAI : MonoBehaviour
     private int AlphaBeta(int depth, bool maximizing, int alpha, int beta, int ply)
     {
         nodes++;
-        if ((nodes & 63) == 0 && clock.Elapsed.TotalMilliseconds > thinkBudgetMs) timeUp = true;
+        if ((nodes & 63) == 0 && clock.Elapsed.TotalMilliseconds > budgetMs) timeUp = true;
         if (timeUp) return 0;
 
         BoardManager bm = BoardManager.Instance;
@@ -285,6 +311,7 @@ public class SimpleAI : MonoBehaviour
     private static bool IsControllable(PieceInstance p)
     {
         if (p.data.pieceType == PieceType.C3) return false;
+        if (p.team == Team.Player && !p.data.isManualControllable) return false;
         if (p.data.isImmovable || p.data.isAutoMove) return false;
         if (p.isPromoted && p.data.isImmovableWhenPromoted) return false;
         return true;

@@ -254,7 +254,7 @@ public class StageManager : MonoBehaviour
             list.Add(new Placement(PieceType.Pawn, x, row));
     }
 
-    /// <summary>9x9の平手に近い布陣（桂・香の位置の駒を差し替え可能）</summary>
+    /// <summary>9x9の平手の布陣（桂・香の位置の駒を差し替え可能）。飛車・角は本将棋と同じく、敵から見て右に飛車・左に角</summary>
     private static void AddStandardArmy(List<Placement> list, int size,
         PieceType leftKnight, PieceType rightKnight, PieceType leftLance, PieceType rightLance)
     {
@@ -269,8 +269,9 @@ public class StageManager : MonoBehaviour
         list.Add(new Placement(rightKnight, c + 3, top));
         list.Add(new Placement(leftLance, 0, top));
         list.Add(new Placement(rightLance, size - 1, top));
-        list.Add(new Placement(PieceType.Rook, c - 1, top - 1));
-        list.Add(new Placement(PieceType.Bishop, c + 1, top - 1));
+        // 後手の飛車は8二、角は2二（こちらから見て左が飛車、右が角）
+        list.Add(new Placement(PieceType.Rook, 1, top - 1));
+        list.Add(new Placement(PieceType.Bishop, size - 2, top - 1));
     }
 
     private void ApplyStageScaling(BoardManager bm, int stage)

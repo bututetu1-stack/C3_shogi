@@ -77,16 +77,21 @@ public class GameManager : MonoBehaviour
 
     private void StartNewGame()
     {
+        ResetRun();
+        if (BattleEffects.Instance != null) BattleEffects.Instance.PlayBGM("Battle");
+        SetupStageBoard();
+        ShowPieceSelection(true);
+    }
+
+    /// <summary>1周の状態（仲間・全軍強化・戦績・局）を最初に戻す</summary>
+    private void ResetRun()
+    {
         isGameOver = false;
         currentTurn = Team.Player;
         playerOwnedPieces.Clear();
         RunBonusATK = RunBonusDEF = RunBonusHP = RunBonusC3HP = 0;
         TotalKills = TotalMoves = StagesCleared = 0;
         if (stageManager != null) stageManager.currentStage = 1;
-
-        if (BattleEffects.Instance != null) BattleEffects.Instance.PlayBGM("Battle");
-        SetupStageBoard();
-        ShowPieceSelection(true);
     }
 
     /// <summary>現在のステージの盤を作り、C3・歩・持ち越し駒を配置する</summary>
@@ -148,10 +153,17 @@ public class GameManager : MonoBehaviour
 
     private void OnOptionChosen(DraftOption option)
     {
+        ApplyOption(option);
+        StartBattle();
+    }
+
+    /// <summary>選んだ仲間を自陣に置く、または全軍強化を加える</summary>
+    private void ApplyOption(DraftOption option)
+    {
         if (option != null && option.piece != null)
         {
             Vector2Int? slot = boardManager.FindPlayerDeploySlot();
-            if (slot.HasValue && boardManager.SpawnPiece(option.piece, Team.Player, slot.Value) != null)
+            if (slot.HasValue && boardManager.Spawn(option.piece, Team.Player, slot.Value) != null)
                 playerOwnedPieces.Add(option.piece);
         }
         else if (option != null)
@@ -164,8 +176,6 @@ public class GameManager : MonoBehaviour
                 case UpgradeKind.C3HP: RunBonusC3HP += 4; break;
             }
         }
-
-        StartBattle();
     }
 
     /// <summary>全軍強化を自軍の駒に反映する（ステージごとに駒を置き直すので毎回掛ける）</summary>
@@ -212,7 +222,8 @@ public class GameManager : MonoBehaviour
                 stageManager.ApplyPlayerScaling();
             ApplyRunBonuses();
 
-            EnsureStageTitle().ShowTitle(stageManager.currentStage, stageManager.GetStageName(stageManager.currentStage));
+            if (!GameSim.Headless)
+                EnsureStageTitle().ShowTitle(stageManager.currentStage, stageManager.GetStageName(stageManager.currentStage));
         }
 
         // 対局開始SE
@@ -220,6 +231,18 @@ public class GameManager : MonoBehaviour
             BattleEffects.Instance.PlayBattleStartEffect();
 
         yield return new WaitForSeconds(StageIntroDuration);
+
+        // ボスが初めて出る局は登場のカットイン
+        if (stageManager != null && !GameSim.Headless)
+        {
+            PieceType boss;
+            PieceLines.CutIn cut = PieceLines.BossCutIn(stageManager.currentStage, out boss);
+            if (cut != null)
+            {
+                if (BattleEffects.Instance != null) BattleEffects.Instance.PlayCutInSound();
+                yield return CutInUI.PlayPiece(boardManager.GetPieceDataByType(boss), false, cut.title, cut.subtitle, cut.band, cut.accent, 1.6f);
+            }
+        }
 
         SetPhase(GamePhase.Battle);
 
@@ -280,7 +303,7 @@ public class GameManager : MonoBehaviour
 
         if (isGameOver || CheckGameOver()) yield break;
 
-        if (OnTurnChanged != null) OnTurnChanged(currentTurn);
+        if (OnTurnChanged != null && !GameSim.Headless) OnTurnChanged(currentTurn);
     }
 
     /// <summary>勝敗判定。決着（ステージクリア含む）したらtrue</summary>
@@ -355,6 +378,14 @@ public class GameManager : MonoBehaviour
         TotalMoves += MoveCount;
         StagesCleared++;
 
+        if (GameSim.Headless)
+        {
+            SimOutcome = reason != null ? SimBattleOutcome.JudgedWin : SimBattleOutcome.Won;
+            if (stageManager == null || stageManager.IsLastStage()) isGameOver = true;
+            SetPhase(GamePhase.StageClear);
+            return;
+        }
+
         if (stageManager != null && !stageManager.IsLastStage())
         {
             StartCoroutine(StageClearSequence(reason));
@@ -369,6 +400,12 @@ public class GameManager : MonoBehaviour
     {
         TotalMoves += MoveCount;
         isGameOver = true;
+        if (GameSim.Headless)
+        {
+            SimOutcome = MoveCount > MoveLimit ? SimBattleOutcome.JudgedLoss : SimBattleOutcome.Lost;
+            SetPhase(GamePhase.GameOver);
+            return;
+        }
         SetPhase(GamePhase.GameOver);
         if (OnGameOver != null) OnGameOver(Team.Enemy);
     }
@@ -412,10 +449,16 @@ public class GameManager : MonoBehaviour
         return piece.CanPromoteAt(from.y, size) || piece.CanPromoteAt(piece.boardPosition.y, size);
     }
 
-    /// <summary>能力による移動などで敵陣に入ったとき</summary>
+    /// <summary>能力による移動などで敵陣に入ったとき（カットインは待たずに出す）</summary>
     public void CheckPromotion(PieceInstance piece)
     {
         if (ShouldPromote(piece, piece.boardPosition)) PromotePiece(piece);
+    }
+
+    /// <summary>能力による移動のあとの成り（カットインが終わるのを待つ版。なこの突撃など）</summary>
+    public IEnumerator CheckPromotionRoutine(PieceInstance piece)
+    {
+        if (ShouldPromote(piece, piece.boardPosition)) yield return PromoteRoutine(piece);
     }
 
     /// <summary>成りの演出を待つ版（物鉄→提督は着任の演出が入る）</summary>
@@ -426,17 +469,36 @@ public class GameManager : MonoBehaviour
             yield return AbilitySystem.Instance.TeitokuPromotionRoutine(piece);
             yield break;
         }
-        PromotePiece(piece);
+        // 部員の成りはカットインで見せる
+        yield return PromotionCutIn(piece);
+        PromotePiece(piece, false);
     }
 
-    /// <summary>駒を成らせ、成りに伴う特殊処理（過労死・提督化）を行う</summary>
-    public void PromotePiece(PieceInstance piece)
+    /// <summary>部員の成りのカットイン（ない駒・自動プレイ中は何もしない）</summary>
+    private IEnumerator PromotionCutIn(PieceInstance piece)
+    {
+        if (GameSim.Headless || piece.team != Team.Player) yield break;
+        PieceLines.CutIn cut = PieceLines.PromotionCutIn(piece.data.pieceType);
+        if (cut == null) yield break;
+        if (BattleEffects.Instance != null) BattleEffects.Instance.PlayCutInSound();
+        yield return CutInUI.PlayPiece(piece.data, true, cut.title, cut.subtitle, cut.band, cut.accent, 1.4f);
+    }
+
+    /// <summary>
+    /// 駒を成らせ、成りに伴う特殊処理（過労死・提督化）を行う。
+    /// cutIn=true なら部員のカットインを待たずに出す（李白の裏返しなど、手番の途中で成るとき）
+    /// </summary>
+    public void PromotePiece(PieceInstance piece, bool cutIn = true)
     {
         if (piece == null || !piece.isAlive || piece.isPromoted || !piece.data.canPromote) return;
+        if (cutIn && !GameSim.Headless && piece.data.pieceType != PieceType.Monotetsu)
+            StartCoroutine(PromotionCutIn(piece));
 
         piece.Promote();
+        GameSim.RecordPromotion(piece);
         CombatResolver.PlayFlip(piece);
         FloatingText.Spawn(piece.boardPosition, "成", Palette.GoldLight, 4f);
+        SpeechBubble.Say(piece, PieceLines.OnPromote(piece.data.pieceType));
 
         // 過労死チェック（SN・小錦）
         if (piece.data.diesOnPromotion)
@@ -449,7 +511,11 @@ public class GameManager : MonoBehaviour
 
         // 物鉄→提督の特殊処理（演出つき。通常は PromoteRoutine から呼ばれる）
         if (piece.data.pieceType == PieceType.Monotetsu && AbilitySystem.Instance != null)
-            AbilitySystem.Instance.StartCoroutine(AbilitySystem.Instance.TeitokuArrivalRoutine(piece));
+        {
+            IEnumerator arrival = AbilitySystem.Instance.TeitokuArrivalRoutine(piece);
+            if (GameSim.Headless) GameSim.RunSync(arrival);
+            else AbilitySystem.Instance.StartCoroutine(arrival);
+        }
     }
 
     // ================================================================
@@ -474,6 +540,65 @@ public class GameManager : MonoBehaviour
     public void SetPhase(GamePhase phase)
     {
         currentPhase = phase;
-        if (OnPhaseChanged != null) OnPhaseChanged(phase);
+        if (OnPhaseChanged != null && !GameSim.Headless) OnPhaseChanged(phase);
     }
+
+    // ================================================================
+    // 自動プレイ（バランステスト）用。GameSim.Headless の間に BalanceSimulator から呼ぶ
+    // ================================================================
+
+    /// <summary>直前の対局の結果（Headless のときだけ記録する）</summary>
+    public SimBattleOutcome SimOutcome { get; private set; }
+
+    /// <summary>新しい周を始め、第一局の盤（C3と歩）を用意する</summary>
+    public void SimBeginRun()
+    {
+        if (boardManager == null) boardManager = BoardManager.Instance;
+        if (stageManager == null) stageManager = StageManager.Instance;
+        StopAllCoroutines();
+        isTurnProcessing = false;
+        ResetRun();
+        SetupStageBoard();
+    }
+
+    /// <summary>今の局の仲間選択の候補（本番と同じ抽選）</summary>
+    public List<DraftOption> SimDrawOptions()
+    {
+        int stage = stageManager != null ? stageManager.currentStage : 1;
+        bool canDeploy = boardManager.FindPlayerDeploySlot().HasValue;
+        return PiecePool.DrawOptions(boardManager.allPieceData, 3, playerOwnedPieces, stage, canDeploy);
+    }
+
+    public void SimApplyOption(DraftOption option) { ApplyOption(option); }
+
+    /// <summary>敵の配置・強化をして1手目のターン開始時能力まで進める</summary>
+    public IEnumerator SimStartBattle()
+    {
+        SimOutcome = SimBattleOutcome.None;
+        return BattleIntroSequence();
+    }
+
+    /// <summary>手番を終える（ターン終了時能力 → 勝敗判定 → 手番交代 → ターン開始時能力）</summary>
+    public IEnumerator SimEndTurn()
+    {
+        if (isGameOver || CheckGameOver()) return null;
+        return EndTurnSequence();
+    }
+
+    /// <summary>次の局へ進み、盤を用意する</summary>
+    public void SimNextStage()
+    {
+        stageManager.AdvanceStage();
+        SetupStageBoard();
+    }
+}
+
+/// <summary>自動プレイで記録する1局の結果</summary>
+public enum SimBattleOutcome
+{
+    None,
+    Won,
+    JudgedWin,
+    Lost,
+    JudgedLoss
 }

@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PieceData
   pieceType: 7
   displayName: C3
-  pieceName: "\u30B5\u30FC\u30AF\u30EB"
-  description: "\u6211\u3089\u304C\u30B5\u30FC\u30AF\u30EB\u3002\u52D5\u3051\u306A\u3044\u304C\u3001\u305D\u306E\u4EE3\u308F\u308A\u306B\u4F53\u529B\u304C\u9AD8\u304F\u3001\u4ED6\u306E\u30B3\u30DE\u306E\u80FD\u529B\u3092\u7121\u52B9\u5316\u3059\u308B"
+  pieceName: "\u90E8"
+  description: "\u6211\u3089\u304C\u90E8\u3002\u52D5\u3051\u306A\u3044\u304C\u3001\u305D\u306E\u4EE3\u308F\u308A\u306B\u4F53\u529B\u304C\u9AD8\u304F\u3001\u4ED6\u306E\u30B3\u30DE\u306E\u80FD\u529B\u3092\u7121\u52B9\u5316\u3059\u308B"
   baseATK: 0
   baseDEF: 0
   baseHP: 10
@@ -29,3 +29,16 @@ MonoBehaviour:
   promotedDEF: 0
   promotedHP: 0
   promotedMoveDirections: []
+  hasPromotedRarity: 0
+  promotedRarity: 0
+  isAutoMove: 0
+  isManualControllable: 1
+  excludeFromDraft: 0
+  isImmovable: 0
+  immuneToFlip: 0
+  losesHPOnMove: 0
+  diesOnPromotion: 0
+  isImmovableWhenPromoted: 0
+  isTauntPiece: 0
+  portrait: {fileID: 0}
+  promotedPortrait: {fileID: 0}

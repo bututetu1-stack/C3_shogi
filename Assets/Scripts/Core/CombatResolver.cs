@@ -49,10 +49,20 @@ public static class CombatResolver
         // 髑髏の爆発などで攻撃側が倒れた場合はここで終了
         if (!piece.isAlive || !bm.IsEmpty(to)) yield break;
 
+        // SN は残像を残して駆け抜ける
+        if (piece.data.losesHPOnMove)
+        {
+            PieceController driver = bm.GetPieceController(from);
+            if (driver != null) driver.SetTrail(new Color(0.75f, 0.75f, 0.8f, 0.45f), 0.3f);
+        }
         MovePieceTo(piece, to);
         ShowLastMove(from, to);
         if (BattleEffects.Instance != null)
+        {
             BattleEffects.Instance.PlayMoveEffect();
+            // SN はドライブで駆け抜ける
+            if (piece.data.losesHPOnMove) BattleEffects.Instance.PlayExhaust(from, to);
+        }
         yield return new WaitForSeconds(PieceController.MoveDuration);
 
         // SN: 移動でHP-1
@@ -60,9 +70,11 @@ public static class CombatResolver
         {
             piece.currentHP--;
             RefreshHP(piece);
+            FloatingText.Spawn(piece.boardPosition, "-1", PiercingColor, 2.8f);
             if (piece.currentHP <= 0)
             {
                 Log(Name(piece) + " は力尽きた...");
+                SpeechBubble.Say(piece, PieceLines.SnExhausted);
                 KillPiece(piece);
                 yield break;
             }
@@ -93,13 +105,20 @@ public static class CombatResolver
         {
             FloatingText.Spawn(target.boardPosition, "撃破", Palette.GoldLight, 3.6f);
             Log(Name(attacker) + " が " + Name(target) + " を撃破！");
+            GameSim.SetAttacker(attacker);
             KillPiece(target);
+            GameSim.SetAttacker(null);
             return true;
         }
 
         PlayHit(target);
         FloatingText.Spawn(target.boardPosition, damage > 0 ? "-" + damage : "0", damage > 0 ? DamageColor : Palette.TextSub);
         Log(Name(attacker) + " → " + Name(target) + " " + damage + "ダメージ");
+        if (target.data.isTauntPiece)
+        {
+            if (BattleEffects.Instance != null) BattleEffects.Instance.PlayGuard(target.boardPosition);
+            SpeechBubble.SayMaybe(target, PieceLines.KonishikiBullied, 0.5f);
+        }
         return false;
     }
 
@@ -166,11 +185,14 @@ public static class CombatResolver
         BoardManager bm = BoardManager.Instance;
         Vector2Int pos = target.boardPosition;
         int groupId = target.linkedGroupId;
+        if (target.data.pieceType == PieceType.Monotetsu && !target.isPromoted)
+            SpeechBubble.Say(target, PieceLines.MonotetsuDown);
 
         if (BattleEffects.Instance != null)
             BattleEffects.Instance.PlayDefeatEffect(pos);
         if (target.team == Team.Enemy && GameManager.Instance != null)
             GameManager.Instance.RegisterKill();
+        GameSim.RecordKill(target);
 
         bm.RemovePieceController(pos);
         bm.RemovePiece(pos);
