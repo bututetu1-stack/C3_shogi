@@ -79,8 +79,12 @@ public class BattleLogUI : MonoBehaviour
             scrollView.Remove(old);
         }
 
-        // 最新の行までスクロール
-        scrollView.schedule.Execute(() => scrollView.ScrollTo(label)).StartingIn(16);
+        // 最新の行までスクロール（その前にログが消されていたら何もしない）
+        scrollView.schedule.Execute(() =>
+        {
+            if (label.parent == scrollView.contentContainer)
+                scrollView.ScrollTo(label);
+        }).StartingIn(16);
     }
 
     public void ClearLog()
