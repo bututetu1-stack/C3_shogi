@@ -19,6 +19,10 @@ public class BattleEffects : MonoBehaviour
     private AudioClip torpedoClip;
     private AudioClip bombardmentClip;
     private AudioClip promoteClip;
+    private AudioClip clickClip;
+    private AudioClip stageClearClip;
+    private AudioSource bgmSource;
+    private string currentBgm;
 
     private Transform effectsRoot;
     private Coroutine cameraShakeRoutine;
@@ -50,7 +54,30 @@ public class BattleEffects : MonoBehaviour
         torpedoClip = Resources.Load<AudioClip>("Audio/Torpedo");
         bombardmentClip = Resources.Load<AudioClip>("Audio/Bombardment");
         promoteClip = Resources.Load<AudioClip>("Audio/Promote");
+        clickClip = Resources.Load<AudioClip>("Audio/Click");
+        stageClearClip = Resources.Load<AudioClip>("Audio/StageClear");
+
+        bgmSource = gameObject.AddComponent<AudioSource>();
+        bgmSource.playOnAwake = false;
+        bgmSource.loop = true;
+        bgmSource.volume = 0.35f;
     }
+
+    /// <summary>BGMを流す（Resources/Audio/BGM_名前 があれば）。同じ曲なら何もしない</summary>
+    public void PlayBGM(string name)
+    {
+        if (currentBgm == name) return;
+        currentBgm = name;
+        AudioClip clip = Resources.Load<AudioClip>("Audio/BGM_" + name);
+        if (clip == null) { bgmSource.Stop(); return; }
+        bgmSource.clip = clip;
+        bgmSource.Play();
+    }
+
+    public void PlayClick() { Play(clickClip); }
+
+    /// <summary>ステージクリア（効果音がなければ対局開始の音で代用）</summary>
+    public void PlayStageClearEffect() { Play(stageClearClip, battleStartClip); }
 
     // 同じ効果音が同時に大量に鳴らないようにする（髑髏の連鎖爆発など）
     private readonly System.Collections.Generic.Dictionary<AudioClip, float> lastPlayed = new System.Collections.Generic.Dictionary<AudioClip, float>();

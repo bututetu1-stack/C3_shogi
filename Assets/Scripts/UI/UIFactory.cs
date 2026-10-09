@@ -53,7 +53,11 @@ public static class UIFactory
 
     public static Button Button(string text, Action onClick, params string[] classes)
     {
-        var button = new Button(onClick);
+        var button = new Button(() =>
+        {
+            if (BattleEffects.Instance != null) BattleEffects.Instance.PlayClick();
+            if (onClick != null) onClick();
+        });
         button.text = text;
         button.AddToClassList("c3-button");
         foreach (var c in classes) button.AddToClassList(c);
@@ -89,7 +93,6 @@ public static class UIFactory
         var chip = new Label(text);
         chip.AddToClassList("c3-chip");
         chip.style.flexShrink = 0;
-        chip.style.alignSelf = Align.FlexStart;
         chip.style.marginBottom = 3;
         chip.style.color = color;
         chip.style.borderTopColor = chip.style.borderBottomColor = chip.style.borderLeftColor = chip.style.borderRightColor = new Color(color.r, color.g, color.b, 0.6f);

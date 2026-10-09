@@ -7,7 +7,10 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
-    public GamePhase currentPhase = GamePhase.Battle;
+    /// <summary>「もう一度挑む」で再読み込みしたときはタイトルを飛ばす</summary>
+    public static bool SkipTitleOnce;
+
+    public GamePhase currentPhase = GamePhase.Title;
     public Team currentTurn = Team.Player;
 
     public event Action<Team> OnTurnChanged;
@@ -16,11 +19,16 @@ public class GameManager : MonoBehaviour
 
     // ステージタイトル表示中に入力を止める時間（タイトルが消え始めたら操作できる）
     private const float StageIntroDuration = StageTitleUI.Duration - 0.3f;
+    // 1ステージの手数の上限（超えたら判定）
+    public const int MoveLimit = 150;
+    // 1ステージで引き直せる回数
+    private const int RerollsPerStage = 1;
 
     private BoardManager boardManager;
     private PieceSelectionUI pieceSelectionUI;
     private StageManager stageManager;
     private bool isGameOver;
+    private int rerollsLeft;
     public bool IsTurnProcessing { get { return isTurnProcessing; } }
     private bool isTurnProcessing;
 
@@ -28,12 +36,25 @@ public class GameManager : MonoBehaviour
     public int MoveCount { get; private set; }
 
     // プレイヤーが持っている駒データのリスト(ステージ間で引き継ぎ)
-    private List<PieceData> playerOwnedPieces = new List<PieceData>();
+    private readonly List<PieceData> playerOwnedPieces = new List<PieceData>();
+    public IList<PieceData> OwnedPieces { get { return playerOwnedPieces.AsReadOnly(); } }
+
+    // 全軍強化（最後まで続く）
+    public int RunBonusATK { get; private set; }
+    public int RunBonusDEF { get; private set; }
+    public int RunBonusHP { get; private set; }
+    public int RunBonusC3HP { get; private set; }
+
+    // 戦績
+    public int TotalKills { get; private set; }
+    public int TotalMoves { get; private set; }
+    public int StagesCleared { get; private set; }
 
     void Awake()
     {
         if (Instance == null) Instance = this;
         else { Destroy(gameObject); return; }
+        AudioListener.volume = PlayerPrefs.GetFloat(TitleScreenUI.VolumeKey, 0.8f);
     }
 
     void Start()
@@ -42,7 +63,16 @@ public class GameManager : MonoBehaviour
         stageManager = StageManager.Instance;
         pieceSelectionUI = FindFirstObjectByType<PieceSelectionUI>();
 
-        StartNewGame();
+        if (SkipTitleOnce)
+        {
+            SkipTitleOnce = false;
+            StartNewGame();
+        }
+        else
+        {
+            SetPhase(GamePhase.Title);
+            TitleScreenUI.Show(StartNewGame);
+        }
     }
 
     private void StartNewGame()
@@ -50,9 +80,13 @@ public class GameManager : MonoBehaviour
         isGameOver = false;
         currentTurn = Team.Player;
         playerOwnedPieces.Clear();
+        RunBonusATK = RunBonusDEF = RunBonusHP = RunBonusC3HP = 0;
+        TotalKills = TotalMoves = StagesCleared = 0;
+        if (stageManager != null) stageManager.currentStage = 1;
 
+        if (BattleEffects.Instance != null) BattleEffects.Instance.PlayBGM("Battle");
         SetupStageBoard();
-        ShowPieceSelection();
+        ShowPieceSelection(true);
     }
 
     /// <summary>現在のステージの盤を作り、C3・歩・持ち越し駒を配置する</summary>
@@ -83,33 +117,79 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    private void ShowPieceSelection()
+    // ================================================================
+    // 仲間選択
+    // ================================================================
+
+    private void ShowPieceSelection(bool newStage)
     {
         SetPhase(GamePhase.PieceSelection);
+        if (newStage) rerollsLeft = RerollsPerStage;
 
-        List<PieceData> onBoard = boardManager.GetPiecesOnBoard();
-        List<PieceData> choices = PiecePool.DrawPieces(boardManager.allPieceData, 3, onBoard);
+        int stage = stageManager != null ? stageManager.currentStage : 1;
+        bool canDeploy = boardManager.FindPlayerDeploySlot().HasValue;
+        List<DraftOption> options = PiecePool.DrawOptions(boardManager.allPieceData, 3, playerOwnedPieces, stage, canDeploy);
 
-        if (choices.Count == 0 || pieceSelectionUI == null || !boardManager.FindPlayerDeploySlot().HasValue)
+        if (options.Count == 0 || pieceSelectionUI == null)
         {
             StartBattle();
             return;
         }
 
-        pieceSelectionUI.ShowSelection(choices, OnPieceChosen);
+        pieceSelectionUI.ShowSelection(options, OnOptionChosen, OnReroll, rerollsLeft);
     }
 
-    private void OnPieceChosen(PieceData chosen)
+    private void OnReroll()
     {
-        if (chosen != null)
+        if (rerollsLeft <= 0) return;
+        rerollsLeft--;
+        ShowPieceSelection(false);
+    }
+
+    private void OnOptionChosen(DraftOption option)
+    {
+        if (option != null && option.piece != null)
         {
             Vector2Int? slot = boardManager.FindPlayerDeploySlot();
-            if (slot.HasValue && boardManager.SpawnPiece(chosen, Team.Player, slot.Value) != null)
-                playerOwnedPieces.Add(chosen);
+            if (slot.HasValue && boardManager.SpawnPiece(option.piece, Team.Player, slot.Value) != null)
+                playerOwnedPieces.Add(option.piece);
+        }
+        else if (option != null)
+        {
+            switch (option.upgrade)
+            {
+                case UpgradeKind.AllATK: RunBonusATK += 1; break;
+                case UpgradeKind.AllDEF: RunBonusDEF += 1; break;
+                case UpgradeKind.AllHP: RunBonusHP += 2; break;
+                case UpgradeKind.C3HP: RunBonusC3HP += 4; break;
+            }
         }
 
         StartBattle();
     }
+
+    /// <summary>全軍強化を自軍の駒に反映する（ステージごとに駒を置き直すので毎回掛ける）</summary>
+    private void ApplyRunBonuses()
+    {
+        foreach (var p in boardManager.GetTeamPieces(Team.Player))
+        {
+            if (p.data.pieceType == PieceType.C3)
+            {
+                p.AddMaxHP(RunBonusC3HP);
+            }
+            else
+            {
+                p.bonusATK += RunBonusATK;
+                p.bonusDEF += RunBonusDEF;
+                p.AddMaxHP(RunBonusHP);
+            }
+            CombatResolver.RefreshStats(p);
+        }
+    }
+
+    // ================================================================
+    // 対局の進行
+    // ================================================================
 
     private void StartBattle()
     {
@@ -130,13 +210,9 @@ public class GameManager : MonoBehaviour
             // プレイヤー駒にもステージに応じた強化（ステージ2以降）
             if (stageManager.currentStage > 1)
                 stageManager.ApplyPlayerScaling();
+            ApplyRunBonuses();
 
-            if (StageTitleUI.Instance == null)
-            {
-                GameObject titleObj = new GameObject("StageTitleUI");
-                titleObj.AddComponent<StageTitleUI>();
-            }
-            StageTitleUI.Instance.ShowTitle(stageManager.currentStage, stageManager.GetStageName(stageManager.currentStage));
+            EnsureStageTitle().ShowTitle(stageManager.currentStage, stageManager.GetStageName(stageManager.currentStage));
         }
 
         // 対局開始SE
@@ -150,6 +226,16 @@ public class GameManager : MonoBehaviour
         // 1手目からターン開始時能力（門人・ヲツ・なこ）を発動
         yield return ExecuteTurnStartThenNotify(Team.Player);
         isTurnProcessing = false;
+    }
+
+    private static StageTitleUI EnsureStageTitle()
+    {
+        if (StageTitleUI.Instance == null)
+        {
+            GameObject titleObj = new GameObject("StageTitleUI");
+            titleObj.AddComponent<StageTitleUI>();
+        }
+        return StageTitleUI.Instance;
     }
 
     public void EndTurn()
@@ -173,6 +259,14 @@ public class GameManager : MonoBehaviour
 
         currentTurn = (currentTurn == Team.Player) ? Team.Enemy : Team.Player;
         MoveCount++;
+
+        // 手数の上限に達したら残った戦力で判定
+        if (MoveCount > MoveLimit)
+        {
+            JudgeByStrength();
+            isTurnProcessing = false;
+            yield break;
+        }
 
         // ターン開始時能力（門人自動移動・ヲツ中華生成）を実行してからOnTurnChanged
         yield return ExecuteTurnStartThenNotify(currentTurn);
@@ -198,7 +292,7 @@ public class GameManager : MonoBehaviour
         // C3撃破を最優先で判定
         if (boardManager.FindC3(Team.Enemy) == null)
         {
-            HandleStageWon();
+            HandleStageWon(null);
             return true;
         }
         if (boardManager.FindC3(Team.Player) == null)
@@ -210,7 +304,7 @@ public class GameManager : MonoBehaviour
         // C3以外が全滅したら決着
         if (!HasFightingPieces(Team.Enemy))
         {
-            HandleStageWon();
+            HandleStageWon(null);
             return true;
         }
         if (!HasFightingPieces(Team.Player))
@@ -234,11 +328,36 @@ public class GameManager : MonoBehaviour
         return false;
     }
 
-    private void HandleStageWon()
+    /// <summary>手数切れ: 残った駒の強さとC3の体力で勝敗を決める</summary>
+    private void JudgeByStrength()
     {
+        int player = Strength(Team.Player);
+        int enemy = Strength(Team.Enemy);
+        if (BattleLogUI.Instance != null)
+            BattleLogUI.Instance.AddLog("手数が" + MoveLimit + "手に達したため判定（" + player + " 対 " + enemy + "）");
+        if (player >= enemy) HandleStageWon("判定勝ち");
+        else HandleDefeat();
+    }
+
+    private int Strength(Team team)
+    {
+        int total = 0;
+        foreach (var p in boardManager.GetTeamPieces(team))
+        {
+            if (p.data.pieceType == PieceType.C3) total += p.currentHP * 4;
+            else total += p.ATK * 3 + p.DEF * 2 + Mathf.Min(p.currentHP, 20);
+        }
+        return total;
+    }
+
+    private void HandleStageWon(string reason)
+    {
+        TotalMoves += MoveCount;
+        StagesCleared++;
+
         if (stageManager != null && !stageManager.IsLastStage())
         {
-            OnStageClear();
+            StartCoroutine(StageClearSequence(reason));
             return;
         }
         isGameOver = true;
@@ -248,33 +367,67 @@ public class GameManager : MonoBehaviour
 
     private void HandleDefeat()
     {
+        TotalMoves += MoveCount;
         isGameOver = true;
         SetPhase(GamePhase.GameOver);
         if (OnGameOver != null) OnGameOver(Team.Enemy);
     }
 
-    private void OnStageClear()
+    /// <summary>ステージクリアの演出をしてから次のステージへ</summary>
+    private IEnumerator StageClearSequence(string reason)
     {
-        StopAllCoroutines();
-        isTurnProcessing = false;
+        SetPhase(GamePhase.StageClear);
+        isTurnProcessing = true;
         if (InputManager.Instance != null)
             InputManager.Instance.ClearSelection();
 
-        stageManager.AdvanceStage();
+        int stage = stageManager.currentStage;
+        EnsureStageTitle().ShowBanner(reason ?? "勝利",
+            "第" + UIFactory.Kanji(stage) + "局「" + stageManager.GetStageName(stage) + "」突破", Palette.GoldLight);
+        if (BattleEffects.Instance != null)
+            BattleEffects.Instance.PlayStageClearEffect();
 
+        yield return new WaitForSeconds(StageTitleUI.Duration + 0.2f);
+
+        isTurnProcessing = false;
+        stageManager.AdvanceStage();
         if (BattleLogUI.Instance != null)
             BattleLogUI.Instance.ClearLog();
 
         SetupStageBoard();
-        ShowPieceSelection();
+        ShowPieceSelection(true);
     }
 
-    // 成りチェック: 移動後に成りゾーンにいれば成る
+    // ================================================================
+    // 成り
+    // ================================================================
+
+    /// <summary>今いる位置で成れるか</summary>
+    public bool CanPromoteNow(PieceInstance piece)
+    {
+        return piece != null && piece.isAlive && !piece.isPromoted && piece.data.canPromote
+            && piece.CanPromoteAt(piece.boardPosition.y, boardManager.CurrentBoardSize);
+    }
+
+    /// <summary>成らないとこれ以上動けない（行き所のない駒）なら成るしかない</summary>
+    public bool MustPromote(PieceInstance piece)
+    {
+        if (piece.data.isImmovable) return false;
+        int size = boardManager.CurrentBoardSize;
+        foreach (var dir in piece.GetMoveDirections())
+        {
+            Vector2Int to = piece.boardPosition + dir.direction;
+            if (to.x >= 0 && to.y >= 0 && to.x < size && to.y < size) return false;
+        }
+        return true;
+    }
+
+    /// <summary>能力による移動などで成れる位置に来たとき（自動で判断。過労死する駒は成らない）</summary>
     public void CheckPromotion(PieceInstance piece)
     {
-        if (piece == null || !piece.isAlive || piece.isPromoted || !piece.data.canPromote) return;
-        if (piece.CanPromoteAt(piece.boardPosition.y, boardManager.CurrentBoardSize))
-            PromotePiece(piece);
+        if (!CanPromoteNow(piece)) return;
+        if (piece.data.diesOnPromotion && !MustPromote(piece)) return;
+        PromotePiece(piece);
     }
 
     /// <summary>駒を成らせ、成りに伴う特殊処理（過労死・提督化）を行う</summary>
@@ -290,7 +443,7 @@ public class GameManager : MonoBehaviour
         if (piece.data.diesOnPromotion)
         {
             if (BattleLogUI.Instance != null)
-                BattleLogUI.Instance.AddLog(BattleLogUI.ColorName(piece.DisplayName, piece.team) + " は過労死した...");
+                BattleLogUI.Instance.AddLog(BattleLogUI.ColorName(piece.DisplayName, piece.team) + " は力尽きた...");
             CombatResolver.KillPiece(piece);
             return;
         }
@@ -300,11 +453,22 @@ public class GameManager : MonoBehaviour
             AbilitySystem.Instance.ExecuteTeitokuPromotion(piece);
     }
 
+    // ================================================================
+    // その他
+    // ================================================================
+
+    public void RegisterKill()
+    {
+        TotalKills++;
+    }
+
     public void Resign()
     {
         if (isGameOver) return;
         StopAllCoroutines();
         isTurnProcessing = false;
+        if (BattleLogUI.Instance != null)
+            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("あなた", Team.Player) + " は投了した");
         HandleDefeat();
     }
 

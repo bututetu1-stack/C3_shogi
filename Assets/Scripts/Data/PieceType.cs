@@ -44,7 +44,9 @@ public enum GamePhase
 {
     PieceSelection,
     Battle,
-    GameOver
+    GameOver,
+    Title,       // タイトル画面
+    StageClear   // ステージクリアの演出中
 }
 
 public enum Rarity

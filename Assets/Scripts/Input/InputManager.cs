@@ -197,7 +197,7 @@ public class InputManager : MonoBehaviour
         isExecutingMove = true;
         ClearSelection();
 
-        yield return CombatResolver.ExecuteMove(piece, move);
+        yield return CombatResolver.ExecuteMove(piece, move, true);
 
         isExecutingMove = false;
         GameManager.Instance.EndTurn();
