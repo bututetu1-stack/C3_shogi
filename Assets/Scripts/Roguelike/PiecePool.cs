@@ -93,12 +93,15 @@ public static class PiecePool
         int s = Mathf.Max(0, stage - 1);
         switch (rarity)
         {
-            // 素の将棋駒（ノーマル）は種類が多いので1枚あたりの重みを低くし、部員が出やすいようにする
-            case Rarity.Bronze: return Mathf.Max(20f, 45f * (1f - 0.03f * s));
-            case Rarity.Normal: return Mathf.Max(6f, 16f * (1f - 0.04f * s));
-            case Rarity.Rare: return 32f * (1f + 0.08f * s);
-            case Rarity.SuperRare: return 16f * (1f + 0.15f * s);
-            case Rarity.Legend: return 5f * (1f + 0.2f * s);
+            // 序盤はノーマル・ブロンズ中心、局が進むほどレア・激レアが出やすくなる。
+            // （第一局の1枠あたり: ノーマル約35% / ブロンズ約35% / レア約21% / 激レア約8%
+            //   第十五局: ノーマル約12% / ブロンズ約14% / レア約43% / 激レア約31%）
+            // 素の将棋駒（ノーマル）は種類が多いので1枚あたりの重みは低め
+            case Rarity.Normal: return Mathf.Max(4f, 10f * (1f - 0.04f * s));
+            case Rarity.Bronze: return Mathf.Max(12f, 30f * (1f - 0.035f * s));
+            case Rarity.Rare: return 12f * (1f + 0.12f * s);
+            case Rarity.SuperRare: return 4.5f * (1f + 0.3f * s);
+            case Rarity.Legend: return 2f * (1f + 0.3f * s);
             default: return 10f;
         }
     }

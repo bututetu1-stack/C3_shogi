@@ -15,8 +15,7 @@ public static class CombatResolver
     // ================================================================
     // 1手の実行（攻撃 → 撃破なら前進 → SN消耗 → 成り → 李白）
     // ================================================================
-    /// <param name="askPromotion">成れるときにプレイヤーに確認する（手動で指した手のみ）</param>
-    public static IEnumerator ExecuteMove(PieceInstance piece, MoveValidator.MoveResult move, bool askPromotion = false)
+    public static IEnumerator ExecuteMove(PieceInstance piece, MoveValidator.MoveResult move)
     {
         if (piece == null || !piece.isAlive) yield break;
 
@@ -69,24 +68,10 @@ public static class CombatResolver
             }
         }
 
-        // 成り（手動で指した手は確認、それ以外は自動で判断）
+        // 成り（将棋と同じく、敵陣に入る・敵陣から出る手で成る。成りは強制）
         GameManager gm = GameManager.Instance;
-        if (gm != null && gm.CanPromoteNow(piece))
-        {
-            bool promote;
-            if (gm.MustPromote(piece))
-                promote = true;
-            else if (askPromotion && piece.team == Team.Player)
-            {
-                bool answer = false;
-                yield return PromotionDialogUI.Ask(piece, result => answer = result);
-                promote = answer;
-            }
-            else
-                promote = !piece.data.diesOnPromotion;
-
-            if (promote) gm.PromotePiece(piece);
-        }
+        if (gm != null && gm.ShouldPromote(piece, from))
+            yield return gm.PromoteRoutine(piece);
         if (!piece.isAlive) yield break;
 
         // 李白の裏返し能力（移動後に発動）
@@ -127,7 +112,7 @@ public static class CombatResolver
         int damage = piercing ? amount : Mathf.Max(0, amount - target.DEF);
         target.currentHP -= damage;
         RefreshHP(target);
-        FloatingText.Spawn(target.boardPosition, "-" + damage, piercing ? PiercingColor : DamageColor);
+        FloatingText.Spawn(target.boardPosition, damage > 0 ? "-" + damage : "0", damage > 0 ? (piercing ? PiercingColor : DamageColor) : Palette.TextSub);
 
         if (target.currentHP <= 0)
         {
@@ -188,6 +173,17 @@ public static class CombatResolver
 
         if (checkLinkedDeaths && AbilitySystem.Instance != null)
             AbilitySystem.Instance.CheckLinkedDeaths(groupId);
+    }
+
+    /// <summary>撃破ではない形で盤から去らせる（艦隊の帰投・沈没など）。死亡時能力や撃破数には数えない</summary>
+    public static void RemoveWithExit(PieceInstance piece, PieceController.ExitStyle style)
+    {
+        if (piece == null || !piece.isAlive) return;
+        BoardManager bm = BoardManager.Instance;
+        Vector2Int pos = piece.boardPosition;
+        PieceController pc = bm.DetachPieceController(pos);
+        bm.RemovePiece(pos, false);
+        if (pc != null) pc.PlayExit(style);
     }
 
     /// <summary>盤面データと見た目の両方で駒を移動する</summary>

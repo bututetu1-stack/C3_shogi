@@ -21,6 +21,10 @@ public class AbilitySystem : MonoBehaviour
     {
         if (Instance == null) Instance = this;
         else { Destroy(gameObject); return; }
+
+        // 提督と艦娘のつながりを描く
+        if (GetComponent<FleetLinkRenderer>() == null)
+            gameObject.AddComponent<FleetLinkRenderer>();
     }
 
     /// <summary>ステージ開始時に能力の内部状態をリセットする</summary>
@@ -319,9 +323,29 @@ public class AbilitySystem : MonoBehaviour
     }
 
     // ============================================================
-    // 提督の成り時特殊処理（ワープ + 深海3体 + 艦娘2体召喚）
+    // 物鉄 → 提督（着任のカットイン → 裏返し → ワープ → 深海浮上 → 艦娘出撃）
     // ============================================================
-    public void ExecuteTeitokuPromotion(PieceInstance teitoku)
+    public IEnumerator TeitokuPromotionRoutine(PieceInstance monotetsu)
+    {
+        if (BattleLogUI.Instance != null)
+            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("物鉄", monotetsu.team) + " が " + BattleLogUI.ColorName("提督", monotetsu.team) + " に着任！");
+
+        if (BattleEffects.Instance != null) BattleEffects.Instance.PlayTeitokuFanfare();
+        yield return NavalCutInUI.Play("提督 着任", "全艦隊、抜錨せよ！",
+            monotetsu.data.promotedPortrait != null ? monotetsu.data.promotedPortrait : monotetsu.data.portrait,
+            NavalCutInUI.Navy, 1.7f);
+        if (!monotetsu.isAlive || monotetsu.isPromoted) yield break;
+
+        monotetsu.Promote();
+        CombatResolver.PlayFlip(monotetsu);
+        FloatingText.Spawn(monotetsu.boardPosition, "提督", Palette.GoldLight, 4f);
+        yield return new WaitForSeconds(0.45f);
+
+        yield return TeitokuArrivalRoutine(monotetsu);
+    }
+
+    /// <summary>提督のワープと艦隊の召喚（深海3体・艦娘2体）</summary>
+    public IEnumerator TeitokuArrivalRoutine(PieceInstance teitoku)
     {
         BoardManager bm = BoardManager.Instance;
         int groupId = nextGroupId++;
@@ -330,59 +354,74 @@ public class AbilitySystem : MonoBehaviour
         int size = bm.CurrentBoardSize;
         int halfBoard = size / 2;
         int promoteRows = BoardCell.GetPromoteRows(size);
+        BattleEffects fx = BattleEffects.Instance;
 
-        // 提督をプレイヤー側の成りゾーン（自陣下段）にワープ
+        // 提督は自陣の奥へ潜航してワープ
         Vector2Int? newPos = FindEmptyInRange(0, promoteRows);
-        if (newPos.HasValue)
-            CombatResolver.MovePieceTo(teitoku, newPos.Value);
+        if (newPos.HasValue && teitoku.isAlive)
+        {
+            Vector2Int oldPos = teitoku.boardPosition;
+            PieceController pc = bm.GetPieceController(oldPos);
+            if (fx != null) fx.PlayDiveEffect(oldPos);
+            if (pc != null) yield return pc.WarpOutRoutine();
 
-        // 提督の最終位置を取得（深海との間隔チェック用）
+            bm.MovePiece(oldPos, newPos.Value);
+            bm.UpdatePieceControllerPosition(oldPos, newPos.Value);
+            if (pc != null) pc.SnapTo(newPos.Value);
+
+            if (fx != null) fx.PlaySurfaceEffect(newPos.Value);
+            if (pc != null) yield return pc.WarpInRoutine();
+            yield return new WaitForSeconds(0.15f);
+        }
+        if (!teitoku.isAlive) yield break;
         Vector2Int teitokuPos = teitoku.boardPosition;
 
-        // 深海3体を敵として敵陣～中央（上半分）に生成（提督と最低2マス間隔）
+        // 深海3体が敵陣側に浮上（提督と最低2マス離す）
         PieceData shinkaiData = bm.GetPieceDataByType(PieceType.Shinkai);
+        int risen = 0;
         if (shinkaiData != null)
         {
+            if (fx != null) fx.PlayAbyssRumble();
             for (int i = 0; i < 3; i++)
             {
                 Vector2Int? spawnPos = FindEmptyWithMinDistance(halfBoard, size, teitokuPos, 2);
-                if (spawnPos.HasValue)
-                {
-                    PieceController pc = bm.SpawnPiece(shinkaiData, Team.Enemy, spawnPos.Value);
-                    if (pc != null)
-                    {
-                        PieceInstance spawned = pc.GetPiece();
-                        if (spawned != null) spawned.linkedGroupId = groupId;
-                    }
-                }
+                if (!spawnPos.HasValue) continue;
+                if (fx != null) fx.PlayAbyssRiseEffect(spawnPos.Value);
+                yield return new WaitForSeconds(0.18f);
+                PieceController pc = bm.SpawnPiece(shinkaiData, Team.Enemy, spawnPos.Value);
+                if (pc == null) continue;
+                pc.GetPiece().linkedGroupId = groupId;
+                risen++;
+                yield return new WaitForSeconds(0.2f);
             }
+            if (risen > 0 && BattleLogUI.Instance != null)
+                BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("深海", Team.Enemy) + " が" + risen + "体、海の底から浮上した");
         }
 
-        // 艦娘2体をプレイヤーとして自軍エリア（下半分）に生成
+        // 艦娘2隻が自陣から出撃
         PieceData kanmusuData = bm.GetPieceDataByType(PieceType.Kanmusu);
+        int launched = 0;
         if (kanmusuData != null)
         {
             for (int i = 0; i < 2; i++)
             {
                 Vector2Int? spawnPos = FindEmptyInRange(0, halfBoard + 1);
-                if (spawnPos.HasValue)
-                {
-                    PieceController pc = bm.SpawnPiece(kanmusuData, Team.Player, spawnPos.Value);
-                    if (pc != null)
-                    {
-                        PieceInstance spawned = pc.GetPiece();
-                        if (spawned != null) spawned.linkedGroupId = groupId;
-                    }
-                }
+                if (!spawnPos.HasValue) continue;
+                if (fx != null) fx.PlaySortieEffect(spawnPos.Value);
+                PieceController pc = bm.SpawnPiece(kanmusuData, Team.Player, spawnPos.Value);
+                if (pc == null) continue;
+                pc.GetPiece().linkedGroupId = groupId;
+                FloatingText.Spawn(spawnPos.Value, "出撃！", NavalCutInUI.SeaLight, 3.6f);
+                launched++;
+                yield return new WaitForSeconds(0.3f);
             }
+            if (launched > 0 && BattleLogUI.Instance != null)
+                BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("艦娘", Team.Player) + " " + launched + "隻、出撃！");
         }
-
-        if (BattleLogUI.Instance != null)
-            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("物鉄", teitoku.team) + "が提督に！深海3+艦娘2召喚");
     }
 
     // ============================================================
-    // リンク消滅ロジック
+    // 艦隊のつながり（全深海撃破で帰投、提督が沈めば艦娘も沈む）
     // ============================================================
     public void CheckLinkedDeaths(int groupId)
     {
@@ -393,7 +432,6 @@ public class AbilitySystem : MonoBehaviour
         allAlive.AddRange(bm.GetTeamPieces(Team.Player));
         allAlive.AddRange(bm.GetTeamPieces(Team.Enemy));
 
-        bool teitokuAlive = false;
         PieceInstance teitoku = null;
         bool anyShinkaiAlive = false;
         var kanmusuList = new List<PieceInstance>();
@@ -401,40 +439,29 @@ public class AbilitySystem : MonoBehaviour
         foreach (var p in allAlive)
         {
             if (p.linkedGroupId != groupId || !p.isAlive) continue;
-
-            if (p.data.pieceType == PieceType.Monotetsu && p.isPromoted)
-            {
-                teitokuAlive = true;
-                teitoku = p;
-            }
-            else if (p.data.pieceType == PieceType.Shinkai)
-            {
-                anyShinkaiAlive = true;
-            }
-            else if (p.data.pieceType == PieceType.Kanmusu)
-            {
-                kanmusuList.Add(p);
-            }
+            if (p.data.pieceType == PieceType.Monotetsu && p.isPromoted) teitoku = p;
+            else if (p.data.pieceType == PieceType.Shinkai) anyShinkaiAlive = true;
+            else if (p.data.pieceType == PieceType.Kanmusu) kanmusuList.Add(p);
         }
 
-        bool removedTeitoku = false;
-
-        // 全深海撃破 → 提督撤退
-        if (!anyShinkaiAlive && teitokuAlive && teitoku != null)
+        // 全深海撃破 → 作戦完了。提督と艦娘は帰投する
+        if (!anyShinkaiAlive && teitoku != null)
         {
-            CombatResolver.KillPiece(teitoku, false);
-            removedTeitoku = true;
             if (BattleLogUI.Instance != null)
-                BattleLogUI.Instance.AddLog("全" + BattleLogUI.ColorName("深海", Team.Enemy) + "撃破 → " + BattleLogUI.ColorName("提督", Team.Player) + "撤退！");
+                BattleLogUI.Instance.AddLog("全" + BattleLogUI.ColorName("深海", Team.Enemy) + "撃破！ 作戦完了、" + BattleLogUI.ColorName("提督", Team.Player) + "の艦隊は帰投する");
+            if (BattleEffects.Instance != null) BattleEffects.Instance.PlayRetreatHorn();
+            StartCoroutine(NavalCutInUI.Play("作戦完了", "艦隊、帰投せよ", null, NavalCutInUI.Navy, 1.2f));
+            CombatResolver.RemoveWithExit(teitoku, PieceController.ExitStyle.Retreat);
+            foreach (var k in kanmusuList) CombatResolver.RemoveWithExit(k, PieceController.ExitStyle.Retreat);
+            return;
         }
 
-        // 提督撃破 → 艦娘全滅（提督が元から死亡 or 上で撤退した場合）
-        if ((!teitokuAlive || removedTeitoku) && kanmusuList.Count > 0)
+        // 提督が沈んだら艦娘も沈む
+        if (teitoku == null && kanmusuList.Count > 0)
         {
-            foreach (var kanmusu in kanmusuList)
-                CombatResolver.KillPiece(kanmusu, false);
             if (BattleLogUI.Instance != null)
-                BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("提督", Team.Player) + "撃破 → " + BattleLogUI.ColorName("艦娘", Team.Player) + "全滅！");
+                BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("提督", Team.Player) + "轟沈……" + BattleLogUI.ColorName("艦娘", Team.Player) + "たちも海へ消えた");
+            foreach (var k in kanmusuList) CombatResolver.RemoveWithExit(k, PieceController.ExitStyle.Sink);
         }
     }
 
@@ -484,9 +511,12 @@ public class AbilitySystem : MonoBehaviour
         // ランダム1枚に通常2ダメージ
         PieceInstance victim = targets[Random.Range(0, targets.Count)];
         if (BattleLogUI.Instance != null)
-            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("深海", shinkai.team) + "が " + BattleLogUI.ColorName(victim.DisplayName, victim.team) + " に攻撃");
-        CombatResolver.ApplyDamage(victim, 2, false);
+            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("深海", shinkai.team) + "が " + BattleLogUI.ColorName(victim.DisplayName, victim.team) + " を海へ引きずり込む");
+        if (BattleEffects.Instance != null)
+            BattleEffects.Instance.PlayAbyssStrike(shinkai.boardPosition, victim.boardPosition);
         yield return new WaitForSeconds(0.3f);
+        CombatResolver.ApplyDamage(victim, 2, false);
+        yield return new WaitForSeconds(0.25f);
     }
 
     // ============================================================
@@ -530,6 +560,13 @@ public class AbilitySystem : MonoBehaviour
 
         // 空爆/雷撃/砲撃からランダム選択
         int attackType = Random.Range(0, 3);
+        string[] calls = { "空爆！", "雷撃！", "砲撃！" };
+        FloatingText.Spawn(kanmusu.boardPosition, calls[attackType], NavalCutInUI.SeaLight, 3.8f);
+        PieceController kpc = bm.GetPieceController(kanmusu.boardPosition);
+        if (kpc != null) kpc.Lunge(targetShinkai.boardPosition);
+        yield return new WaitForSeconds(0.3f);
+        if (!kanmusu.isAlive || !targetShinkai.isAlive) yield break;
+
         switch (attackType)
         {
             case 0:
@@ -552,9 +589,9 @@ public class AbilitySystem : MonoBehaviour
         Vector2Int targetPos = shinkai.boardPosition;
 
         if (BattleEffects.Instance != null)
-            BattleEffects.Instance.PlayAirRaidEffect(targetPos);
+            BattleEffects.Instance.PlayAirRaidEffect(kanmusu.boardPosition, targetPos);
 
-        yield return new WaitForSeconds(0.8f);
+        yield return new WaitForSeconds(BattleEffects.AirRaidImpactTime);
 
         // 深海に防御貫通1ダメージ
         CombatResolver.ApplyDamage(shinkai, 1, true);
@@ -583,7 +620,7 @@ public class AbilitySystem : MonoBehaviour
         if (BattleEffects.Instance != null)
             BattleEffects.Instance.PlayTorpedoEffect(from, to);
 
-        yield return new WaitForSeconds(1.0f);
+        yield return new WaitForSeconds(BattleEffects.TorpedoImpactTime);
 
         // Bresenham直線上のマスを取得（始点・終点含まない）
         List<Vector2Int> line = GetBresenhamLine(from, to);
@@ -625,9 +662,9 @@ public class AbilitySystem : MonoBehaviour
         Vector2Int targetPos = shinkai.boardPosition;
 
         if (BattleEffects.Instance != null)
-            BattleEffects.Instance.PlayBombardmentEffect(targetPos);
+            BattleEffects.Instance.PlayBombardmentEffect(kanmusu.boardPosition, targetPos);
 
-        yield return new WaitForSeconds(1.0f);
+        yield return new WaitForSeconds(BattleEffects.BombardmentImpactTime);
 
         // 深海に防御貫通4ダメージ
         CombatResolver.ApplyDamage(shinkai, 4, true);

@@ -176,10 +176,80 @@ public static class SpriteFactory
     // 駒
     // ------------------------------------------------------------
 
+    public enum BodyFinish { Wood, Metal, Lacquer }
+
     /// <summary>レアリティ別の駒本体（尖った先が上。敵駒は180度回転して使う）</summary>
     public static Sprite PieceBody(Rarity rarity)
     {
-        return Cached("piece_" + rarity, () => CreatePieceBody(256, rarity));
+        bool metallic = rarity == Rarity.Rare || rarity == Rarity.SuperRare;
+        bool lacquer = rarity == Rarity.Legend;
+        Color body = Palette.RarityBody(rarity);
+        BodyFinish finish = lacquer ? BodyFinish.Lacquer : (metallic ? BodyFinish.Metal : BodyFinish.Wood);
+        Color edge = lacquer ? Palette.Gold : body * 0.42f;
+        return Cached("piece_" + rarity, () => CreatePieceBody(256, body, finish, edge, Palette.Hex(0x8A5BB8)));
+    }
+
+    /// <summary>特別な駒の本体（提督＝紺の漆と金、艦娘＝鋼、深海＝深淵）</summary>
+    public static Sprite SpecialBody(string kind)
+    {
+        switch (kind)
+        {
+            case "naval":
+                return Cached("piece_naval", () => CreatePieceBody(256, Palette.Hex(0x1E3358), BodyFinish.Lacquer, Palette.Gold, Palette.Hex(0x4F7FCF)));
+            case "steel":
+                return Cached("piece_steel", () => CreatePieceBody(256, Palette.Hex(0xBAC4CF), BodyFinish.Metal, Palette.Hex(0x2A3B55), Color.white));
+            case "abyss":
+                return Cached("piece_abyss", () => CreatePieceBody(256, Palette.Hex(0x151B25), BodyFinish.Lacquer, Palette.Hex(0x3FB8B0), Palette.Hex(0x2F6F78)));
+            default:
+                return PieceBody(Rarity.Normal);
+        }
+    }
+
+    /// <summary>錨の紋章（提督・艦娘・物鉄）</summary>
+    public static Sprite Anchor
+    {
+        get
+        {
+            return Cached("anchor", () => Shape(128, (x, y) =>
+            {
+                // 上の輪
+                float ring = Mathf.Abs(new Vector2(x, y - 0.68f).magnitude - 0.17f) - 0.06f;
+                // 軸
+                float shank = Box(x, y + 0.05f, 0.065f, 0.62f);
+                // 横木
+                float stock = Box(x, y - 0.38f, 0.36f, 0.06f);
+                // 下の弧（腕）
+                float r = new Vector2(x, y + 0.12f).magnitude;
+                float arc = Mathf.Abs(r - 0.56f) - 0.065f;
+                if (y > -0.12f) arc = Mathf.Max(arc, y + 0.12f);
+                // 爪
+                float flukeL = new Vector2(x + 0.56f, y + 0.08f).magnitude - 0.11f;
+                float flukeR = new Vector2(x - 0.56f, y + 0.08f).magnitude - 0.11f;
+                return Mathf.Min(Mathf.Min(Mathf.Min(ring, shank), Mathf.Min(stock, arc)), Mathf.Min(flukeL, flukeR));
+            }));
+        }
+    }
+
+    /// <summary>艦載機のシルエット（上向き）</summary>
+    public static Sprite Plane
+    {
+        get
+        {
+            return Cached("plane", () => Shape(64, (x, y) =>
+            {
+                float body = Box(x, y, 0.09f, 0.75f);
+                float wing = Box(x, y - 0.12f, 0.8f, 0.11f);
+                float tail = Box(x, y + 0.6f, 0.32f, 0.07f);
+                return Mathf.Min(body, Mathf.Min(wing, tail));
+            }));
+        }
+    }
+
+    private static float Box(float x, float y, float hw, float hh)
+    {
+        float dx = Mathf.Abs(x) - hw;
+        float dy = Mathf.Abs(y) - hh;
+        return new Vector2(Mathf.Max(dx, 0), Mathf.Max(dy, 0)).magnitude + Mathf.Min(Mathf.Max(dx, dy), 0);
     }
 
     /// <summary>駒の落ち影</summary>
@@ -215,16 +285,14 @@ public static class SpriteFactory
         return PieceBody(rarity).texture;
     }
 
-    private static Sprite CreatePieceBody(int size, Rarity rarity)
+    private static Sprite CreatePieceBody(int size, Color body, BodyFinish finish, Color edgeColor, Color sheenColor)
     {
         var tex = NewTexture(size, size, true);
         tex.filterMode = FilterMode.Trilinear;
         var px = new Color[size * size];
 
-        Color body = Palette.RarityBody(rarity);
-        bool metallic = rarity == Rarity.Rare || rarity == Rarity.SuperRare;
-        bool lacquer = rarity == Rarity.Legend;
-        Color edgeColor = lacquer ? Palette.Gold : body * 0.42f;
+        bool metallic = finish == BodyFinish.Metal;
+        bool lacquer = finish == BodyFinish.Lacquer;
         edgeColor.a = 1f;
 
         float scale = size * 0.5f * 0.94f;           // 1px 余白
@@ -250,7 +318,7 @@ public static class SpriteFactory
                 {
                     // 漆：深い艶
                     float sheen = Mathf.Exp(-Mathf.Pow((nx * 0.8f + ny - 0.35f) / 0.25f, 2f));
-                    c = Color.Lerp(c, Palette.Hex(0x8A5BB8), sheen * 0.35f);
+                    c = Color.Lerp(c, sheenColor, sheen * 0.35f);
                 }
                 else if (metallic)
                 {

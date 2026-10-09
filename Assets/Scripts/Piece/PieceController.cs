@@ -25,12 +25,21 @@ public class PieceController : MonoBehaviour
     private Coroutine moveRoutine;
     private bool isShaking;
     private bool isDying;
+    private float bobPhase;
+
+    /// <summary>撃破以外で盤を去るときの演出</summary>
+    public enum ExitStyle
+    {
+        Retreat,  // 帰投（自陣側へ去っていく）
+        Sink      // 沈没（泡を出して沈む）
+    }
 
     public void Init(PieceInstance piece)
     {
         pieceInstance = piece;
         pieceRenderer = GetComponent<PieceRenderer>();
         homePos = transform.position;
+        bobPhase = Random.value * Mathf.PI * 2f;
         StartCoroutine(SpawnRoutine());
     }
 
@@ -48,7 +57,11 @@ public class PieceController : MonoBehaviour
 
         float s = pieceRenderer.BaseScale * spawnScale * (1f + 0.08f * up);
         pieceRenderer.Visual.localScale = new Vector3(s * flipScale, s, 1f);
-        pieceRenderer.Visual.localPosition = new Vector3(0f, 0.04f * up, 0f);
+        // 海の駒（艦娘・深海）は波に揺られる
+        float bob = pieceRenderer.IsFloating ? Mathf.Sin(Time.time * 2.1f + bobPhase) * 0.03f : 0f;
+        pieceRenderer.Visual.localPosition = new Vector3(0f, 0.04f * up + bob, 0f);
+        if (pieceRenderer.IsFloating)
+            pieceRenderer.Visual.localRotation = Quaternion.Euler(0f, 0f, (pieceInstance.team == Team.Enemy ? 180f : 0f) + Mathf.Sin(Time.time * 1.7f + bobPhase) * 2.5f);
         pieceRenderer.ShadowHolder.localScale = new Vector3(s * flipScale, s, 1f);
         pieceRenderer.ShadowHolder.localPosition = ShadowOffset * (1f + 1.6f * up);
         pieceRenderer.Stats.localScale = Vector3.one * spawnScale;
@@ -193,8 +206,107 @@ public class PieceController : MonoBehaviour
     }
 
     // ------------------------------------------------------------
+    // ワープ（提督の潜航と浮上）
+    // ------------------------------------------------------------
+
+    public IEnumerator WarpOutRoutine()
+    {
+        const float duration = 0.28f;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            spawnScale = 1f - Ease.InCubic(elapsed / duration);
+            yield return null;
+        }
+        spawnScale = 0f;
+    }
+
+    public IEnumerator WarpInRoutine()
+    {
+        const float duration = 0.32f;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            spawnScale = Mathf.LerpUnclamped(0f, 1f, Ease.OutBack(elapsed / duration));
+            yield return null;
+        }
+        spawnScale = 1f;
+    }
+
+    // ------------------------------------------------------------
     // 登場・退場
     // ------------------------------------------------------------
+
+    /// <summary>撃破以外で盤を去る（帰投・沈没）。演出のあと破棄する</summary>
+    public void PlayExit(ExitStyle style)
+    {
+        pieceInstance.isAlive = false;
+        if (isDying) return;
+        isDying = true;
+        StopAllCoroutines();
+        if (!gameObject.activeInHierarchy) { Destroy(gameObject); return; }
+        StartCoroutine(ExitRoutine(style));
+    }
+
+    private IEnumerator ExitRoutine(ExitStyle style)
+    {
+        if (pieceRenderer != null && pieceRenderer.Stats != null)
+            pieceRenderer.Stats.gameObject.SetActive(false);
+
+        var renderers = GetComponentsInChildren<SpriteRenderer>();
+        var texts = GetComponentsInChildren<TMPro.TextMeshPro>();
+        var baseColors = new Color[renderers.Length];
+        for (int i = 0; i < renderers.Length; i++) baseColors[i] = renderers[i].color;
+
+        Vector3 start = transform.position;
+        float duration = style == ExitStyle.Retreat ? 0.9f : 0.8f;
+        float elapsed = 0f;
+        float wakeTimer = 0f;
+        while (elapsed < duration)
+        {
+            float dt = Time.deltaTime;
+            elapsed += dt;
+            wakeTimer += dt;
+            float t = elapsed / duration;
+            float alpha = 1f - Ease.InCubic(t);
+
+            if (style == ExitStyle.Retreat)
+            {
+                // 自陣の方へ滑るように去り、航跡を残す
+                transform.position = start + new Vector3(0f, -0.9f * Ease.InCubic(t), 0f);
+                if (wakeTimer > 0.06f && BattleEffects.Instance != null)
+                {
+                    wakeTimer = 0f;
+                    BattleEffects.Instance.PlayWakePuff(transform.position + new Vector3(0f, 0.25f, 0f));
+                }
+            }
+            else
+            {
+                // 傾きながら沈み、泡が上がる
+                transform.position = start + new Vector3(0f, -0.15f * t, 0f);
+                transform.rotation = Quaternion.Euler(0f, 0f, 18f * t);
+                if (pieceRenderer != null) pieceRenderer.Visual.localScale = Vector3.one * pieceRenderer.BaseScale * (1f - 0.35f * t);
+                if (wakeTimer > 0.08f && BattleEffects.Instance != null)
+                {
+                    wakeTimer = 0f;
+                    BattleEffects.Instance.PlayBubble(transform.position + new Vector3(Random.Range(-0.25f, 0.25f), 0.1f, 0f));
+                }
+            }
+
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                if (renderers[i] == null) continue;
+                Color c = baseColors[i];
+                c.a *= alpha;
+                renderers[i].color = c;
+            }
+            foreach (var tx in texts) if (tx != null) tx.alpha = alpha;
+            yield return null;
+        }
+        Destroy(gameObject);
+    }
 
     private IEnumerator SpawnRoutine()
     {

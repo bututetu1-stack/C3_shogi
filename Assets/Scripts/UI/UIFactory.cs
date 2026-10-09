@@ -51,6 +51,25 @@ public static class UIFactory
         return Label(text, fontSize, Palette.Text, classes);
     }
 
+    /// <summary>複数行の文章（日本語の改行ルールで自動改行）</summary>
+    public static WrappedLabel Paragraph(string text, float fontSize, Color color, params string[] classes)
+    {
+        var label = new WrappedLabel(text);
+        label.style.fontSize = fontSize;
+        label.style.color = color;
+        foreach (var c in classes) label.AddToClassList(c);
+        return label;
+    }
+
+    /// <summary>動きの図の凡例</summary>
+    public static Label MoveLegend()
+    {
+        var legend = Label("●1マス　▲どこまでも　○飛び越え", 14, Palette.TextSub);
+        legend.style.marginTop = 8;
+        legend.style.unityTextAlign = TextAnchor.MiddleCenter;
+        return legend;
+    }
+
     public static Button Button(string text, Action onClick, params string[] classes)
     {
         var button = new Button(() =>
@@ -117,8 +136,8 @@ public static class UIFactory
         var box = new VisualElement();
         box.AddToClassList("c3-stat");
         box.style.borderTopColor = color;
-        box.Add(Label(label, 12, "c3-stat__label"));
-        var v = Label(value, 22, Color.Lerp(color, Color.white, 0.55f), "c3-stat__value");
+        box.Add(Label(label, 15, "c3-stat__label"));
+        var v = Label(value, 26, Color.Lerp(color, Color.white, 0.55f), "c3-stat__value");
         box.Add(v);
         box.pickingMode = PickingMode.Ignore;
         return box;
@@ -140,7 +159,7 @@ public static class UIFactory
         icon.style.flexShrink = 0;
         icon.pickingMode = PickingMode.Ignore;
 
-        Sprite portrait = data.portrait;
+        Sprite portrait = promoted && data.canPromote && data.promotedPortrait != null ? data.promotedPortrait : data.portrait;
         if (portrait != null)
         {
             icon.style.backgroundImage = new StyleBackground(portrait);
@@ -148,13 +167,27 @@ public static class UIFactory
             return icon;
         }
 
-        Rarity rarity = (promoted && data.hasPromotedRarity) ? data.promotedRarity : data.rarity;
-        icon.style.backgroundImage = new StyleBackground(SpriteFactory.PieceTexture(rarity));
+        PieceLook look = PieceSkin.For(data, promoted);
+        icon.style.backgroundImage = new StyleBackground(look.body.texture);
         icon.style.backgroundSize = new BackgroundSize(BackgroundSizeType.Contain);
 
         string name = promoted && data.canPromote ? data.promotedDisplayName : data.displayName;
         if (string.IsNullOrEmpty(name)) name = "?";
-        Color ink = Palette.PieceInk(rarity, promoted && data.canPromote);
+        Color ink = look.ink;
+
+        if (look.emblem != null)
+        {
+            var emblem = new VisualElement();
+            emblem.style.position = Position.Absolute;
+            emblem.style.width = size * 0.17f;
+            emblem.style.height = size * 0.17f;
+            emblem.style.top = size * 0.06f;
+            emblem.style.left = size * 0.415f;
+            emblem.style.backgroundImage = new StyleBackground(look.emblem);
+            emblem.style.unityBackgroundImageTintColor = look.emblemColor;
+            emblem.pickingMode = PickingMode.Ignore;
+            icon.Add(emblem);
+        }
 
         var labels = new VisualElement();
         labels.style.alignItems = Align.Center;

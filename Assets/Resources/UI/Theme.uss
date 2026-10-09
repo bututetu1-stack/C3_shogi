@@ -5,7 +5,7 @@
 .c3-root {
     -unity-font-definition: resource("Fonts/ZenKakuGothicNew-Medium");
     color: rgb(243, 235, 221);
-    font-size: 16px;
+    font-size: 18px;
 }
 
 .c3-bold { -unity-font-definition: resource("Fonts/ZenKakuGothicNew-Bold"); }
@@ -24,7 +24,7 @@
 
 .c3-panel-title {
     -unity-font-definition: resource("Fonts/ShipporiMinchoB1-ExtraBold");
-    font-size: 18px;
+    font-size: 21px;
     color: rgb(212, 175, 95);
     -unity-text-align: middle-center;
     letter-spacing: 6px;
@@ -43,7 +43,7 @@
 /* ---------------- ボタン ---------------- */
 .c3-button {
     -unity-font-definition: resource("Fonts/ZenKakuGothicNew-Bold");
-    font-size: 18px;
+    font-size: 20px;
     color: rgb(243, 235, 221);
     background-color: rgb(52, 43, 37);
     border-width: 1px;
@@ -69,13 +69,13 @@
 .c3-button--primary:active { background-color: rgb(130, 40, 30); }
 .c3-button--danger { background-color: rgb(92, 34, 30); }
 .c3-button--danger:hover { background-color: rgb(128, 46, 40); }
-.c3-button--big { font-size: 24px; padding: 12px 48px; }
+.c3-button--big { font-size: 26px; padding: 12px 48px; }
 .c3-button:disabled { opacity: 0.4; }
 
 /* ---------------- チップ（小さなラベル） ---------------- */
 .c3-chip {
-    font-size: 13px;
-    padding: 2px 10px;
+    font-size: 16px;
+    padding: 3px 12px;
     border-radius: 10px;
     border-width: 1px;
     margin: 0 3px;
@@ -96,8 +96,8 @@
     border-radius: 4px;
     align-items: center;
 }
-.c3-stat__label { font-size: 12px; color: rgb(191, 179, 160); }
-.c3-stat__value { -unity-font-definition: resource("Fonts/ZenKakuGothicNew-Bold"); font-size: 22px; }
+.c3-stat__label { font-size: 15px; color: rgb(191, 179, 160); }
+.c3-stat__value { -unity-font-definition: resource("Fonts/ZenKakuGothicNew-Bold"); font-size: 26px; }
 
 /* ---------------- 動きの図 ---------------- */
 .c3-move-grid { align-self: center; padding: 4px; background-color: rgb(170, 128, 70); border-radius: 4px; }
@@ -128,9 +128,9 @@
 
 /* ---------------- 駒選択カード ---------------- */
 .c3-card {
-    width: 230px;
+    width: 220px;
     margin: 0 12px;
-    padding: 16px 12px 14px 12px;
+    padding: 12px 12px 12px 12px;
     background-color: rgba(28, 22, 19, 0.96);
     border-width: 2px;
     border-color: rgba(212, 175, 95, 0.35);

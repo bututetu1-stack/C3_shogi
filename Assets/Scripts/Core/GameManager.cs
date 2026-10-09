@@ -402,31 +402,30 @@ public class GameManager : MonoBehaviour
     // 成り
     // ================================================================
 
-    /// <summary>今いる位置で成れるか</summary>
-    public bool CanPromoteNow(PieceInstance piece)
+    /// <summary>
+    /// from から今の位置へ動いた駒が成るか。将棋と同じく、移動の前後どちらかが敵陣なら成る（成りは強制）
+    /// </summary>
+    public bool ShouldPromote(PieceInstance piece, Vector2Int from)
     {
-        return piece != null && piece.isAlive && !piece.isPromoted && piece.data.canPromote
-            && piece.CanPromoteAt(piece.boardPosition.y, boardManager.CurrentBoardSize);
-    }
-
-    /// <summary>成らないとこれ以上動けない（行き所のない駒）なら成るしかない</summary>
-    public bool MustPromote(PieceInstance piece)
-    {
-        if (piece.data.isImmovable) return false;
+        if (piece == null || !piece.isAlive || piece.isPromoted || !piece.data.canPromote) return false;
         int size = boardManager.CurrentBoardSize;
-        foreach (var dir in piece.GetMoveDirections())
-        {
-            Vector2Int to = piece.boardPosition + dir.direction;
-            if (to.x >= 0 && to.y >= 0 && to.x < size && to.y < size) return false;
-        }
-        return true;
+        return piece.CanPromoteAt(from.y, size) || piece.CanPromoteAt(piece.boardPosition.y, size);
     }
 
-    /// <summary>能力による移動などで成れる位置に来たとき（自動で判断。過労死する駒は成らない）</summary>
+    /// <summary>能力による移動などで敵陣に入ったとき</summary>
     public void CheckPromotion(PieceInstance piece)
     {
-        if (!CanPromoteNow(piece)) return;
-        if (piece.data.diesOnPromotion && !MustPromote(piece)) return;
+        if (ShouldPromote(piece, piece.boardPosition)) PromotePiece(piece);
+    }
+
+    /// <summary>成りの演出を待つ版（物鉄→提督は着任の演出が入る）</summary>
+    public IEnumerator PromoteRoutine(PieceInstance piece)
+    {
+        if (piece.data.pieceType == PieceType.Monotetsu && AbilitySystem.Instance != null)
+        {
+            yield return AbilitySystem.Instance.TeitokuPromotionRoutine(piece);
+            yield break;
+        }
         PromotePiece(piece);
     }
 
@@ -448,9 +447,9 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        // 物鉄→提督の特殊処理（ワープ+召喚）
+        // 物鉄→提督の特殊処理（演出つき。通常は PromoteRoutine から呼ばれる）
         if (piece.data.pieceType == PieceType.Monotetsu && AbilitySystem.Instance != null)
-            AbilitySystem.Instance.ExecuteTeitokuPromotion(piece);
+            AbilitySystem.Instance.StartCoroutine(AbilitySystem.Instance.TeitokuArrivalRoutine(piece));
     }
 
     // ================================================================
