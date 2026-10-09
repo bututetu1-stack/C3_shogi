@@ -3,30 +3,39 @@ using System.Collections;
 using System.Collections.Generic;
 
 /// <summary>
-/// RPG将棋用AI - Alpha-Beta探索 + RPG戦闘理解型評価関数
+/// RPG将棋用AI - 反復深化 Alpha-Beta 探索 + RPG戦闘理解型評価関数
 ///
 /// 設計方針:
-/// - 0ダメージ攻撃は絶対にしない（C3/挑発駒以外）
-/// - C3の安全を最優先で考慮
-/// - 有利なトレードのみ攻撃する
-/// - 危険なマスへの移動を避ける
-/// - 前進しつつもC3を守る
+/// - 効果のない攻撃（0ダメージ・挑発駒への攻撃）はしない
+/// - 自分の手 → 相手の応手まで読んでから判断する（偶数手で評価して楽観しすぎない）
+/// - 挑発・髑髏の爆発・SNの消耗・成り・過労死を探索の中でも再現する
+/// - 時間予算を超えたら打ち切り、そこまでの最善手を指す（フリーズしない）
+/// - ほぼ同点の手からはランダムに選び、毎回同じ展開にならないようにする
 /// </summary>
 public class SimpleAI : MonoBehaviour
 {
     public static SimpleAI Instance { get; private set; }
 
+    [Tooltip("手番が来てから指すまでの待ち時間（秒）")]
     public float moveDelay = 0.5f;
+    [Tooltip("1手の思考に使う時間の上限（ミリ秒）")]
+    public float thinkBudgetMs = 150f;
+    [Tooltip("探索の統計をコンソールに出す")]
+    public bool logSearchStats;
 
-    // 探索設定: depth 3 = AI手→プレイヤー応手→AI手
-    private const int SEARCH_DEPTH = 3;
-    // 各深さで検討する手の上限（性能と品質のバランス）
-    private const int MAX_MOVES = 25;
+    // 反復深化で試す深さ（自分の手→相手の応手 で1組）
+    private static readonly int[] SearchDepths = { 2, 4 };
+    // 各ノードで読む手の上限（ルートは全手）
+    private const int InnerMaxMoves = 14;
+    // この点差以内の手は同じくらい良いとみなしてランダムに選ぶ
+    private const int RandomMargin = 25;
+
+    private const int WinScore = 100000;
 
     void Awake()
     {
         if (Instance == null) Instance = this;
-        else Destroy(gameObject);
+        else Destroy(this);
     }
 
     // ================================================================
@@ -39,10 +48,8 @@ public class SimpleAI : MonoBehaviour
     void OnDisable()
     {
         if (isSubscribed && GameManager.Instance != null)
-        {
             GameManager.Instance.OnTurnChanged -= OnTurnChanged;
-            isSubscribed = false;
-        }
+        isSubscribed = false;
     }
 
     void Start() { TrySubscribe(); }
@@ -68,7 +75,7 @@ public class SimpleAI : MonoBehaviour
     }
 
     // ================================================================
-    // AIターン: 候補生成→探索→最善手実行
+    // AIターン
     // ================================================================
     private IEnumerator DoAITurn()
     {
@@ -79,115 +86,145 @@ public class SimpleAI : MonoBehaviour
         if (gm == null || gm.currentPhase != GamePhase.Battle || gm.currentTurn != Team.Enemy)
             yield break;
 
-        BoardManager bm = BoardManager.Instance;
-        PieceInstance bestPiece = null;
-        MoveValidator.MoveResult bestMove = default(MoveValidator.MoveResult);
-        int bestScore = int.MinValue + 1;
-
-        var candidates = GenerateOrderedMoves(Team.Enemy);
-
-        // === 即勝ちチェック: プレイヤーC3を倒せるなら即実行 ===
-        PieceInstance playerC3 = bm.FindC3(Team.Player);
-        if (playerC3 != null)
-        {
-            for (int i = 0; i < candidates.Count; i++)
-            {
-                if (!candidates[i].move.isAttack) continue;
-                if (candidates[i].move.position.x != playerC3.boardPosition.x
-                    || candidates[i].move.position.y != playerC3.boardPosition.y) continue;
-                int dmg = Mathf.Max(0, candidates[i].piece.ATK - playerC3.DEF);
-                if (dmg >= playerC3.currentHP)
-                {
-                    yield return CombatResolver.ExecuteMove(candidates[i].piece, candidates[i].move);
-                    gm.EndTurn();
-                    yield break;
-                }
-            }
-        }
-
-        // === 挑発駒を探す（タゲ強化用） ===
-        PieceInstance tauntTarget = null;
-        List<PieceInstance> pList = bm.GetTeamPieces(Team.Player);
-        for (int t = 0; t < pList.Count; t++)
-        {
-            if (pList[t].data.isTauntPiece && pList[t].isAlive)
-            {
-                tauntTarget = pList[t];
-                break;
-            }
-        }
-
-        // === Alpha-Beta探索で最善手を選ぶ ===
-        int searchCount = Mathf.Min(candidates.Count, MAX_MOVES);
-
-        for (int i = 0; i < searchCount; i++)
-        {
-            MoveUndo undo = SimulateMove(candidates[i].piece, candidates[i].move);
-            int score = AlphaBeta(SEARCH_DEPTH - 1, false, int.MinValue + 1, int.MaxValue - 1);
-            RestoreMove(undo);
-
-            // 挑発駒タゲ強化: C3に届かない駒が挑発駒を攻撃→大幅ボーナス
-            if (tauntTarget != null && candidates[i].move.isAttack)
-            {
-                PieceInstance atkTarget = bm.GetPieceAt(candidates[i].move.position);
-                if (atkTarget != null && atkTarget.data.isTauntPiece)
-                {
-                    bool canHitC3 = playerC3 != null
-                        && CanReachTarget(candidates[i].piece, playerC3.boardPosition);
-                    if (!canHitC3)
-                        score += 3000;
-                    else
-                        score += 500;
-                }
-            }
-
-            if (score > bestScore)
-            {
-                bestScore = score;
-                bestPiece = candidates[i].piece;
-                bestMove = candidates[i].move;
-            }
-        }
-
-        if (bestPiece != null)
-            yield return CombatResolver.ExecuteMove(bestPiece, bestMove);
+        MoveEntry? choice = ChooseMove();
+        if (choice.HasValue)
+            yield return CombatResolver.ExecuteMove(choice.Value.piece, choice.Value.move);
+        else if (BattleLogUI.Instance != null)
+            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("相手", Team.Enemy) + " はパスした");
 
         gm.EndTurn();
     }
 
     // ================================================================
-    // Alpha-Beta探索 (正の値 = Enemy/AI有利)
+    // 探索
     // ================================================================
-    private int AlphaBeta(int depth, bool maximizing, int alpha, int beta)
+    private struct MoveEntry
     {
+        public PieceInstance piece;
+        public MoveValidator.MoveResult move;
+        public int priority;
+        public int score;
+    }
+
+    private System.Diagnostics.Stopwatch clock;
+    private bool timeUp;
+    private int nodes;
+
+    // 深さごとに使い回すバッファ
+    private readonly List<List<MoveEntry>> moveBuffers = new List<List<MoveEntry>>();
+    private readonly List<List<PieceInstance>> pieceBuffers = new List<List<PieceInstance>>();
+    private readonly List<MoveValidator.MoveResult> moveScratch = new List<MoveValidator.MoveResult>();
+
+    private MoveEntry? ChooseMove()
+    {
+        clock = System.Diagnostics.Stopwatch.StartNew();
+        timeUp = false;
+        nodes = 0;
+
         BoardManager bm = BoardManager.Instance;
-        PieceInstance pC3 = bm.FindC3(Team.Player);
-        PieceInstance eC3 = bm.FindC3(Team.Enemy);
+        List<MoveEntry> root = new List<MoveEntry>();
+        GenerateOrderedMoves(Team.Enemy, root, GetPieceBuffer(0));
+        if (root.Count == 0) return null;
 
-        // 終了判定: C3撃破
-        if (pC3 == null) return 100000 + depth;   // AI勝ち（早いほど高得点）
-        if (eC3 == null) return -100000 - depth;   // プレイヤー勝ち
+        // 即勝ち: プレイヤーのC3を倒せるなら迷わず指す
+        PieceInstance playerC3 = bm.FindC3(Team.Player);
+        if (playerC3 != null)
+        {
+            foreach (var e in root)
+            {
+                if (e.move.isAttack && e.move.position == playerC3.boardPosition
+                    && CombatResolver.CalcDamage(e.piece, playerC3) >= playerC3.currentHP)
+                    return e;
+            }
+        }
 
-        // 葉ノード: 局面評価
+        int completedDepth = 0;
+        List<MoveEntry> best = null;
+
+        foreach (int depth in SearchDepths)
+        {
+            var scored = new List<MoveEntry>(root.Count);
+            int alpha = -WinScore * 2;
+            for (int i = 0; i < root.Count; i++)
+            {
+                MoveEntry e = root[i];
+                int mark = Simulate(e.piece, e.move);
+                // 最善候補との差を見るため、alphaより少し下までは正確に読む
+                e.score = AlphaBeta(depth - 1, false, alpha - RandomMargin, WinScore * 2, 1);
+                Restore(mark);
+                if (timeUp) break;
+                scored.Add(e);
+                if (e.score > alpha) alpha = e.score;
+            }
+
+            if (scored.Count > 0 && (!timeUp || best == null || scored.Count >= root.Count / 2))
+            {
+                scored.Sort((a, b) => b.score.CompareTo(a.score));
+                best = scored;
+                completedDepth = depth;
+                // 次の深さは良かった手から読む
+                if (!timeUp)
+                {
+                    var reordered = new List<MoveEntry>(scored);
+                    foreach (var e in root) if (!reordered.Exists(x => SameMove(x, e))) reordered.Add(e);
+                    root = reordered;
+                }
+            }
+            if (timeUp) break;
+        }
+
+        if (best == null || best.Count == 0) return root[0];
+
+        // ほぼ同点の手からランダムに選ぶ
+        int top = best[0].score;
+        int count = 1;
+        while (count < best.Count && best[count].score >= top - RandomMargin) count++;
+        MoveEntry chosen = best[Random.Range(0, count)];
+
+        if (logSearchStats)
+            Debug.Log("[AI] depth=" + completedDepth + " nodes=" + nodes + " time=" + clock.ElapsedMilliseconds + "ms"
+                + " candidates=" + best.Count + "/" + root.Count + " best=" + top + " ties=" + count
+                + " -> " + chosen.piece.DisplayName + " " + chosen.move.position);
+        return chosen;
+    }
+
+    private static bool SameMove(MoveEntry a, MoveEntry b)
+    {
+        return a.piece == b.piece && a.move.position == b.move.position;
+    }
+
+    /// <summary>Alpha-Beta探索（正の値 = AI有利）</summary>
+    private int AlphaBeta(int depth, bool maximizing, int alpha, int beta, int ply)
+    {
+        nodes++;
+        if ((nodes & 63) == 0 && clock.Elapsed.TotalMilliseconds > thinkBudgetMs) timeUp = true;
+        if (timeUp) return 0;
+
+        BoardManager bm = BoardManager.Instance;
+        // 決着（早い勝ちほど高く、遅い負けほどまし）
+        if (bm.FindC3(Team.Player) == null) return WinScore - ply;
+        if (bm.FindC3(Team.Enemy) == null) return -WinScore + ply;
+
         if (depth <= 0)
-            return Evaluate();
+            return Evaluate(maximizing ? Team.Enemy : Team.Player);
 
-        Team team = maximizing ? Team.Enemy : Team.Player;
-        var moves = GenerateOrderedMoves(team);
-        int moveCount = Mathf.Min(moves.Count, MAX_MOVES);
+        List<MoveEntry> moves = GetBuffer(ply);
+        GenerateOrderedMoves(maximizing ? Team.Enemy : Team.Player, moves, GetPieceBuffer(ply));
+        int moveCount = Mathf.Min(moves.Count, InnerMaxMoves);
 
+        // 動ける手がなければパスとして相手番へ
         if (moveCount == 0)
-            return Evaluate();
+            return AlphaBeta(depth - 1, !maximizing, alpha, beta, ply + 1);
 
         if (maximizing)
         {
-            int best = int.MinValue + 1;
+            int best = -WinScore * 2;
             for (int i = 0; i < moveCount; i++)
             {
-                MoveUndo undo = SimulateMove(moves[i].piece, moves[i].move);
-                int score = AlphaBeta(depth - 1, false, alpha, beta);
-                RestoreMove(undo);
-
+                int mark = Simulate(moves[i].piece, moves[i].move);
+                int score = AlphaBeta(depth - 1, false, alpha, beta, ply + 1);
+                Restore(mark);
+                if (timeUp) return 0;
                 if (score > best) best = score;
                 if (score > alpha) alpha = score;
                 if (alpha >= beta) break;
@@ -196,13 +233,13 @@ public class SimpleAI : MonoBehaviour
         }
         else
         {
-            int best = int.MaxValue - 1;
+            int best = WinScore * 2;
             for (int i = 0; i < moveCount; i++)
             {
-                MoveUndo undo = SimulateMove(moves[i].piece, moves[i].move);
-                int score = AlphaBeta(depth - 1, true, alpha, beta);
-                RestoreMove(undo);
-
+                int mark = Simulate(moves[i].piece, moves[i].move);
+                int score = AlphaBeta(depth - 1, true, alpha, beta, ply + 1);
+                Restore(mark);
+                if (timeUp) return 0;
                 if (score < best) best = score;
                 if (score < beta) beta = score;
                 if (alpha >= beta) break;
@@ -211,211 +248,360 @@ public class SimpleAI : MonoBehaviour
         }
     }
 
-    // ================================================================
-    // 局面評価関数 (正の値 = Enemy/AI有利)
-    // ================================================================
-
-    /// <summary>駒の戦闘力を数値化</summary>
-    private int PieceValue(PieceInstance p)
+    private List<MoveEntry> GetBuffer(int ply)
     {
-        int v = p.ATK * 30 + p.DEF * 20 + p.currentHP * 20;
-        if (p.isPromoted) v += 40;
-        return v;
+        while (moveBuffers.Count <= ply) moveBuffers.Add(new List<MoveEntry>());
+        return moveBuffers[ply];
     }
 
-    /// <summary>駒が移動可能か</summary>
-    private bool CanMove(PieceInstance p)
+    private List<PieceInstance> GetPieceBuffer(int ply)
     {
-        if (p.data.isImmovable) return false;
+        while (pieceBuffers.Count <= ply) pieceBuffers.Add(new List<PieceInstance>());
+        return pieceBuffers[ply];
+    }
+
+    // ================================================================
+    // 候補手生成（優先度順）
+    // ================================================================
+
+    /// <summary>
+    /// 手として動かせる駒か（自動移動・移動不可の駒は除く）。
+    /// isManualControllable は「プレイヤーが操作できるか」なので、敵専用駒の判定には使わない
+    /// </summary>
+    private static bool IsControllable(PieceInstance p)
+    {
+        if (p.data.pieceType == PieceType.C3) return false;
+        if (p.data.isImmovable || p.data.isAutoMove) return false;
         if (p.isPromoted && p.data.isImmovableWhenPromoted) return false;
-        if (p.data.isAutoMove) return false;
         return true;
     }
 
-    private int Evaluate()
+    private void GenerateOrderedMoves(Team team, List<MoveEntry> entries, List<PieceInstance> pieces)
+    {
+        entries.Clear();
+        BoardManager bm = BoardManager.Instance;
+        Team opponent = team == Team.Enemy ? Team.Player : Team.Enemy;
+        PieceInstance targetC3 = bm.FindC3(opponent);
+        PieceInstance ownC3 = bm.FindC3(team);
+        int size = bm.CurrentBoardSize;
+
+        bm.GetTeamPieces(team, pieces);
+
+        foreach (PieceInstance piece in pieces)
+        {
+            if (!IsControllable(piece)) continue;
+
+            MoveValidator.GetValidMoves(piece, moveScratch);
+            for (int m = 0; m < moveScratch.Count; m++)
+            {
+                MoveValidator.MoveResult move = moveScratch[m];
+                int priority;
+
+                if (move.isAttack)
+                {
+                    PieceInstance target = bm.GetPieceAt(move.position);
+                    if (target == null) continue;
+                    // 効果のない攻撃は読まない
+                    if (target.data.isTauntPiece) continue;
+                    int damage = CombatResolver.CalcDamage(piece, target);
+                    if (damage <= 0) continue;
+
+                    bool kill = damage >= target.currentHP;
+                    if (target.data.pieceType == PieceType.C3)
+                        priority = kill ? 50000 : 10000 + damage * 200;
+                    else if (kill)
+                        priority = 5000 + PieceValue(target) - PieceValue(piece) / 4;
+                    else
+                        priority = 1000 + damage * 40;
+                }
+                else
+                {
+                    priority = 0;
+                    if (targetC3 != null)
+                    {
+                        int curDist = Chebyshev(piece.boardPosition, targetC3.boardPosition);
+                        int newDist = Chebyshev(move.position, targetC3.boardPosition);
+                        priority += (curDist - newDist) * 40;
+                    }
+                    if (ownC3 != null && Chebyshev(move.position, ownC3.boardPosition) <= 1)
+                        priority += 120;
+                    // 前進
+                    priority += (team == Team.Enemy ? (size - 1 - move.position.y) : move.position.y) * 2;
+                    // 成れる位置への移動
+                    if (!piece.isPromoted && piece.data.canPromote && piece.CanPromoteAt(move.position.y, size))
+                        priority += piece.data.diesOnPromotion ? -2000 : 300;
+                }
+
+                entries.Add(new MoveEntry { piece = piece, move = move, priority = priority });
+            }
+        }
+
+        entries.Sort((a, b) => b.priority.CompareTo(a.priority));
+    }
+
+    // ================================================================
+    // 手のシミュレーション（探索用: 盤面を一時的に変更し、あとで戻す）
+    // ================================================================
+    private struct Saved
+    {
+        public PieceInstance piece;
+        public int hp;
+        public bool alive;
+        public bool promoted;
+        public Vector2Int pos;
+    }
+
+    private readonly List<Saved> undoLog = new List<Saved>();
+    private readonly List<PieceInstance> restoreScratch = new List<PieceInstance>();
+
+    private void Save(PieceInstance p)
+    {
+        undoLog.Add(new Saved { piece = p, hp = p.currentHP, alive = p.isAlive, promoted = p.isPromoted, pos = p.boardPosition });
+    }
+
+    /// <summary>手を盤面に適用する。戻すときは返り値を Restore に渡す</summary>
+    private int Simulate(PieceInstance piece, MoveValidator.MoveResult move)
+    {
+        BoardManager bm = BoardManager.Instance;
+        int mark = undoLog.Count;
+        Save(piece);
+
+        if (move.isAttack)
+        {
+            PieceInstance target = bm.GetPieceAt(move.position);
+            if (target != null && target.team != piece.team)
+            {
+                if (target.data.isTauntPiece) return mark; // ダメージ無効
+                Save(target);
+                target.currentHP -= CombatResolver.CalcDamage(piece, target);
+                if (target.currentHP > 0) return mark;      // 倒せなければその場に留まる
+                SimKill(target, 0);
+                if (!piece.isAlive) return mark;            // 髑髏の爆発で倒れた
+            }
+        }
+
+        if (!bm.IsEmpty(move.position)) return mark;
+        bm.RemovePieceFromBoard(piece.boardPosition);
+        bm.PlacePieceOnBoard(piece, move.position);
+
+        // SN: 移動でHP-1
+        if (piece.data.losesHPOnMove)
+        {
+            piece.currentHP--;
+            if (piece.currentHP <= 0) { SimKill(piece, 0); return mark; }
+        }
+
+        // 成り（成ると死ぬ駒は成らない前提。成りの選択はPR4で任意化）
+        if (!piece.isPromoted && piece.data.canPromote && piece.CanPromoteAt(move.position.y, bm.CurrentBoardSize))
+        {
+            piece.isPromoted = true;
+            int hpDiff = piece.data.promotedHP - piece.data.baseHP;
+            if (hpDiff > 0) piece.currentHP += hpDiff;
+            if (piece.data.diesOnPromotion) SimKill(piece, 0);
+        }
+        return mark;
+    }
+
+    /// <summary>探索中の撃破。髑髏なら周囲（C3以外）に貫通1ダメージ</summary>
+    private void SimKill(PieceInstance victim, int chain)
+    {
+        BoardManager bm = BoardManager.Instance;
+        if (bm.GetPieceAt(victim.boardPosition) == victim)
+            bm.RemovePieceFromBoard(victim.boardPosition);
+        victim.isAlive = false;
+
+        if (victim.data.pieceType != PieceType.Dokuro || chain > 4) return;
+        Vector2Int c = victim.boardPosition;
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                if (dx == 0 && dy == 0) continue;
+                PieceInstance n = bm.GetPieceAt(new Vector2Int(c.x + dx, c.y + dy));
+                if (n == null || !n.isAlive || n.data.pieceType == PieceType.C3 || n.data.isTauntPiece) continue;
+                Save(n);
+                n.currentHP -= 1;
+                if (n.currentHP <= 0) SimKill(n, chain + 1);
+            }
+        }
+    }
+
+    private void Restore(int mark)
+    {
+        BoardManager bm = BoardManager.Instance;
+        restoreScratch.Clear();
+
+        // 変更のあった駒を盤から外し、最初に保存した状態へ戻す
+        for (int i = undoLog.Count - 1; i >= mark; i--)
+        {
+            Saved s = undoLog[i];
+            PieceInstance p = s.piece;
+            if (bm.IsInBounds(p.boardPosition) && bm.GetPieceAt(p.boardPosition) == p)
+                bm.RemovePieceFromBoard(p.boardPosition);
+            p.currentHP = s.hp;
+            p.isAlive = s.alive;
+            p.isPromoted = s.promoted;
+            p.boardPosition = s.pos;
+            if (!restoreScratch.Contains(p)) restoreScratch.Add(p);
+        }
+        undoLog.RemoveRange(mark, undoLog.Count - mark);
+
+        // 生きていた駒を元の位置に置き直す
+        foreach (var p in restoreScratch)
+            if (p.isAlive) bm.PlacePieceOnBoard(p, p.boardPosition);
+    }
+
+    // ================================================================
+    // 局面評価（正の値 = AI有利）
+    // ================================================================
+    private readonly List<PieceInstance> evalEnemy = new List<PieceInstance>();
+    private readonly List<PieceInstance> evalPlayer = new List<PieceInstance>();
+    // 各マスに届く駒の数と最大攻撃力（陣営別）
+    private int[] reachCountE, reachMaxAtkE, reachSumAtkE;
+    private int[] reachCountP, reachMaxAtkP, reachSumAtkP;
+
+    private int PieceValue(PieceInstance p)
+    {
+        if (p.data.isTauntPiece) return 60;
+        int hp = Mathf.Min(p.currentHP, 20);
+        int v = p.ATK * 30 + p.DEF * 22 + hp * 18 + 20;
+        if (p.isPromoted) v += 30;
+        return v;
+    }
+
+    private int Evaluate(Team toMove)
     {
         BoardManager bm = BoardManager.Instance;
         PieceInstance pC3 = bm.FindC3(Team.Player);
         PieceInstance eC3 = bm.FindC3(Team.Enemy);
+        if (pC3 == null) return WinScore;
+        if (eC3 == null) return -WinScore;
 
-        if (pC3 == null) return 100000;
-        if (eC3 == null) return -100000;
+        int size = bm.CurrentBoardSize;
+        bm.GetTeamPieces(Team.Enemy, evalEnemy);
+        bm.GetTeamPieces(Team.Player, evalPlayer);
+        BuildReach(evalEnemy, size, ref reachCountE, ref reachMaxAtkE, ref reachSumAtkE);
+        BuildReach(evalPlayer, size, ref reachCountP, ref reachMaxAtkP, ref reachSumAtkP);
 
         int score = 0;
-        int boardSize = bm.CurrentBoardSize;
 
-        List<PieceInstance> ePieces = bm.GetTeamPieces(Team.Enemy);
-        List<PieceInstance> pPieces = bm.GetTeamPieces(Team.Player);
+        // 1. 戦力
+        foreach (var p in evalEnemy) if (p.data.pieceType != PieceType.C3) score += PieceValue(p);
+        foreach (var p in evalPlayer) if (p.data.pieceType != PieceType.C3) score -= PieceValue(p);
 
-        // === 1. 戦力差 (Material) ===
-        for (int i = 0; i < ePieces.Count; i++)
+        // 2. C3の体力
+        score += eC3.currentHP * 300 - pC3.currentHP * 300;
+        if (pC3.currentHP <= 2) score += 1500;
+        if (eC3.currentHP <= 2) score -= 1500;
+
+        // 3. C3の護衛
+        score += CountAdjacent(eC3.boardPosition, Team.Enemy) * 150;
+        score -= CountAdjacent(pC3.boardPosition, Team.Player) * 150;
+
+        // 4. C3への脅威（届く駒の数と合計ダメージ）
+        int pIdx = pC3.boardPosition.x + pC3.boardPosition.y * size;
+        int eIdx = eC3.boardPosition.x + eC3.boardPosition.y * size;
+        int threatsToP = reachCountE[pIdx];
+        int threatsToE = reachCountP[eIdx];
+        int dmgToP = Mathf.Max(0, reachSumAtkE[pIdx] - threatsToP * pC3.DEF);
+        int dmgToE = Mathf.Max(0, reachSumAtkP[eIdx] - threatsToE * eC3.DEF);
+        score += threatsToP * 450 - threatsToE * 450;
+        if (dmgToP >= pC3.currentHP && threatsToP > 0) score += toMove == Team.Enemy ? 20000 : 3000;
+        if (dmgToE >= eC3.currentHP && threatsToE > 0) score -= toMove == Team.Player ? 20000 : 3000;
+
+        // 5. 取られそうな駒（手番側は取れる、相手側は逃げる余地がある）
+        int bestEnemyCapture = 0, bestPlayerCapture = 0;
+        int enemyHanging = 0, playerHanging = 0;
+        foreach (var p in evalPlayer)
         {
-            if (ePieces[i].data.pieceType != PieceType.C3)
-                score += PieceValue(ePieces[i]);
-        }
-        for (int i = 0; i < pPieces.Count; i++)
-        {
-            if (pPieces[i].data.pieceType != PieceType.C3)
-                score -= PieceValue(pPieces[i]);
-        }
-
-        // === 2. C3のHP ===
-        score += eC3.currentHP * 300;
-        score -= pC3.currentHP * 300;
-
-        // HP低下ボーナス/ペナルティ
-        if (pC3.currentHP <= 2) score += 2000;
-        if (pC3.currentHP <= 1) score += 4000;
-        if (eC3.currentHP <= 2) score -= 2000;
-        if (eC3.currentHP <= 1) score -= 4000;
-
-        // === 3. C3の護衛（隣接味方駒数） ===
-        score += CountAdjacent(eC3.boardPosition, Team.Enemy) * 200;
-        score -= CountAdjacent(pC3.boardPosition, Team.Player) * 200;
-
-        // === 4. C3への脅威（到達可能な敵駒数） ===
-        int threatsToPC3 = 0;
-        int totalDmgToPC3 = 0;
-        for (int i = 0; i < ePieces.Count; i++)
-        {
-            PieceInstance ep = ePieces[i];
-            if (ep.data.pieceType == PieceType.C3 || !CanMove(ep)) continue;
-            if (CanReachTarget(ep, pC3.boardPosition))
+            if (p.data.pieceType == PieceType.C3 || p.data.isTauntPiece) continue;
+            int idx = p.boardPosition.x + p.boardPosition.y * size;
+            if (reachCountE[idx] > 0 && reachMaxAtkE[idx] - p.DEF >= p.currentHP)
             {
-                threatsToPC3++;
-                totalDmgToPC3 += Mathf.Max(0, ep.ATK - pC3.DEF);
+                int v = PieceValue(p);
+                playerHanging += v;
+                if (v > bestEnemyCapture) bestEnemyCapture = v;
             }
         }
-
-        int threatsToEC3 = 0;
-        int totalDmgToEC3 = 0;
-        for (int i = 0; i < pPieces.Count; i++)
+        foreach (var p in evalEnemy)
         {
-            PieceInstance pp = pPieces[i];
-            if (pp.data.pieceType == PieceType.C3 || !CanMove(pp)) continue;
-            if (CanReachTarget(pp, eC3.boardPosition))
+            if (p.data.pieceType == PieceType.C3) continue;
+            int idx = p.boardPosition.x + p.boardPosition.y * size;
+            if (reachCountP[idx] > 0 && reachMaxAtkP[idx] - p.DEF >= p.currentHP)
             {
-                threatsToEC3++;
-                totalDmgToEC3 += Mathf.Max(0, pp.ATK - eC3.DEF);
+                int v = PieceValue(p);
+                enemyHanging += v;
+                if (v > bestPlayerCapture) bestPlayerCapture = v;
             }
         }
+        if (toMove == Team.Enemy)
+            score += bestEnemyCapture * 8 / 10 - enemyHanging * 3 / 10;
+        else
+            score -= bestPlayerCapture * 8 / 10 - playerHanging * 3 / 10;
 
-        score += threatsToPC3 * 500;
-        score -= threatsToEC3 * 500;
-        if (threatsToPC3 >= 2) score += 1500;
-        if (threatsToEC3 >= 2) score -= 1500;
-        // 致死脅威ボーナス
-        if (totalDmgToPC3 >= pC3.currentHP) score += 4000;
-        if (totalDmgToEC3 >= eC3.currentHP) score -= 4000;
-
-        // === 5. 駒の安全性 ===
-        // AI駒が倒される危険
-        for (int i = 0; i < ePieces.Count; i++)
+        // 6. 前進と敵C3への接近（動かせる駒のみ）
+        foreach (var p in evalEnemy)
         {
-            PieceInstance ep = ePieces[i];
-            if (ep.data.pieceType == PieceType.C3 || ep.data.isImmovable) continue;
-            if (CanBeKilledBy(ep, pPieces))
-                score -= PieceValue(ep);
+            if (!IsControllable(p)) continue;
+            score += (10 - Chebyshev(p.boardPosition, pC3.boardPosition)) * 4;
+            score += (size - 1 - p.boardPosition.y) * 3;
         }
-        // プレイヤー駒を倒せるボーナス
-        for (int i = 0; i < pPieces.Count; i++)
+        foreach (var p in evalPlayer)
         {
-            PieceInstance pp = pPieces[i];
-            if (pp.data.pieceType == PieceType.C3 || pp.data.isImmovable) continue;
-            if (CanBeKilledBy(pp, ePieces))
-                score += PieceValue(pp);
-        }
-
-        // === 6. 敵C3への接近 ===
-        for (int i = 0; i < ePieces.Count; i++)
-        {
-            PieceInstance ep = ePieces[i];
-            if (ep.data.pieceType == PieceType.C3 || !CanMove(ep)) continue;
-            int dist = Chebyshev(ep.boardPosition, pC3.boardPosition);
-            score += (10 - dist) * 4;
-        }
-
-        // === 7. 前進ボーナス ===
-        int maxRow = boardSize - 1;
-        for (int i = 0; i < ePieces.Count; i++)
-        {
-            PieceInstance ep = ePieces[i];
-            if (ep.data.pieceType == PieceType.C3 || !CanMove(ep)) continue;
-            score += (maxRow - ep.boardPosition.y) * 3;
-        }
-
-        // === 8. 挑発駒への脅威ボーナス ===
-        for (int i = 0; i < pPieces.Count; i++)
-        {
-            if (!pPieces[i].data.isTauntPiece || !pPieces[i].isAlive) continue;
-            Vector2Int tauntPos = pPieces[i].boardPosition;
-            for (int j = 0; j < ePieces.Count; j++)
-            {
-                PieceInstance ep = ePieces[j];
-                if (ep.data.pieceType == PieceType.C3 || !CanMove(ep)) continue;
-                if (CanReachTarget(ep, tauntPos))
-                {
-                    score += 800;
-                    if (Chebyshev(ep.boardPosition, tauntPos) <= 1)
-                        score += 400;
-                }
-            }
-            break; // 挑発駒は1体のみ想定
+            if (!IsControllable(p)) continue;
+            score -= (10 - Chebyshev(p.boardPosition, eC3.boardPosition)) * 4;
+            score -= p.boardPosition.y * 3;
         }
 
         return score;
     }
 
-    // ================================================================
-    // 到達判定ヘルパー
-    // ================================================================
-
-    /// <summary>駒がtargetマスに到達可能か（ブロック判定込み）</summary>
-    private bool CanReachTarget(PieceInstance piece, Vector2Int target)
+    /// <summary>陣営の駒が次の手で攻撃できるマスを集計する（自動移動の門人も含む）</summary>
+    private static void BuildReach(List<PieceInstance> pieces, int size, ref int[] count, ref int[] maxAtk, ref int[] sumAtk)
     {
-        BoardManager bm = BoardManager.Instance;
-        MoveDirection[] dirs = piece.GetMoveDirections();
-        for (int i = 0; i < dirs.Length; i++)
+        int n = size * size;
+        if (count == null || count.Length != n)
         {
-            int dx = dirs[i].direction.x;
-            int dy = dirs[i].direction.y;
-            bool canJump = dirs[i].canJump;
+            count = new int[n];
+            maxAtk = new int[n];
+            sumAtk = new int[n];
+        }
+        else
+        {
+            System.Array.Clear(count, 0, n);
+            System.Array.Clear(maxAtk, 0, n);
+            System.Array.Clear(sumAtk, 0, n);
+        }
 
-            for (int d = 1; d <= dirs[i].maxDistance; d++)
+        BoardManager bm = BoardManager.Instance;
+        foreach (var p in pieces)
+        {
+            if (p.data.pieceType == PieceType.C3 || p.data.isImmovable) continue;
+            if (p.isPromoted && p.data.isImmovableWhenPromoted) continue;
+            int atk = p.ATK;
+            if (atk <= 0) continue;
+
+            MoveDirection[] dirs = p.GetMoveDirections();
+            for (int i = 0; i < dirs.Length; i++)
             {
-                int px = piece.boardPosition.x + dx * d;
-                int py = piece.boardPosition.y + dy * d;
-                if (px < 0 || py < 0 || px >= bm.CurrentBoardSize || py >= bm.CurrentBoardSize) break;
-
-                if (px == target.x && py == target.y) return true;
-
-                if (!canJump)
+                MoveDirection dir = dirs[i];
+                for (int d = 1; d <= dir.maxDistance; d++)
                 {
-                    PieceInstance blocker = bm.GetPieceAt(new Vector2Int(px, py));
-                    if (blocker != null) break;
+                    int x = p.boardPosition.x + dir.direction.x * d;
+                    int y = p.boardPosition.y + dir.direction.y * d;
+                    if (x < 0 || y < 0 || x >= size || y >= size) break;
+                    int idx = x + y * size;
+                    count[idx]++;
+                    sumAtk[idx] += atk;
+                    if (atk > maxAtk[idx]) maxAtk[idx] = atk;
+                    // 飛び越えられない方向は駒に当たったら止まる（MoveValidatorと同じ規則）
+                    if (!dir.canJump && bm.GetPieceAt(new Vector2Int(x, y)) != null) break;
                 }
             }
         }
-        return false;
     }
 
-    /// <summary>targetがattackersリスト内のいずれかの駒に倒されうるか</summary>
-    private bool CanBeKilledBy(PieceInstance target, List<PieceInstance> attackers)
-    {
-        for (int i = 0; i < attackers.Count; i++)
-        {
-            PieceInstance atk = attackers[i];
-            if (atk.data.pieceType == PieceType.C3 || !CanMove(atk)) continue;
-            int dmg = Mathf.Max(0, atk.ATK - target.DEF);
-            if (dmg < target.currentHP) continue;
-            if (CanReachTarget(atk, target.boardPosition))
-                return true;
-        }
-        return false;
-    }
-
-    /// <summary>隣接する指定チームの駒数を数える</summary>
-    private int CountAdjacent(Vector2Int pos, Team team)
+    private static int CountAdjacent(Vector2Int pos, Team team)
     {
         BoardManager bm = BoardManager.Instance;
         int count = 0;
@@ -424,266 +610,15 @@ public class SimpleAI : MonoBehaviour
             for (int dy = -1; dy <= 1; dy++)
             {
                 if (dx == 0 && dy == 0) continue;
-                Vector2Int p = new Vector2Int(pos.x + dx, pos.y + dy);
-                if (!bm.IsInBounds(p)) continue;
-                PieceInstance piece = bm.GetPieceAt(p);
-                if (piece != null && piece.team == team)
-                    count++;
+                PieceInstance piece = bm.GetPieceAt(new Vector2Int(pos.x + dx, pos.y + dy));
+                if (piece != null && piece.team == team) count++;
             }
         }
         return count;
     }
 
-    private int Chebyshev(Vector2Int a, Vector2Int b)
+    private static int Chebyshev(Vector2Int a, Vector2Int b)
     {
         return Mathf.Max(Mathf.Abs(a.x - b.x), Mathf.Abs(a.y - b.y));
-    }
-
-    // ================================================================
-    // 候補手生成（優先度順にソート済み）
-    // ================================================================
-    private struct MoveEntry
-    {
-        public PieceInstance piece;
-        public MoveValidator.MoveResult move;
-        public int priority;
-    }
-
-    private List<MoveEntry> GenerateOrderedMoves(Team team)
-    {
-        BoardManager bm = BoardManager.Instance;
-        List<PieceInstance> pieces = bm.GetTeamPieces(team);
-        var entries = new List<MoveEntry>();
-
-        Team enemyTeam = (team == Team.Enemy) ? Team.Player : Team.Enemy;
-        PieceInstance targetC3 = bm.FindC3(enemyTeam);
-        PieceInstance ownC3 = bm.FindC3(team);
-
-        // 挑発駒を探す
-        PieceInstance tauntPiece = null;
-        List<PieceInstance> enemyPieces = bm.GetTeamPieces(enemyTeam);
-        for (int i = 0; i < enemyPieces.Count; i++)
-        {
-            if (enemyPieces[i].data.isTauntPiece && enemyPieces[i].isAlive)
-            {
-                tauntPiece = enemyPieces[i];
-                break;
-            }
-        }
-
-        for (int p = 0; p < pieces.Count; p++)
-        {
-            PieceInstance piece = pieces[p];
-            if (piece.data.pieceType == PieceType.C3) continue;
-            if (!CanMove(piece)) continue;
-
-            List<MoveValidator.MoveResult> moves = MoveValidator.GetValidMoves(piece);
-            for (int m = 0; m < moves.Count; m++)
-            {
-                MoveValidator.MoveResult move = moves[m];
-                int priority = 0;
-
-                if (move.isAttack)
-                {
-                    PieceInstance target = bm.GetPieceAt(move.position);
-                    if (target == null) continue;
-
-                    int damage = Mathf.Max(0, piece.ATK - target.DEF);
-
-                    // === 0ダメージ攻撃は絶対にスキップ（C3と挑発駒以外） ===
-                    if (damage <= 0)
-                    {
-                        bool isC3 = target.data.pieceType == PieceType.C3;
-                        bool isTaunt = tauntPiece != null && target == tauntPiece;
-                        if (!isC3 && !isTaunt) continue;
-                    }
-
-                    bool canKill = damage >= target.currentHP;
-
-                    if (target.data.pieceType == PieceType.C3)
-                    {
-                        // C3攻撃: 最高優先度
-                        priority = canKill ? 50000 : (10000 + damage * 100);
-                    }
-                    else if (tauntPiece != null && target == tauntPiece)
-                    {
-                        // 挑発駒攻撃: C3に到達不可なら最優先
-                        bool canHitC3 = targetC3 != null && CanReachTarget(piece, targetC3.boardPosition);
-                        if (!canHitC3)
-                            priority = canKill ? 49000 : (25000 + damage * 100);
-                        else
-                            priority = canKill ? 40000 : (9000 + damage * 50);
-                    }
-                    else if (canKill)
-                    {
-                        // 撃破可能: 相手の駒価値が高いほど優先
-                        // 自駒の価値が低いほど有利なトレード
-                        int victimVal = PieceValue(target);
-                        int attackerVal = PieceValue(piece);
-                        priority = 5000 + victimVal - attackerVal / 4;
-                    }
-                    else
-                    {
-                        // ダメージのみ（撃破不可）
-                        priority = 1000 + damage * 30;
-                    }
-                }
-                else
-                {
-                    // === 移動手 ===
-                    // 優先攻撃対象に接近
-                    Vector2Int approach;
-                    if (tauntPiece != null)
-                        approach = tauntPiece.boardPosition;
-                    else if (targetC3 != null)
-                        approach = targetC3.boardPosition;
-                    else
-                        approach = new Vector2Int(-1, -1);
-
-                    if (approach.x >= 0)
-                    {
-                        int curDist = Chebyshev(piece.boardPosition, approach);
-                        int newDist = Chebyshev(move.position, approach);
-                        // 接近するほど高得点
-                        priority += (curDist - newDist) * 40;
-                    }
-
-                    // 自C3の近くに守り駒を配置
-                    if (ownC3 != null)
-                    {
-                        int distToOwn = Chebyshev(move.position, ownC3.boardPosition);
-                        if (distToOwn <= 1) priority += 150;
-                    }
-
-                    // 前進ボーナス
-                    if (team == Team.Enemy)
-                        priority += (bm.CurrentBoardSize - 1 - move.position.y) * 2;
-                    else
-                        priority += move.position.y * 2;
-                }
-
-                MoveEntry entry = new MoveEntry();
-                entry.piece = piece;
-                entry.move = move;
-                entry.priority = priority;
-                entries.Add(entry);
-            }
-        }
-
-        entries.Sort(delegate(MoveEntry a, MoveEntry b) { return b.priority.CompareTo(a.priority); });
-        return entries;
-    }
-
-    // ================================================================
-    // 手のシミュレーション（探索用: 盤面を一時的に変更）
-    // ================================================================
-    private struct MoveUndo
-    {
-        public PieceInstance piece;
-        public Vector2Int from;
-        public Vector2Int to;
-        public PieceInstance captured;
-        public int capturedHP;
-        public bool wasPromoted;
-        public int oldHP;
-    }
-
-    private MoveUndo SimulateMove(PieceInstance piece, MoveValidator.MoveResult move)
-    {
-        BoardManager bm = BoardManager.Instance;
-        MoveUndo undo = new MoveUndo();
-        undo.piece = piece;
-        undo.from = piece.boardPosition;
-        undo.to = move.position;
-        undo.captured = null;
-        undo.wasPromoted = piece.isPromoted;
-        undo.oldHP = piece.currentHP;
-
-        if (move.isAttack)
-        {
-            PieceInstance target = bm.GetPieceAt(move.position);
-            if (target != null)
-            {
-                int damage = Mathf.Max(0, piece.ATK - target.DEF);
-                undo.captured = target;
-                undo.capturedHP = target.currentHP;
-                target.currentHP -= damage;
-
-                if (target.currentHP <= 0)
-                {
-                    // 撃破: ターゲット除去 → 攻撃者移動
-                    target.isAlive = false;
-                    bm.RemovePieceFromBoard(move.position);
-                    bm.RemovePieceFromBoard(piece.boardPosition);
-                    bm.PlacePieceOnBoard(piece, move.position);
-                }
-                else
-                {
-                    // 非撃破: 攻撃者は動かない
-                    return undo;
-                }
-            }
-        }
-        else
-        {
-            // 通常移動
-            bm.RemovePieceFromBoard(piece.boardPosition);
-            bm.PlacePieceOnBoard(piece, move.position);
-        }
-
-        // 移動コスト（SN駒: 移動毎にHP-1）
-        if (piece.data.losesHPOnMove)
-            piece.currentHP--;
-
-        // 成り判定
-        if (!piece.isPromoted && piece.data.canPromote)
-        {
-            if (piece.CanPromoteAt(move.position.y, bm.CurrentBoardSize))
-            {
-                piece.isPromoted = true;
-                if (piece.data.diesOnPromotion)
-                {
-                    piece.isAlive = false;
-                    bm.RemovePieceFromBoard(move.position);
-                }
-            }
-        }
-
-        return undo;
-    }
-
-    private void RestoreMove(MoveUndo undo)
-    {
-        BoardManager bm = BoardManager.Instance;
-        PieceInstance piece = undo.piece;
-
-        // 状態復元
-        piece.isPromoted = undo.wasPromoted;
-        piece.currentHP = undo.oldHP;
-        piece.isAlive = true;
-
-        if (undo.captured != null)
-        {
-            // 捕獲駒のHP復元
-            undo.captured.currentHP = undo.capturedHP;
-
-            int damage = Mathf.Max(0, piece.ATK - undo.captured.DEF);
-            if (undo.capturedHP <= damage)
-            {
-                // 撃破だった: 両駒を元の位置に戻す
-                bm.RemovePieceFromBoard(undo.to);
-                bm.PlacePieceOnBoard(piece, undo.from);
-                undo.captured.isAlive = true;
-                bm.PlacePieceOnBoard(undo.captured, undo.to);
-            }
-            // 非撃破: 駒は動いていないのでHP復元のみ
-        }
-        else
-        {
-            // 通常移動: 元に戻す
-            if (bm.GetPieceAt(undo.to) == piece)
-                bm.RemovePieceFromBoard(undo.to);
-            bm.PlacePieceOnBoard(piece, undo.from);
-        }
     }
 }

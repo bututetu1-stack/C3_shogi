@@ -52,10 +52,19 @@ public class BattleEffects : MonoBehaviour
         promoteClip = Resources.Load<AudioClip>("Audio/Promote");
     }
 
+    // 同じ効果音が同時に大量に鳴らないようにする（髑髏の連鎖爆発など）
+    private readonly System.Collections.Generic.Dictionary<AudioClip, float> lastPlayed = new System.Collections.Generic.Dictionary<AudioClip, float>();
+    private const float MinReplayInterval = 0.06f;
+
     private void Play(AudioClip clip, AudioClip fallback = null)
     {
         AudioClip c = clip != null ? clip : fallback;
-        if (c != null) audioSource.PlayOneShot(c);
+        if (c == null) return;
+        float now = Time.unscaledTime;
+        float last;
+        if (lastPlayed.TryGetValue(c, out last) && now - last < MinReplayInterval) return;
+        lastPlayed[c] = now;
+        audioSource.PlayOneShot(c);
     }
 
     private static Vector3 World(Vector2Int pos) { return new Vector3(pos.x, pos.y, 0f); }

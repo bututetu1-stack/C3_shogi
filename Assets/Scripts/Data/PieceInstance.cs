@@ -42,15 +42,27 @@ public class PieceInstance
         this.isPromoted = false;
     }
 
+    // 陣営に合わせた移動方向のキャッシュ（AIの探索で毎回配列を作らないため）
+    [System.NonSerialized] private MoveDirection[] baseDirsCache;
+    [System.NonSerialized] private MoveDirection[] promotedDirsCache;
+
+    /// <summary>この駒の移動方向（敵駒はY反転済み）。返した配列は書き換えないこと</summary>
     public MoveDirection[] GetMoveDirections()
     {
-        MoveDirection[] dirs = isPromoted && data.promotedMoveDirections != null && data.promotedMoveDirections.Length > 0
-            ? data.promotedMoveDirections
-            : data.moveDirections;
-        if (dirs == null) return new MoveDirection[0];
+        bool usePromoted = isPromoted && data.promotedMoveDirections != null && data.promotedMoveDirections.Length > 0;
+        if (usePromoted)
+        {
+            if (promotedDirsCache == null) promotedDirsCache = BuildDirections(data.promotedMoveDirections);
+            return promotedDirsCache;
+        }
+        if (baseDirsCache == null) baseDirsCache = BuildDirections(data.moveDirections);
+        return baseDirsCache;
+    }
 
-        if (team == Team.Player)
-            return dirs;
+    private MoveDirection[] BuildDirections(MoveDirection[] dirs)
+    {
+        if (dirs == null) return new MoveDirection[0];
+        if (team == Team.Player) return dirs;
 
         // Enemy側はY方向を反転
         var flipped = new MoveDirection[dirs.Length];
