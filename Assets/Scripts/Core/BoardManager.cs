@@ -19,6 +19,9 @@ public class BoardManager : MonoBehaviour
 
     public int CurrentBoardSize { get { return boardSize; } }
 
+    /// <summary>盤中央を映すカメラの基準位置（揺れ演出の戻り先）</summary>
+    public Vector3 CameraHomePosition { get; private set; }
+
     void Awake()
     {
         if (Instance == null) Instance = this;
@@ -26,7 +29,7 @@ public class BoardManager : MonoBehaviour
 
         boardRenderer = GetComponent<BoardRenderer>();
 
-        // Auto-load additional PieceData from Resources/Pieces/
+        // Resources/Pieces/ の駒データを追加読み込み（同じ駒種はシーン側を優先）
         PieceData[] resourcePieces = Resources.LoadAll<PieceData>("Pieces");
         if (resourcePieces != null && resourcePieces.Length > 0)
         {
@@ -34,14 +37,14 @@ public class BoardManager : MonoBehaviour
             if (allPieceData != null)
             {
                 for (int i = 0; i < allPieceData.Length; i++)
-                    combined.Add(allPieceData[i]);
+                    if (allPieceData[i] != null) combined.Add(allPieceData[i]);
             }
             for (int i = 0; i < resourcePieces.Length; i++)
             {
                 bool duplicate = false;
                 for (int j = 0; j < combined.Count; j++)
                 {
-                    if (combined[j] != null && combined[j].pieceType == resourcePieces[i].pieceType)
+                    if (combined[j].pieceType == resourcePieces[i].pieceType)
                     {
                         duplicate = true;
                         break;
@@ -66,7 +69,8 @@ public class BoardManager : MonoBehaviour
 
         // カメラ調整
         float center = (size - 1) * 0.5f;
-        Camera.main.transform.position = new Vector3(center, center, -10);
+        CameraHomePosition = new Vector3(center, center, -10);
+        Camera.main.transform.position = CameraHomePosition;
         Camera.main.orthographicSize = size * 0.45f + 1.5f;
     }
 
@@ -100,7 +104,22 @@ public class BoardManager : MonoBehaviour
 
     public PieceController SpawnPiece(PieceData data, Team team, Vector2Int pos)
     {
-        if (!IsInBounds(pos) || board[pos.x, pos.y] != null) return null;
+        if (data == null)
+        {
+            Debug.LogWarning("SpawnPiece: PieceData が null です (" + team + " " + pos + ")");
+            return null;
+        }
+        if (!IsInBounds(pos))
+        {
+            Debug.LogWarning("SpawnPiece: 盤外です " + data.displayName + " " + pos);
+            return null;
+        }
+        if (board[pos.x, pos.y] != null)
+        {
+            Debug.LogWarning("SpawnPiece: マスが埋まっています " + data.displayName + " " + pos
+                + " (既存: " + board[pos.x, pos.y].DisplayName + ")");
+            return null;
+        }
 
         var instance = new PieceInstance(data, team, pos);
         PlacePiece(instance, pos);
@@ -182,23 +201,21 @@ public class BoardManager : MonoBehaviour
         board[pos.x, pos.y] = null;
     }
 
-    public void RemovePiece(Vector2Int pos)
+    /// <summary>
+    /// 盤面データから駒を取り除く。triggerDeathEffects=trueなら死亡時能力（髑髏の爆発）を発動する。
+    /// </summary>
+    public void RemovePiece(Vector2Int pos, bool triggerDeathEffects = true)
     {
         var piece = board[pos.x, pos.y];
-        if (piece != null)
-        {
-            piece.isAlive = false;
-            allPieces.Remove(piece);
-            board[pos.x, pos.y] = null;
+        board[pos.x, pos.y] = null;
+        if (piece == null) return;
 
-            // 髑髏の死亡時爆発フック
-            if (piece.data.pieceType == PieceType.Dokuro && AbilitySystem.Instance != null)
-                AbilitySystem.Instance.OnPieceDeath(piece, pos);
-        }
-        else
-        {
-            board[pos.x, pos.y] = null;
-        }
+        piece.isAlive = false;
+        allPieces.Remove(piece);
+
+        // 髑髏の死亡時爆発フック
+        if (triggerDeathEffects && piece.data.pieceType == PieceType.Dokuro && AbilitySystem.Instance != null)
+            AbilitySystem.Instance.OnPieceDeath(piece, pos);
     }
 
     public void MovePiece(Vector2Int from, Vector2Int to)
@@ -232,51 +249,21 @@ public class BoardManager : MonoBehaviour
         return result;
     }
 
-    // 外側から内側への配置順でプレイヤー駒の空きスロットを見つける
-    public Vector2Int? FindEmptySlotOuterFirst(Team team)
+    /// <summary>プレイヤー陣（下3段）の空きマスを外側から探す</summary>
+    public Vector2Int? FindPlayerDeploySlot()
     {
-        if (team == Team.Player)
+        foreach (var pos in playerPlacementOrder)
         {
-            foreach (var pos in playerPlacementOrder)
-            {
-                if (IsInBounds(pos) && board[pos.x, pos.y] == null)
-                    return pos;
-            }
-        }
-        else
-        {
-            // 敵側は上から
-            for (int y = boardSize - 1; y >= boardSize - 3; y--)
-            {
-                for (int x = 0; x < boardSize; x++)
-                {
-                    if (IsInBounds(new Vector2Int(x, y)) && board[x, y] == null)
-                        return new Vector2Int(x, y);
-                }
-            }
+            if (IsInBounds(pos) && board[pos.x, pos.y] == null)
+                return pos;
         }
         return null;
     }
 
-    public void ClearTeam(Team team)
-    {
-        var toRemove = new List<Vector2Int>();
-        for (int x = 0; x < boardSize; x++)
-            for (int y = 0; y < boardSize; y++)
-            {
-                var p = board[x, y];
-                if (p != null && p.team == team)
-                    toRemove.Add(new Vector2Int(x, y));
-            }
-        foreach (var pos in toRemove)
-        {
-            RemovePieceController(pos);
-            RemovePiece(pos);
-        }
-    }
-
+    /// <summary>盤上の全駒を除去する（ステージ切替用。死亡時能力は発動しない）</summary>
     public void ClearAll()
     {
+        if (board == null) return;
         var toRemove = new List<Vector2Int>();
         for (int x = 0; x < boardSize; x++)
             for (int y = 0; y < boardSize; y++)
@@ -284,35 +271,7 @@ public class BoardManager : MonoBehaviour
         foreach (var pos in toRemove)
         {
             RemovePieceController(pos);
-            RemovePiece(pos);
-        }
-    }
-
-    // プレイヤー駒を初期位置にリセット(HPも全回復)
-    public void ResetPlayerPiecesToInitialPositions()
-    {
-        var playerPieces = GetTeamPieces(Team.Player);
-        var pieceDataList = new List<PieceData>();
-
-        // 現在の駒データを保存してからクリア
-        foreach (var p in playerPieces)
-            pieceDataList.Add(p.data);
-        ClearTeam(Team.Player);
-
-        // C3を中央下に再配置
-        var c3Data = GetPieceDataByType(PieceType.C3);
-        if (c3Data != null)
-        {
-            SpawnPiece(c3Data, Team.Player, new Vector2Int(boardSize / 2, 0));
-            pieceDataList.Remove(c3Data);
-        }
-
-        // 残りの駒を外側から配置
-        foreach (var data in pieceDataList)
-        {
-            var slot = FindEmptySlotOuterFirst(Team.Player);
-            if (slot.HasValue)
-                SpawnPiece(data, Team.Player, slot.Value);
+            RemovePiece(pos, false);
         }
     }
 }

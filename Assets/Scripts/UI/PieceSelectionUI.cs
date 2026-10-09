@@ -51,7 +51,12 @@ public class PieceSelectionUI : MonoBehaviour
     public void ShowSelection(List<PieceData> choices, System.Action<PieceData> callback)
     {
         EnsureRoot();
-        if (root == null) return;
+        if (root == null)
+        {
+            // UIが使えない場合でも進行が止まらないようにする
+            if (callback != null) callback(null);
+            return;
+        }
 
         currentChoices = choices;
         onPieceSelected = callback;
@@ -254,6 +259,7 @@ public class PieceSelectionUI : MonoBehaviour
         int atk = usePromoted ? piece.promotedATK : piece.baseATK;
         int def = usePromoted ? piece.promotedDEF : piece.baseDEF;
         int hp = usePromoted ? piece.promotedHP : piece.baseHP;
+        Rarity rarity = (usePromoted && piece.hasPromotedRarity) ? piece.promotedRarity : piece.rarity;
 
         // 左パネル: アイコン + ステータス
         var leftPanel = new VisualElement();
@@ -264,7 +270,7 @@ public class PieceSelectionUI : MonoBehaviour
         var icon = new VisualElement();
         icon.style.width = 100;
         icon.style.height = 100;
-        icon.style.backgroundColor = ShogiPieceShape.GetRarityBodyColor(piece.rarity);
+        icon.style.backgroundColor = ShogiPieceShape.GetRarityBodyColor(rarity);
         icon.style.borderTopLeftRadius = 10;
         icon.style.borderTopRightRadius = 10;
         icon.style.borderBottomLeftRadius = 10;
@@ -291,9 +297,9 @@ public class PieceSelectionUI : MonoBehaviour
         ApplyFont(nameLabel);
         leftPanel.Add(nameLabel);
 
-        var rarityLabel = new Label(piece.rarity.ToString());
+        var rarityLabel = new Label(rarity.ToString());
         rarityLabel.style.fontSize = 18;
-        rarityLabel.style.color = GetRarityColor(piece.rarity);
+        rarityLabel.style.color = GetRarityColor(rarity);
         rarityLabel.style.marginBottom = 12;
         rarityLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
         ApplyFont(rarityLabel);
@@ -322,7 +328,7 @@ public class PieceSelectionUI : MonoBehaviour
         ApplyFont(moveTitle);
         centerPanel.Add(moveTitle);
 
-        MoveDirection[] dirs = usePromoted && piece.promotedMoveDirections != null
+        MoveDirection[] dirs = usePromoted && piece.promotedMoveDirections != null && piece.promotedMoveDirections.Length > 0
             ? piece.promotedMoveDirections
             : piece.moveDirections;
         AddMoveGrid(centerPanel, dirs);

@@ -6,17 +6,16 @@ public class HighlightManager : MonoBehaviour
     public static HighlightManager Instance { get; private set; }
 
     private List<BoardCell> highlightedCells = new List<BoardCell>();
-    private List<BoardCell> dangerCells = new List<BoardCell>();
 
     void Awake()
     {
         if (Instance == null) Instance = this;
-        else Destroy(gameObject);
+        else Destroy(this);
     }
 
+    /// <summary>移動先をハイライトする（既存のハイライトは呼び出し側で消すこと）</summary>
     public void ShowMoveHighlights(List<MoveValidator.MoveResult> moves)
     {
-        ClearHighlights();
         BoardRenderer renderer = BoardManager.Instance.GetRenderer();
 
         // 敵の攻撃範囲を計算

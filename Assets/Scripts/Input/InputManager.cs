@@ -1,5 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UIElements;
+using System.Collections;
 using System.Collections.Generic;
 
 public class InputManager : MonoBehaviour
@@ -12,33 +14,70 @@ public class InputManager : MonoBehaviour
     // 敵駒クリック時の閲覧用(移動ハイライトなし)
     private PieceInstance viewedPiece;
 
+    // プレイヤーの手を実行中（アニメーション等）
+    private bool isExecutingMove;
+
     void Awake()
     {
         if (Instance == null) Instance = this;
-        else Destroy(gameObject);
+        else { Destroy(this); return; }
     }
 
     void Update()
     {
+        // 倒された駒の選択・閲覧は解除する
+        if (selectedPiece != null && !selectedPiece.isAlive) ClearSelection();
+        if (viewedPiece != null && !viewedPiece.isAlive) viewedPiece = null;
+
         if (GameManager.Instance == null) return;
         if (GameManager.Instance.currentPhase != GamePhase.Battle) return;
-        // 能力処理中（なこ移動等）は入力をブロック
-        if (GameManager.Instance.IsTurnProcessing) return;
+        // 能力処理中（なこ移動等）・自分の手の実行中は入力をブロック
+        if (GameManager.Instance.IsTurnProcessing || isExecutingMove) return;
 
         if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
         {
+            Vector2 mousePos = Mouse.current.position.ReadValue();
+            // UIの上でのクリックは盤面に通さない
+            if (IsPointerOverUI(mousePos)) return;
             // プレイヤーターンでなくてもクリックは受け付ける(敵駒閲覧のため)
-            HandleClick();
+            HandleClick(mousePos);
         }
     }
 
-    private void HandleClick()
+    /// <summary>画面座標がUI Toolkitのクリック可能な要素の上にあるか</summary>
+    private static bool IsPointerOverUI(Vector2 screenPos)
     {
-        Vector2 mousePos = Mouse.current.position.ReadValue();
+        UIDocument[] docs = FindObjectsByType<UIDocument>(FindObjectsSortMode.None);
+        for (int i = 0; i < docs.Length; i++)
+        {
+            VisualElement root = docs[i].rootVisualElement;
+            if (root == null || root.panel == null) continue;
+            IPanel panel = root.panel;
+            Vector2 panelPos = RuntimePanelUtils.ScreenToPanel(panel, new Vector2(screenPos.x, Screen.height - screenPos.y));
+            VisualElement picked = panel.Pick(panelPos);
+            if (picked != null && picked != panel.visualTree && !IsDocumentRoot(picked, docs))
+                return true;
+        }
+        return false;
+    }
+
+    private static bool IsDocumentRoot(VisualElement element, UIDocument[] docs)
+    {
+        for (int i = 0; i < docs.Length; i++)
+            if (docs[i].rootVisualElement == element) return true;
+        return false;
+    }
+
+    private void HandleClick(Vector2 mousePos)
+    {
         Vector3 worldPos = Camera.main.ScreenToWorldPoint(new Vector3(mousePos.x, mousePos.y, 0));
         Vector2Int boardPos = new Vector2Int(Mathf.RoundToInt(worldPos.x), Mathf.RoundToInt(worldPos.y));
 
-        if (!BoardManager.Instance.IsInBounds(boardPos)) return;
+        if (!BoardManager.Instance.IsInBounds(boardPos))
+        {
+            ClearSelection();
+            return;
+        }
 
         bool isPlayerTurn = (GameManager.Instance.currentTurn == Team.Player);
         PieceInstance clickedPiece = BoardManager.Instance.GetPieceAt(boardPos);
@@ -52,61 +91,29 @@ public class InputManager : MonoBehaviour
                 return;
             }
 
-            MoveValidator.MoveResult? targetMove = null;
             if (currentValidMoves != null)
             {
                 foreach (var move in currentValidMoves)
                 {
                     if (move.position == boardPos)
                     {
-                        targetMove = move;
-                        break;
+                        StartCoroutine(ExecutePlayerMove(selectedPiece, move));
+                        return;
                     }
                 }
             }
+        }
 
-            if (targetMove.HasValue)
-            {
-                ExecuteMove(selectedPiece, targetMove.Value);
-                return;
-            }
-
-            // 自駒クリックで選択切替
-            if (clickedPiece != null && clickedPiece.team == Team.Player)
-            {
-                SelectPiece(clickedPiece);
-                return;
-            }
-
-            // 敵駒クリックで閲覧
-            if (clickedPiece != null && clickedPiece.team == Team.Enemy)
-            {
-                ClearSelection();
-                ViewPiece(clickedPiece);
-                return;
-            }
-
+        if (clickedPiece == null)
+        {
             ClearSelection();
             return;
         }
 
-        // 駒未選択
-        if (clickedPiece != null)
-        {
-            if (clickedPiece.team == Team.Player && isPlayerTurn)
-            {
-                SelectPiece(clickedPiece);
-            }
-            else
-            {
-                // 敵駒 or プレイヤーターン外: 閲覧のみ
-                ViewPiece(clickedPiece);
-            }
-        }
+        if (clickedPiece.team == Team.Player && isPlayerTurn)
+            SelectPiece(clickedPiece);
         else
-        {
-            ClearSelection();
-        }
+            ViewPiece(clickedPiece); // 敵駒 or プレイヤーターン外: 閲覧のみ
     }
 
     private void SelectPiece(PieceInstance piece)
@@ -123,16 +130,18 @@ public class InputManager : MonoBehaviour
         viewedPiece = piece;
         currentValidMoves = MoveValidator.GetValidMoves(piece);
 
-        HighlightManager.Instance.ShowSelectedHighlight(piece.boardPosition);
-        HighlightManager.Instance.ShowMoveHighlights(currentValidMoves);
+        if (HighlightManager.Instance != null)
+        {
+            HighlightManager.Instance.ShowMoveHighlights(currentValidMoves);
+            HighlightManager.Instance.ShowSelectedHighlight(piece.boardPosition);
+        }
     }
 
     private void ViewPiece(PieceInstance piece)
     {
         // 移動ハイライトなしで閲覧のみ
+        ClearSelection();
         viewedPiece = piece;
-        selectedPiece = null;
-        currentValidMoves = null;
     }
 
     public void ClearSelection()
@@ -144,111 +153,20 @@ public class InputManager : MonoBehaviour
             HighlightManager.Instance.ClearHighlights();
     }
 
-    private void ExecuteMove(PieceInstance piece, MoveValidator.MoveResult move)
+    private IEnumerator ExecutePlayerMove(PieceInstance piece, MoveValidator.MoveResult move)
     {
-        BoardManager bm = BoardManager.Instance;
-        Vector2Int from = piece.boardPosition;
-        Vector2Int to = move.position;
-
-        if (move.isAttack)
-        {
-            PieceInstance target = bm.GetPieceAt(to);
-            if (target != null)
-            {
-                int damage = Mathf.Max(0, piece.ATK - target.DEF);
-
-                // 挑発駒はダメージ無効（∞HP）
-                if (target.data.isTauntPiece)
-                {
-                    if (BattleEffects.Instance != null)
-                        BattleEffects.Instance.PlayHitEffect(to);
-                    PieceController tpc = bm.GetPieceController(to);
-                    if (tpc != null) tpc.Shake();
-                    if (BattleLogUI.Instance != null)
-                        BattleLogUI.Instance.AddLog(BattleLogUI.ColorName(piece.DisplayName, piece.team) + " \u2192 " + BattleLogUI.ColorName(target.DisplayName, target.team) + " \u30C0\u30E1\u30FC\u30B8\u7121\u52B9");
-                    ClearSelection();
-                    GameManager.Instance.EndTurn();
-                    return;
-                }
-
-                target.currentHP -= damage;
-
-                PieceController targetPC = bm.GetPieceController(to);
-                if (targetPC != null) targetPC.UpdateHP();
-
-                if (target.currentHP <= 0)
-                {
-                    if (BattleEffects.Instance != null)
-                        BattleEffects.Instance.PlayDefeatEffect(to);
-                    if (BattleLogUI.Instance != null)
-                        BattleLogUI.Instance.AddLog(BattleLogUI.ColorName(piece.DisplayName, piece.team) + " が " + BattleLogUI.ColorName(target.DisplayName, target.team) + " を撃破！");
-                    int groupId = target.linkedGroupId;
-                    bm.RemovePiece(to);
-                    bm.RemovePieceController(to);
-                    if (AbilitySystem.Instance != null)
-                        AbilitySystem.Instance.CheckLinkedDeaths(groupId);
-                }
-                else
-                {
-                    if (BattleEffects.Instance != null)
-                        BattleEffects.Instance.PlayHitEffect(to);
-                    if (BattleLogUI.Instance != null)
-                        BattleLogUI.Instance.AddLog(BattleLogUI.ColorName(piece.DisplayName, piece.team) + " → " + BattleLogUI.ColorName(target.DisplayName, target.team) + " " + damage + "ダメージ");
-                    if (targetPC != null) targetPC.Shake();
-                    ClearSelection();
-                    GameManager.Instance.EndTurn();
-                    return;
-                }
-            }
-        }
-
-        PieceController pc = bm.GetPieceController(from);
-        bm.MovePiece(from, to);
-        bm.UpdatePieceControllerPosition(from, to);
-        if (pc != null) pc.MoveTo(to);
-
-        // 移動SE
-        if (BattleEffects.Instance != null)
-            BattleEffects.Instance.PlayMoveEffect();
-
-        // SN: 移動でHP-1
-        if (piece.data.losesHPOnMove && piece.isAlive)
-        {
-            piece.currentHP--;
-            PieceController snPC = bm.GetPieceController(to);
-            if (snPC != null) snPC.UpdateHP();
-            if (piece.currentHP <= 0)
-            {
-                if (BattleEffects.Instance != null)
-                    BattleEffects.Instance.PlayDefeatEffect(to);
-                bm.RemovePiece(to);
-                bm.RemovePieceController(to);
-                if (BattleLogUI.Instance != null)
-                    BattleLogUI.Instance.AddLog(BattleLogUI.ColorName(piece.DisplayName, piece.team) + " は力尽きた...");
-                ClearSelection();
-                GameManager.Instance.EndTurn();
-                return;
-            }
-        }
-
-        // 成りチェック
-        GameManager.Instance.CheckPromotion(piece);
-
-        // 李白の裏返し能力
-        if (piece.data.pieceType == PieceType.Rihaku && AbilitySystem.Instance != null)
-            AbilitySystem.Instance.ExecuteRihakuAbility(piece);
-
+        isExecutingMove = true;
         ClearSelection();
-        GameManager.Instance.EndTurn();
-    }
 
-    public PieceInstance GetSelectedPiece()
-    {
-        return selectedPiece;
+        yield return CombatResolver.ExecuteMove(piece, move);
+
+        isExecutingMove = false;
+        GameManager.Instance.EndTurn();
     }
 
     public PieceInstance GetViewedPiece()
     {
-        return viewedPiece != null ? viewedPiece : selectedPiece;
+        PieceInstance p = viewedPiece != null ? viewedPiece : selectedPiece;
+        return (p != null && p.isAlive) ? p : null;
     }
 }

@@ -158,7 +158,7 @@ public class TurnIndicatorUI : MonoBehaviour
     private void OnPhaseChanged(GamePhase phase)
     {
         if (GameManager.Instance != null)
-            UpdateButtonVisibility(GameManager.Instance.currentTurn);
+            UpdateTurnDisplay(GameManager.Instance.currentTurn);
     }
 
     private void UpdateButtonVisibility(Team team)
@@ -174,8 +174,8 @@ public class TurnIndicatorUI : MonoBehaviour
         if (GameManager.Instance == null) return;
         if (GameManager.Instance.currentTurn != Team.Player) return;
         if (GameManager.Instance.currentPhase != GamePhase.Battle) return;
+        if (GameManager.Instance.IsTurnProcessing) return;
 
-        Debug.Log("\u30D1\u30B9\u30DC\u30BF\u30F3\u30AF\u30EA\u30C3\u30AF");
         if (InputManager.Instance != null)
             InputManager.Instance.ClearSelection();
         GameManager.Instance.EndTurn();
@@ -185,8 +185,8 @@ public class TurnIndicatorUI : MonoBehaviour
     {
         if (GameManager.Instance == null) return;
         if (GameManager.Instance.currentPhase != GamePhase.Battle) return;
+        if (GameManager.Instance.IsTurnProcessing) return;
 
-        Debug.Log("\u6295\u4E86\u30DC\u30BF\u30F3\u30AF\u30EA\u30C3\u30AF");
         GameManager.Instance.Resign();
     }
 }
