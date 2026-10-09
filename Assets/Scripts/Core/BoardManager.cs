@@ -235,9 +235,19 @@ public class BoardManager : MonoBehaviour
     public List<PieceInstance> GetTeamPieces(Team team)
     {
         var result = new List<PieceInstance>();
-        foreach (var p in allPieces)
-            if (p.team == team && p.isAlive) result.Add(p);
+        GetTeamPieces(team, result);
         return result;
+    }
+
+    /// <summary>生きている駒を result に詰める（result は先にクリアされる）</summary>
+    public void GetTeamPieces(Team team, List<PieceInstance> result)
+    {
+        result.Clear();
+        for (int i = 0; i < allPieces.Count; i++)
+        {
+            PieceInstance p = allPieces[i];
+            if (p.team == team && p.isAlive) result.Add(p);
+        }
     }
 
     public PieceInstance FindC3(Team team)

@@ -12,9 +12,17 @@ public static class MoveValidator
     public static List<MoveResult> GetValidMoves(PieceInstance piece)
     {
         var results = new List<MoveResult>();
-        if (piece == null || !piece.isAlive) return results;
-        if (piece.data.isImmovable) return results;
-        if (piece.isPromoted && piece.data.isImmovableWhenPromoted) return results;
+        GetValidMoves(piece, results);
+        return results;
+    }
+
+    /// <summary>合法手を results に詰める（results は先にクリアされる。AI用にアロケーションを避ける版）</summary>
+    public static void GetValidMoves(PieceInstance piece, List<MoveResult> results)
+    {
+        results.Clear();
+        if (piece == null || !piece.isAlive) return;
+        if (piece.data.isImmovable) return;
+        if (piece.isPromoted && piece.data.isImmovableWhenPromoted) return;
 
         MoveDirection[] directions = piece.GetMoveDirections();
         BoardManager bm = BoardManager.Instance;
@@ -47,8 +55,6 @@ public static class MoveValidator
                 if (!dir.canJump && targetPiece != null) break;
             }
         }
-
-        return results;
     }
 
     // 駒の攻撃範囲を取得（味方駒の位置も含む = 防衛範囲）
