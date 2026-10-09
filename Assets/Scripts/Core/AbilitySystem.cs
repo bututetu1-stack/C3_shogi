@@ -162,12 +162,14 @@ public class AbilitySystem : MonoBehaviour
                 }
                 if (targets.Count > 0)
                 {
+                    var source = GameSim.BeginSource(maou);
                     PieceInstance victim = targets[Random.Range(0, targets.Count)];
                     if (BattleLogUI.Instance != null)
                         BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("魔王", Team.Enemy) + " の雷撃！" + BattleLogUI.ColorName(victim.DisplayName, victim.team) + " に貫通1ダメージ");
                     if (BattleEffects.Instance != null) BattleEffects.Instance.PlayLightningEffect(victim.boardPosition);
                     yield return new WaitForSeconds(0.2f);
                     CombatResolver.ApplyDamage(victim, 1, true);
+                    GameSim.EndSource(source);
                     yield return new WaitForSeconds(0.4f);
                 }
             }
@@ -333,7 +335,11 @@ public class AbilitySystem : MonoBehaviour
 
         if (flipped > 0)
         {
-            if (BattleEffects.Instance != null) BattleEffects.Instance.PlayFlipSwirl(center, radius);
+            if (BattleEffects.Instance != null)
+            {
+                BattleEffects.Instance.PlayFlipSwirl(center, radius);
+                BattleEffects.Instance.PlayFanSwirl(center, radius);
+            }
             SpeechBubble.Say(rihaku, PieceLines.RihakuFlip);
         }
     }
@@ -347,12 +353,13 @@ public class AbilitySystem : MonoBehaviour
             BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("物鉄", monotetsu.team) + " が " + BattleLogUI.ColorName("提督", monotetsu.team) + " に着任！");
 
         if (BattleEffects.Instance != null) BattleEffects.Instance.PlayTeitokuFanfare();
-        yield return NavalCutInUI.Play("提督 着任", "全艦隊、抜錨せよ！",
+        yield return CutInUI.Play("提督 着任", "全艦隊、抜錨せよ！",
             monotetsu.data.promotedPortrait != null ? monotetsu.data.promotedPortrait : monotetsu.data.portrait,
-            NavalCutInUI.Navy, 1.7f);
+            CutInUI.Navy, 1.7f);
         if (!monotetsu.isAlive || monotetsu.isPromoted) yield break;
 
         monotetsu.Promote();
+        GameSim.RecordPromotion(monotetsu);
         CombatResolver.PlayFlip(monotetsu);
         FloatingText.Spawn(monotetsu.boardPosition, "提督", Palette.GoldLight, 4f);
         yield return new WaitForSeconds(0.45f);
@@ -427,7 +434,7 @@ public class AbilitySystem : MonoBehaviour
                 PieceInstance kanmusu = bm.Spawn(kanmusuData, Team.Player, spawnPos.Value);
                 if (kanmusu == null) continue;
                 kanmusu.linkedGroupId = groupId;
-                FloatingText.Spawn(spawnPos.Value, "出撃！", NavalCutInUI.SeaLight, 3.6f);
+                FloatingText.Spawn(spawnPos.Value, "出撃！", CutInUI.SeaLight, 3.6f);
                 launched++;
                 yield return new WaitForSeconds(0.3f);
             }
@@ -466,7 +473,7 @@ public class AbilitySystem : MonoBehaviour
             if (BattleLogUI.Instance != null)
                 BattleLogUI.Instance.AddLog("全" + BattleLogUI.ColorName("深海", Team.Enemy) + "撃破！ 作戦完了、" + BattleLogUI.ColorName("提督", Team.Player) + "の艦隊は帰投する");
             if (BattleEffects.Instance != null) BattleEffects.Instance.PlayRetreatHorn();
-            StartCoroutine(NavalCutInUI.Play("作戦完了", "艦隊、帰投せよ", null, NavalCutInUI.Navy, 1.2f));
+            StartCoroutine(CutInUI.Play("作戦完了", "艦隊、帰投せよ", null, CutInUI.Navy, 1.2f));
             CombatResolver.RemoveWithExit(teitoku, PieceController.ExitStyle.Retreat);
             foreach (var k in kanmusuList) CombatResolver.RemoveWithExit(k, PieceController.ExitStyle.Retreat);
             return;
@@ -531,7 +538,9 @@ public class AbilitySystem : MonoBehaviour
         if (BattleEffects.Instance != null)
             BattleEffects.Instance.PlayAbyssStrike(shinkai.boardPosition, victim.boardPosition);
         yield return new WaitForSeconds(0.3f);
+        var source = GameSim.BeginSource(shinkai);
         CombatResolver.ApplyDamage(victim, 2, false);
+        GameSim.EndSource(source);
         yield return new WaitForSeconds(0.25f);
     }
 
@@ -583,7 +592,7 @@ public class AbilitySystem : MonoBehaviour
         // 空爆/雷撃/砲撃からランダム選択
         int attackType = Random.Range(0, 3);
         string[] calls = { "空爆！", "雷撃！", "砲撃！" };
-        FloatingText.Spawn(kanmusu.boardPosition, calls[attackType], NavalCutInUI.SeaLight, 3.8f);
+        FloatingText.Spawn(kanmusu.boardPosition, calls[attackType], CutInUI.SeaLight, 3.8f);
         PieceController kpc = bm.GetPieceController(kanmusu.boardPosition);
         if (kpc != null) kpc.Lunge(targetShinkai.boardPosition);
         yield return new WaitForSeconds(0.3f);
@@ -774,6 +783,7 @@ public class AbilitySystem : MonoBehaviour
             if (nakoPC != null)
             {
                 nakoPC.SetTrail(new Color(NakoPink.r, NakoPink.g, NakoPink.b, 0.55f), 0.5f);
+                if (BattleEffects.Instance != null) BattleEffects.Instance.PlayDashStreak(nakoPos, dopaPos, NakoPink, 0.4f);
                 yield return nakoPC.SlideToCoroutine(dopaPos, 0.4f);
             }
 
@@ -935,6 +945,8 @@ public class AbilitySystem : MonoBehaviour
         Team team = cook.team;
         Vector3 cookPos = new Vector3(cook.boardPosition.x, cook.boardPosition.y, 0f);
         SpeechBubble.Say(cook, PieceLines.WotsuCook);
+        if (BattleEffects.Instance != null) BattleEffects.Instance.PlayWokFlame(cook.boardPosition);
+        yield return new WaitForSeconds(0.2f);
 
         var emptyPositions = new List<Vector2Int>();
         for (int x = 0; x < bm.CurrentBoardSize; x++)
@@ -1007,6 +1019,7 @@ public class AbilitySystem : MonoBehaviour
 
         // 門人は叫びながら突き進む（残像つき）
         SpeechBubble.Say(piece, PieceLines.MoninRush);
+        if (BattleEffects.Instance != null) BattleEffects.Instance.PlayRage(piece.boardPosition, piece.isPromoted);
         PieceController pc = BoardManager.Instance.GetPieceController(piece.boardPosition);
         if (pc != null) pc.SetTrail(new Color(1f, 0.4f, 0.3f, 0.5f), 0.6f);
         yield return new WaitForSeconds(0.25f);
@@ -1105,6 +1118,7 @@ public class AbilitySystem : MonoBehaviour
                     ally.turnsNearBoku = 0;
                     CombatResolver.RefreshStats(ally);
                     if (mentor != null && !cheering.Contains(mentor)) cheering.Add(mentor);
+                    if (mentor != null && BattleEffects.Instance != null) BattleEffects.Instance.PlayMentorBeam(mentor.boardPosition, ally.boardPosition);
                     FloatingText.Spawn(ally.boardPosition, (buffATK ? "攻+" : "防+") + buffAmount, buffATK ? Palette.ATK : Palette.DEF);
                     if (BattleEffects.Instance != null) BattleEffects.Instance.PlayBuffEffect(ally.boardPosition, buffATK);
 
@@ -1163,8 +1177,10 @@ public class AbilitySystem : MonoBehaviour
             }
         }
 
+        var source = GameSim.BeginSource(piece);
         foreach (var victim in victims)
             CombatResolver.ApplyDamage(victim, 1, true);
+        GameSim.EndSource(source);
 
         explodingPositions.Remove(deathPos);
     }

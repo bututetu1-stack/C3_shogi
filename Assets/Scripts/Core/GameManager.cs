@@ -232,6 +232,18 @@ public class GameManager : MonoBehaviour
 
         yield return new WaitForSeconds(StageIntroDuration);
 
+        // ボスが初めて出る局は登場のカットイン
+        if (stageManager != null && !GameSim.Headless)
+        {
+            PieceType boss;
+            PieceLines.CutIn cut = PieceLines.BossCutIn(stageManager.currentStage, out boss);
+            if (cut != null)
+            {
+                if (BattleEffects.Instance != null) BattleEffects.Instance.PlayCutInSound();
+                yield return CutInUI.PlayPiece(boardManager.GetPieceDataByType(boss), false, cut.title, cut.subtitle, cut.band, cut.accent, 1.6f);
+            }
+        }
+
         SetPhase(GamePhase.Battle);
 
         // 1手目からターン開始時能力（門人・ヲツ・なこ）を発動
@@ -451,6 +463,13 @@ public class GameManager : MonoBehaviour
             yield return AbilitySystem.Instance.TeitokuPromotionRoutine(piece);
             yield break;
         }
+        // 部員の成りはカットインで見せる
+        PieceLines.CutIn cut = piece.team == Team.Player ? PieceLines.PromotionCutIn(piece.data.pieceType) : null;
+        if (cut != null && !GameSim.Headless)
+        {
+            if (BattleEffects.Instance != null) BattleEffects.Instance.PlayCutInSound();
+            yield return CutInUI.PlayPiece(piece.data, true, cut.title, cut.subtitle, cut.band, cut.accent, 1.4f);
+        }
         PromotePiece(piece);
     }
 
@@ -460,6 +479,7 @@ public class GameManager : MonoBehaviour
         if (piece == null || !piece.isAlive || piece.isPromoted || !piece.data.canPromote) return;
 
         piece.Promote();
+        GameSim.RecordPromotion(piece);
         CombatResolver.PlayFlip(piece);
         FloatingText.Spawn(piece.boardPosition, "成", Palette.GoldLight, 4f);
         SpeechBubble.Say(piece, PieceLines.OnPromote(piece.data.pieceType));

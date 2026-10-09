@@ -80,16 +80,6 @@ public static class PieceSkin
             case PieceType.Ryuujin: SetAura(ref look, new Color(0.4f, 0.85f, 1f), false); break;
         }
 
-        // 紋章の画像（Resources/Effects/Emblem_駒の種類.png）があれば駒の頭に入れる
-        if (look.emblem == null)
-        {
-            Sprite emblemArt = EffectArt.Get("Emblem_" + data.pieceType);
-            if (emblemArt != null)
-            {
-                look.emblem = emblemArt;
-                look.emblemColor = Color.white;
-            }
-        }
         // 錨を画像に差し替えたときは、画像の色をそのまま使う（濃さだけ残す）
         if (look.emblem != null && EffectArt.Has("Anchor"))
             look.emblemColor = new Color(1f, 1f, 1f, look.emblemColor.a);

@@ -16,20 +16,44 @@ public static class GameSim
     // 通常攻撃で倒したときの攻撃側
     private static PieceInstance attacker;
 
-    /// <summary>この局で自軍が倒した敵（倒した自軍の駒の名前。能力以外の巻き込みは「その他」）</summary>
+    /// <summary>この局で自軍が倒した敵ごとの、倒した自軍の駒の名前（能力以外の巻き込みは「その他」）</summary>
     public static readonly List<string> StageKills = new List<string>();
+    /// <summary>StageKills と同じ順の、倒された敵の名前</summary>
+    public static readonly List<string> StageKillVictims = new List<string>();
     /// <summary>この局で倒された自軍の駒の名前</summary>
     public static readonly List<string> StageLosses = new List<string>();
+    /// <summary>StageLosses と同じ順の、倒した敵の名前（わからなければ「その他」）</summary>
+    public static readonly List<string> StageLossKillers = new List<string>();
+    /// <summary>この局で成った自軍の駒の名前</summary>
+    public static readonly List<string> StagePromotions = new List<string>();
 
     public static void BeginStageStats()
     {
         StageKills.Clear();
+        StageKillVictims.Clear();
         StageLosses.Clear();
+        StageLossKillers.Clear();
+        StagePromotions.Clear();
         AbilitySource = null;
         attacker = null;
     }
 
     public static void SetAttacker(PieceInstance piece) { attacker = piece; }
+
+    /// <summary>能力によるダメージの出どころを一時的に切り替える。戻すときは返り値を EndSource に渡す</summary>
+    public static PieceInstance[] BeginSource(PieceInstance source)
+    {
+        var saved = new[] { attacker, AbilitySource };
+        attacker = null;
+        AbilitySource = source;
+        return saved;
+    }
+
+    public static void EndSource(PieceInstance[] saved)
+    {
+        attacker = saved[0];
+        AbilitySource = saved[1];
+    }
 
     /// <summary>駒が倒されたときに CombatResolver から呼ぶ</summary>
     public static void RecordKill(PieceInstance victim)
@@ -37,13 +61,21 @@ public static class GameSim
         if (!Headless || victim == null) return;
         PieceType t = victim.data.pieceType;
         if (t == PieceType.Chuka || t == PieceType.Dopa) return;   // 消える召喚物は数えない
+        PieceInstance killer = attacker != null ? attacker : AbilitySource;
         if (victim.team == Team.Player)
         {
             StageLosses.Add(victim.data.displayName);
+            StageLossKillers.Add(killer != null && killer.team == Team.Enemy ? killer.data.displayName : "その他");
             return;
         }
-        PieceInstance killer = attacker != null ? attacker : AbilitySource;
         StageKills.Add(killer != null && killer.team == Team.Player ? killer.data.displayName : "その他");
+        StageKillVictims.Add(victim.data.displayName);
+    }
+
+    /// <summary>自軍の駒が成ったときに呼ぶ</summary>
+    public static void RecordPromotion(PieceInstance piece)
+    {
+        if (Headless && piece != null && piece.team == Team.Player) StagePromotions.Add(piece.data.displayName);
     }
 
     /// <summary>

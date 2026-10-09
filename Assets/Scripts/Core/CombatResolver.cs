@@ -49,6 +49,12 @@ public static class CombatResolver
         // 髑髏の爆発などで攻撃側が倒れた場合はここで終了
         if (!piece.isAlive || !bm.IsEmpty(to)) yield break;
 
+        // SN は残像を残して駆け抜ける
+        if (piece.data.losesHPOnMove)
+        {
+            PieceController driver = bm.GetPieceController(from);
+            if (driver != null) driver.SetTrail(new Color(0.75f, 0.75f, 0.8f, 0.45f), 0.3f);
+        }
         MovePieceTo(piece, to);
         ShowLastMove(from, to);
         if (BattleEffects.Instance != null)
@@ -108,7 +114,11 @@ public static class CombatResolver
         PlayHit(target);
         FloatingText.Spawn(target.boardPosition, damage > 0 ? "-" + damage : "0", damage > 0 ? DamageColor : Palette.TextSub);
         Log(Name(attacker) + " → " + Name(target) + " " + damage + "ダメージ");
-        if (target.data.isTauntPiece) SpeechBubble.SayMaybe(target, PieceLines.KonishikiBullied, 0.5f);
+        if (target.data.isTauntPiece)
+        {
+            if (BattleEffects.Instance != null) BattleEffects.Instance.PlayGuard(target.boardPosition);
+            SpeechBubble.SayMaybe(target, PieceLines.KonishikiBullied, 0.5f);
+        }
         return false;
     }
 

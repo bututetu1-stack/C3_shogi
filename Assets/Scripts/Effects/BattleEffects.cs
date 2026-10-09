@@ -787,6 +787,120 @@ public class BattleEffects : MonoBehaviour
         StartCoroutine(Implode(p, 10, purple, new Color(0.35f, 0.2f, 0.6f), 0.9f + radius * 0.5f, 0.45f));
     }
 
+    /// <summary>カットインの効果音</summary>
+    public void PlayCutInSound() { Play(Clip("CutIn"), promoteClip); }
+
+    /// <summary>僕から味方へ、見守る金色の光が流れていく</summary>
+    public void PlayMentorBeam(Vector2Int from, Vector2Int to)
+    {
+        Vector3 a = World(from), b = World(to);
+        for (int i = 0; i < 6; i++)
+            StartCoroutine(Mote(a, b, new Color(1f, 0.88f, 0.5f, 0.95f), 0.45f, i * 0.05f, 0.35f));
+    }
+
+    // 光の粒が弧を描いて a から b へ飛び、着いたところで光る
+    private IEnumerator Mote(Vector3 a, Vector3 b, Color color, float life, float delay, float arc)
+    {
+        if (delay > 0f) yield return new WaitForSeconds(delay);
+        var sr = CreateSprite(SpriteFactory.SoftCircle, a, color, 0.16f, OrderParticle + 1);
+        Vector3 side = Vector3.Cross(b - a, Vector3.forward).normalized * Random.Range(-arc, arc);
+        float elapsed = 0f;
+        while (elapsed < life)
+        {
+            elapsed += Time.deltaTime;
+            float t = Ease.InOutCubic(Mathf.Clamp01(elapsed / life));
+            sr.transform.position = Vector3.Lerp(a, b, t) + side * Mathf.Sin(t * Mathf.PI);
+            sr.transform.localScale = Vector3.one * Mathf.Lerp(0.16f, 0.1f, t);
+            yield return null;
+        }
+        Destroy(sr.gameObject);
+        StartCoroutine(Glow(b, new Color(color.r, color.g, color.b, 0.6f), 0.15f, 0.5f, 0.2f));
+    }
+
+    /// <summary>ヲツの鍋振り（鍋から炎と火の粉が上がる）</summary>
+    public void PlayWokFlame(Vector2Int pos)
+    {
+        Vector3 p = World(pos) + new Vector3(0f, 0.15f, 0f);
+        if (!ArtFx("MuzzleFlash", p + new Vector3(0f, 0.35f, 0f), 0.5f, 0.9f, 0.32f, 90f))
+            StartCoroutine(Glow(p, new Color(1f, 0.6f, 0.2f, 0.9f), 0.3f, 1.0f, 0.3f));
+        StartCoroutine(Burst(p, 12, new Color(1f, 0.85f, 0.3f), new Color(1f, 0.35f, 0.1f), 1f, 2.6f, 0.07f, 0.55f, 3f, SpriteFactory.Pixel));
+    }
+
+    /// <summary>門人の怒り（赤い衝撃波と火の粉。成ると大きくなる）</summary>
+    public void PlayRage(Vector2Int pos, bool awakened)
+    {
+        Vector3 p = World(pos);
+        Color red = new Color(1f, 0.3f, 0.2f);
+        StartCoroutine(Glow(p, new Color(red.r, red.g, red.b, 0.7f), 0.4f, awakened ? 2f : 1.5f, 0.35f));
+        StartCoroutine(RingWave(p, red, 0.3f, awakened ? 2.2f : 1.6f, 0.35f));
+        StartCoroutine(RingWave(p, new Color(1f, 0.8f, 0.4f), 0.2f, awakened ? 1.6f : 1.2f, 0.3f));
+        StartCoroutine(Burst(p, awakened ? 16 : 10, red, new Color(0.35f, 0.05f, 0.05f), 2f, 4.5f, 0.08f, 0.4f, 0f, SpriteFactory.Pixel));
+        ShakeCamera(0.12f, awakened ? 0.07f : 0.04f);
+    }
+
+    /// <summary>光の軌跡（なこの突撃）。duration は駒が滑る時間に合わせる</summary>
+    public void PlayDashStreak(Vector2Int from, Vector2Int to, Color color, float duration)
+    {
+        StartCoroutine(StreakRoutine(World(from), World(to), color, duration));
+    }
+
+    private IEnumerator StreakRoutine(Vector3 a, Vector3 b, Color color, float duration)
+    {
+        float elapsed = 0f;
+        Vector3 last = a;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            Vector3 p = Vector3.LerpUnclamped(a, b, Ease.OutCubic(Mathf.Clamp01(elapsed / duration)));
+            // 前のフレームとの間も埋めて、切れ目のない光の帯にする
+            int steps = Mathf.Max(1, Mathf.CeilToInt(Vector3.Distance(last, p) / 0.12f));
+            for (int i = 1; i <= steps; i++)
+                StartCoroutine(Glow(Vector3.Lerp(last, p, (float)i / steps), new Color(color.r, color.g, color.b, 0.8f), 0.32f, 0.06f, 0.45f));
+            last = p;
+            yield return null;
+        }
+        StartCoroutine(Burst(b, 10, color, Color.white, 1f, 2.4f, 0.07f, 0.45f, 0f, SpriteFactory.Pixel));
+    }
+
+    /// <summary>李白の扇の渦（紫と桃色の花びらが渦を巻いて広がる）</summary>
+    public void PlayFanSwirl(Vector2Int pos, int radius)
+    {
+        Vector3 p = World(pos);
+        int count = 8 + radius * 4;
+        for (int i = 0; i < count; i++)
+            StartCoroutine(Petal(p, i * 360f / count, 0.9f + radius * 0.6f));
+    }
+
+    private IEnumerator Petal(Vector3 center, float startAngle, float reach)
+    {
+        Color c = Color.Lerp(new Color(0.75f, 0.5f, 1f), new Color(1f, 0.75f, 0.95f), Random.value);
+        var sr = CreateSprite(SpriteFactory.SoftCircle, center, c, 0.14f, OrderParticle + 1);
+        const float life = 0.7f;
+        float elapsed = 0f;
+        while (elapsed < life)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / life;
+            float k = Ease.OutCubic(t);
+            float ang = (startAngle + 300f * k) * Mathf.Deg2Rad;
+            sr.transform.position = center + new Vector3(Mathf.Cos(ang), Mathf.Sin(ang), 0f) * reach * k;
+            sr.transform.localScale = new Vector3(0.2f, 0.1f, 1f);
+            sr.transform.rotation = Quaternion.Euler(0f, 0f, ang * Mathf.Rad2Deg + 90f);
+            sr.color = new Color(c.r, c.g, c.b, 1f - t);
+            yield return null;
+        }
+        Destroy(sr.gameObject);
+    }
+
+    /// <summary>小錦の踏ん張り（攻撃を受け止めて盾が光る）</summary>
+    public void PlayGuard(Vector2Int pos)
+    {
+        Vector3 p = World(pos);
+        if (!ArtFx("BuffDEF", p, 0.5f, 0.85f, 0.35f, 0f))
+            StartCoroutine(Glow(p, new Color(0.45f, 0.65f, 1f, 0.7f), 0.4f, 1.0f, 0.3f));
+        StartCoroutine(RingWave(p, new Color(0.6f, 0.8f, 1f), 0.4f, 1.2f, 0.3f));
+    }
+
     /// <summary>鬼火（黄泉の召喚）</summary>
     public void PlaySoulFire(Vector2Int pos)
     {

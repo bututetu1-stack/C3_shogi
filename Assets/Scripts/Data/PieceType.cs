@@ -7,7 +7,7 @@ public enum PieceType
     Gold,    // 金
     Bishop,  // 角
     Rook,    // 飛
-    C3,      // サークル(動けない王の代替)
+    C3,      // 部（動けない王の代わり）
     Monin,   // 門人
     Wotsu,   // ヲツ
     Chuka,      // 中華

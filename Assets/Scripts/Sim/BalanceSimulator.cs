@@ -18,7 +18,10 @@ public class SimStageRecord
     public string[] roster;         // 対局開始時の自軍（C3・歩・召喚物を除く）
     public string[] survivors;      // 決着時に残っていた自軍（同上）
     public string[] kills;          // 自軍が倒した敵ごとの、倒した駒
+    public string[] victims;        // kills と同じ順の、倒された敵
     public string[] losses;         // 倒された自軍の駒
+    public string[] lossBy;         // losses と同じ順の、倒した敵
+    public string[] promotions;     // 成った自軍の駒
     public int playerC3HP;
     public int enemyLeft;           // 決着時に残っていた敵（C3を除く）
 }
@@ -34,6 +37,15 @@ public class SimRunRecord
     // AIが読み切れた深さの内訳（敵が4手先まで読めた手数／敵の全手数、自軍も同様）
     public int enemyDeepMoves, enemyMoves, playerDeepMoves, playerMoves;
     public List<SimStageRecord> stages = new List<SimStageRecord>();
+}
+
+/// <summary>自動プレイの条件（駒の強さを同じ条件で比べるため）</summary>
+public class SimOptions
+{
+    /// <summary>第一局で必ずこの駒を仲間にする（候補の抽選は通常どおり行い、選ぶ札だけ差し替える）</summary>
+    public PieceType? forcePick;
+    /// <summary>forcePick の駒を各局の開始時に成らせる（成った姿の強さを測る）</summary>
+    public bool promoteAtStart;
 }
 
 /// <summary>
@@ -59,7 +71,7 @@ public static class BalanceSimulator
     /// runs 周を回し、1周ごとに JSON を1行ずつ jsonlPath に追記する（途中で止めてもそこまでの記録は残る）。
     /// onProgress(終わった周, 全体) が false を返したら中断する
     /// </summary>
-    public static int RunBatch(int runs, int firstSeed, float thinkMs, string jsonlPath, Func<int, int, bool> onProgress = null)
+    public static int RunBatch(int runs, int firstSeed, float thinkMs, string jsonlPath, Func<int, int, bool> onProgress = null, SimOptions options = null)
     {
         if (!CanRun) throw new InvalidOperationException("プレイ中のシーンで実行してください");
         string dir = Path.GetDirectoryName(jsonlPath);
@@ -72,7 +84,7 @@ public static class BalanceSimulator
             for (int i = 0; i < runs; i++)
             {
                 if (onProgress != null && !onProgress(i, runs)) break;
-                SimRunRecord record = RunOne(firstSeed + i, thinkMs);
+                SimRunRecord record = RunOne(firstSeed + i, thinkMs, options);
                 File.AppendAllText(jsonlPath, JsonUtility.ToJson(record) + "\n", new UTF8Encoding(false));
                 done++;
             }
@@ -86,7 +98,7 @@ public static class BalanceSimulator
     }
 
     /// <summary>1周を最後まで回す</summary>
-    public static SimRunRecord RunOne(int seed, float thinkMs)
+    public static SimRunRecord RunOne(int seed, float thinkMs, SimOptions simOptions = null)
     {
         GameManager gm = GameManager.Instance;
         StageManager sm = StageManager.Instance;
@@ -108,12 +120,20 @@ public static class BalanceSimulator
             if (options.Count > 0)
             {
                 DraftOption pick = options[UnityEngine.Random.Range(0, options.Count)];
+                if (simOptions != null && simOptions.forcePick.HasValue && sm.currentStage == 1)
+                    pick = DraftOption.Piece(bm.GetPieceDataByType(simOptions.forcePick.Value));
                 rec.pick = OptionName(pick);
                 gm.SimApplyOption(pick);
             }
 
             GameSim.BeginStageStats();
             GameSim.RunSync(gm.SimStartBattle());
+            if (simOptions != null && simOptions.promoteAtStart && simOptions.forcePick.HasValue)
+            {
+                PieceInstance forced = bm.GetTeamPieces(Team.Player)
+                    .FirstOrDefault(p => p.data.pieceType == simOptions.forcePick.Value && !p.isPromoted);
+                if (forced != null) gm.PromotePiece(forced);
+            }
             rec.roster = FighterNames(bm, Team.Player);
 
             int guard = 0;
@@ -137,7 +157,10 @@ public static class BalanceSimulator
             rec.moves = gm.MoveCount;
             rec.survivors = FighterNames(bm, Team.Player);
             rec.kills = GameSim.StageKills.ToArray();
+            rec.victims = GameSim.StageKillVictims.ToArray();
             rec.losses = GameSim.StageLosses.ToArray();
+            rec.lossBy = GameSim.StageLossKillers.ToArray();
+            rec.promotions = GameSim.StagePromotions.ToArray();
             PieceInstance c3 = bm.FindC3(Team.Player);
             rec.playerC3HP = c3 != null ? c3.currentHP : 0;
             rec.enemyLeft = bm.GetTeamPieces(Team.Enemy).Count(p => p.data.pieceType != PieceType.C3);
