@@ -38,7 +38,7 @@ public class StageTitleUI : MonoBehaviour
         {
             uiDocument = gameObject.AddComponent<UIDocument>();
             // Copy PanelSettings from any existing UIDocument in the scene
-            UIDocument[] docs = FindObjectsOfType<UIDocument>();
+            UIDocument[] docs = FindObjectsByType<UIDocument>(FindObjectsSortMode.None);
             for (int i = 0; i < docs.Length; i++)
             {
                 if (docs[i] != uiDocument && docs[i].panelSettings != null)

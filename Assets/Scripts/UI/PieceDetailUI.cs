@@ -8,6 +8,8 @@ public class PieceDetailUI : MonoBehaviour
     private VisualElement detailPanel;
     private PieceInstance lastShownPiece;
     private bool showingPromoted;
+    private string lastStateKey;
+    private bool lastPromoted;
     private static UnityEngine.TextCore.Text.FontAsset sdfFont;
 
     void Start()
@@ -23,17 +25,37 @@ public class PieceDetailUI : MonoBehaviour
 
     void Update()
     {
-        if (InputManager.Instance == null) return;
+        if (InputManager.Instance == null || detailPanel == null) return;
         var viewed = InputManager.Instance.GetViewedPiece();
         if (viewed != lastShownPiece)
         {
             lastShownPiece = viewed;
-            showingPromoted = false;
             if (viewed != null)
-                RenderDetail(viewed, false);
+            {
+                // 成っている駒は成り後の姿を初期表示
+                showingPromoted = viewed.isPromoted;
+                RenderDetail(viewed, showingPromoted);
+            }
             else
+            {
                 HidePanel();
+            }
+            return;
         }
+
+        // 表示中の駒のHP・ステータス・成り状態が変わったら描き直す
+        if (viewed != null && GetStateKey(viewed) != lastStateKey)
+        {
+            // 成り・成り解除が起きたら表示もそれに合わせる
+            if (viewed.isPromoted != lastPromoted)
+                showingPromoted = viewed.isPromoted;
+            RenderDetail(viewed, showingPromoted);
+        }
+    }
+
+    private static string GetStateKey(PieceInstance piece)
+    {
+        return piece.currentHP + "|" + piece.ATK + "|" + piece.DEF + "|" + piece.MaxHP + "|" + (piece.isPromoted ? "1" : "0");
     }
 
     private static UnityEngine.TextCore.Text.FontAsset GetSDFFont()
@@ -82,6 +104,9 @@ public class PieceDetailUI : MonoBehaviour
 
     private void RenderDetail(PieceInstance piece, bool promoted)
     {
+        lastStateKey = GetStateKey(piece);
+        lastPromoted = piece.isPromoted;
+
         detailPanel.Clear();
         detailPanel.style.display = DisplayStyle.Flex;
 
@@ -93,17 +118,19 @@ public class PieceDetailUI : MonoBehaviour
         scrollView.style.paddingRight = 16;
         ApplyFont(scrollView);
 
-        string displayName = promoted && piece.data.canPromote ? piece.data.promotedDisplayName : piece.DisplayName;
-        string fullName = promoted && piece.data.canPromote ? piece.data.promotedName : piece.FullName;
-        string desc = promoted && piece.data.canPromote ? piece.data.promotedDescription : piece.Description;
-        int atk = promoted && piece.data.canPromote ? piece.data.promotedATK : piece.ATK;
-        int def = promoted && piece.data.canPromote ? piece.data.promotedDEF : piece.DEF;
-        int hp = promoted && piece.data.canPromote ? piece.data.promotedHP : piece.MaxHP;
+        PieceData d = piece.data;
+        promoted = promoted && d.canPromote;
+        // 現在の姿を見ているなら実際の値（バフ込み）、もう一方の姿ならデータ上の値を表示
+        bool isCurrentForm = (promoted == piece.isPromoted);
+        string displayName = isCurrentForm ? piece.DisplayName : (promoted ? d.promotedDisplayName : d.displayName);
+        string fullName = isCurrentForm ? piece.FullName : (promoted ? d.promotedName : d.pieceName);
+        string desc = isCurrentForm ? piece.Description : (promoted ? d.promotedDescription : d.description);
+        int atk = isCurrentForm ? piece.ATK : (promoted ? d.promotedATK : d.baseATK);
+        int def = isCurrentForm ? piece.DEF : (promoted ? d.promotedDEF : d.baseDEF);
+        int hp = isCurrentForm ? piece.MaxHP : (promoted ? d.promotedHP : d.baseHP);
 
         // レアリティ判定（成り表示時は成りレアリティを使用）
-        Rarity displayRarity = piece.data.rarity;
-        if (promoted && piece.data.canPromote && piece.data.hasPromotedRarity)
-            displayRarity = piece.data.promotedRarity;
+        Rarity displayRarity = (promoted && d.hasPromotedRarity) ? d.promotedRarity : d.rarity;
 
         // 駒アイコン
         var icon = new VisualElement();
@@ -172,7 +199,7 @@ public class PieceDetailUI : MonoBehaviour
         AddStatRow(scrollView, "DEF", def.ToString(), new Color(0.3f, 0.6f, 0.9f));
         string hpMax = hp >= 999 ? "∞" : hp.ToString();
         string hpCur = piece.currentHP >= 999 ? "∞" : piece.currentHP.ToString();
-        string hpDisplay = promoted ? hpMax : hpCur + " / " + hpMax;
+        string hpDisplay = isCurrentForm ? hpCur + " / " + hpMax : hpMax;
         AddStatRow(scrollView, "HP", hpDisplay, new Color(0.3f, 0.9f, 0.4f));
 
         AddSeparator(scrollView);
@@ -187,10 +214,11 @@ public class PieceDetailUI : MonoBehaviour
         ApplyFont(moveTitle);
         scrollView.Add(moveTitle);
 
-        MoveDirection[] dirs = promoted && piece.data.canPromote && piece.data.promotedMoveDirections != null
-            ? piece.data.promotedMoveDirections
-            : piece.data.moveDirections;
-        AddMoveGrid(scrollView, dirs);
+        MoveDirection[] dirs = promoted && d.promotedMoveDirections != null && d.promotedMoveDirections.Length > 0
+            ? d.promotedMoveDirections
+            : d.moveDirections;
+        // 敵駒は盤上の向きに合わせて上下反転して表示
+        AddMoveGrid(scrollView, dirs, piece.team == Team.Enemy);
 
         // 成りを見るボタン
         if (piece.data.canPromote)
@@ -259,7 +287,7 @@ public class PieceDetailUI : MonoBehaviour
         parent.Add(sep);
     }
 
-    private void AddMoveGrid(VisualElement parent, MoveDirection[] dirs)
+    private void AddMoveGrid(VisualElement parent, MoveDirection[] dirs, bool flipY)
     {
         int gridSize = 9;
         int center = 4;
@@ -269,9 +297,10 @@ public class PieceDetailUI : MonoBehaviour
         {
             foreach (var dir in dirs)
             {
+                Vector2Int step = flipY ? new Vector2Int(dir.direction.x, -dir.direction.y) : dir.direction;
                 int showDist = Mathf.Min(dir.maxDistance, 4);
                 for (int d = 1; d <= showDist; d++)
-                    moveSet.Add(dir.direction * d);
+                    moveSet.Add(step * d);
             }
         }
 

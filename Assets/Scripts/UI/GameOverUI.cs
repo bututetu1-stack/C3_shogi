@@ -7,23 +7,27 @@ public class GameOverUI : MonoBehaviour
     private VisualElement root;
     private Label resultLabel;
     private Button retryButton;
+    private bool isSubscribed;
 
-    void OnEnable()
-    {
-        if (GameManager.Instance != null)
-            GameManager.Instance.OnGameOver += ShowGameOver;
-    }
+    void OnEnable() { TrySubscribe(); }
 
     void OnDisable()
     {
-        if (GameManager.Instance != null)
+        if (isSubscribed && GameManager.Instance != null)
             GameManager.Instance.OnGameOver -= ShowGameOver;
+        isSubscribed = false;
+    }
+
+    private void TrySubscribe()
+    {
+        if (isSubscribed || GameManager.Instance == null) return;
+        GameManager.Instance.OnGameOver += ShowGameOver;
+        isSubscribed = true;
     }
 
     void Start()
     {
-        if (GameManager.Instance != null)
-            GameManager.Instance.OnGameOver += ShowGameOver;
+        TrySubscribe();
 
         uiDocument = GetComponent<UIDocument>();
         if (uiDocument != null && uiDocument.rootVisualElement != null)

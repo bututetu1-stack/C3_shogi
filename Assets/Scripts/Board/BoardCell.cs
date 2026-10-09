@@ -42,8 +42,6 @@ public class BoardCell : MonoBehaviour
 
     public static int GetPromoteRows(int boardSize)
     {
-        if (boardSize <= 5) return 2;
-        if (boardSize <= 7) return 2;
-        return 3; // 9x9
+        return boardSize >= 9 ? 3 : 2;
     }
 }

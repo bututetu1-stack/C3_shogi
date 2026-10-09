@@ -74,6 +74,11 @@ public class SimpleAI : MonoBehaviour
     {
         yield return new WaitForSeconds(moveDelay);
 
+        // 待機中にステージが切り替わった・決着した場合は何もしない
+        GameManager gm = GameManager.Instance;
+        if (gm == null || gm.currentPhase != GamePhase.Battle || gm.currentTurn != Team.Enemy)
+            yield break;
+
         BoardManager bm = BoardManager.Instance;
         PieceInstance bestPiece = null;
         MoveValidator.MoveResult bestMove = default(MoveValidator.MoveResult);
@@ -93,8 +98,8 @@ public class SimpleAI : MonoBehaviour
                 int dmg = Mathf.Max(0, candidates[i].piece.ATK - playerC3.DEF);
                 if (dmg >= playerC3.currentHP)
                 {
-                    ExecuteAIMove(candidates[i].piece, candidates[i].move);
-                    GameManager.Instance.EndTurn();
+                    yield return CombatResolver.ExecuteMove(candidates[i].piece, candidates[i].move);
+                    gm.EndTurn();
                     yield break;
                 }
             }
@@ -145,9 +150,9 @@ public class SimpleAI : MonoBehaviour
         }
 
         if (bestPiece != null)
-            ExecuteAIMove(bestPiece, bestMove);
+            yield return CombatResolver.ExecuteMove(bestPiece, bestMove);
 
-        GameManager.Instance.EndTurn();
+        gm.EndTurn();
     }
 
     // ================================================================
@@ -680,98 +685,5 @@ public class SimpleAI : MonoBehaviour
                 bm.RemovePieceFromBoard(undo.to);
             bm.PlacePieceOnBoard(piece, undo.from);
         }
-    }
-
-    // ================================================================
-    // AI手の実行（視覚エフェクト付き）
-    // ================================================================
-    public void ExecuteAIMove(PieceInstance piece, MoveValidator.MoveResult move)
-    {
-        BoardManager bm = BoardManager.Instance;
-        Vector2Int from = piece.boardPosition;
-        Vector2Int to = move.position;
-
-        if (move.isAttack)
-        {
-            PieceInstance target = bm.GetPieceAt(to);
-            if (target != null)
-            {
-                int damage = Mathf.Max(0, piece.ATK - target.DEF);
-
-                // 挑発駒はダメージ無効（∞HP）
-                if (target.data.isTauntPiece)
-                {
-                    if (BattleEffects.Instance != null)
-                        BattleEffects.Instance.PlayHitEffect(to);
-                    PieceController tpc = bm.GetPieceController(to);
-                    if (tpc != null) tpc.Shake();
-                    if (BattleLogUI.Instance != null)
-                        BattleLogUI.Instance.AddLog(
-                            BattleLogUI.ColorName(piece.DisplayName, piece.team) + " \u2192 " +
-                            BattleLogUI.ColorName(target.DisplayName, target.team) + " \u30C0\u30E1\u30FC\u30B8\u7121\u52B9");
-                    return;
-                }
-
-                target.currentHP -= damage;
-
-                PieceController targetPC = bm.GetPieceController(to);
-                if (targetPC != null) targetPC.UpdateHP();
-
-                if (target.currentHP <= 0)
-                {
-                    if (BattleEffects.Instance != null)
-                        BattleEffects.Instance.PlayDefeatEffect(to);
-                    if (BattleLogUI.Instance != null)
-                        BattleLogUI.Instance.AddLog(
-                            BattleLogUI.ColorName(piece.DisplayName, piece.team) + " \u304C " +
-                            BattleLogUI.ColorName(target.DisplayName, target.team) + " \u3092\u6483\u7834");
-                    int groupId = target.linkedGroupId;
-                    bm.RemovePiece(to);
-                    bm.RemovePieceController(to);
-                    if (AbilitySystem.Instance != null)
-                        AbilitySystem.Instance.CheckLinkedDeaths(groupId);
-                }
-                else
-                {
-                    if (BattleEffects.Instance != null)
-                        BattleEffects.Instance.PlayHitEffect(to);
-                    if (BattleLogUI.Instance != null)
-                        BattleLogUI.Instance.AddLog(
-                            BattleLogUI.ColorName(piece.DisplayName, piece.team) + " \u2192 " +
-                            BattleLogUI.ColorName(target.DisplayName, target.team) + " " + damage + "\u30C0\u30E1\u30FC\u30B8");
-                    if (targetPC != null) targetPC.Shake();
-                    return;
-                }
-            }
-        }
-
-        PieceController pc = bm.GetPieceController(from);
-        bm.MovePiece(from, to);
-        bm.UpdatePieceControllerPosition(from, to);
-        if (pc != null) pc.MoveTo(to);
-
-        if (BattleEffects.Instance != null)
-            BattleEffects.Instance.PlayMoveEffect();
-
-        // SN: 移動毎にHP-1
-        if (piece.data.losesHPOnMove && piece.isAlive)
-        {
-            piece.currentHP--;
-            PieceController snPC = bm.GetPieceController(to);
-            if (snPC != null) snPC.UpdateHP();
-            if (piece.currentHP <= 0)
-            {
-                if (BattleEffects.Instance != null)
-                    BattleEffects.Instance.PlayDefeatEffect(to);
-                bm.RemovePiece(to);
-                bm.RemovePieceController(to);
-                if (BattleLogUI.Instance != null)
-                    BattleLogUI.Instance.AddLog(
-                        BattleLogUI.ColorName(piece.DisplayName, piece.team) + " \u306F\u529B\u5C3D\u304D\u305F...");
-                return;
-            }
-        }
-
-        GameManager.Instance.CheckPromotion(piece);
     }
 }

@@ -10,13 +10,15 @@ public class PieceInstance
     public bool isAlive;
     public bool isPromoted;
     public int linkedGroupId = -1;  // 提督・深海・艦娘のリンクグループID
-    public int bonusATK;            // 僕バフ
-    public int bonusDEF;            // 僕バフ
+    public int bonusATK;            // 僕バフ・軍将バフ・ステージ強化
+    public int bonusDEF;            // 僕バフ・ステージ強化
+    public int bonusMaxHP;          // ステージ強化による最大HP増加
     public int turnsNearBoku;       // 僕の近くにいたターン数
+    public int gundaishouStacks;    // 軍将バフを受けた回数（上限管理用）
 
     public int ATK { get { return (isPromoted ? data.promotedATK : data.baseATK) + bonusATK; } }
     public int DEF { get { return (isPromoted ? data.promotedDEF : data.baseDEF) + bonusDEF; } }
-    public int MaxHP { get { return isPromoted ? data.promotedHP : data.baseHP; } }
+    public int MaxHP { get { return (isPromoted ? data.promotedHP : data.baseHP) + bonusMaxHP; } }
     public string DisplayName { get { return isPromoted ? data.promotedDisplayName : data.displayName; } }
     public string FullName { get { return isPromoted ? data.promotedName : data.pieceName; } }
     public string Description { get { return isPromoted ? data.promotedDescription : data.description; } }
@@ -45,6 +47,7 @@ public class PieceInstance
         MoveDirection[] dirs = isPromoted && data.promotedMoveDirections != null && data.promotedMoveDirections.Length > 0
             ? data.promotedMoveDirections
             : data.moveDirections;
+        if (dirs == null) return new MoveDirection[0];
 
         if (team == Team.Player)
             return dirs;
@@ -59,6 +62,14 @@ public class PieceInstance
         return flipped;
     }
 
+    /// <summary>ステージ強化などで最大HPと現在HPを同時に増やす</summary>
+    public void AddMaxHP(int amount)
+    {
+        if (amount <= 0) return;
+        bonusMaxHP += amount;
+        currentHP += amount;
+    }
+
     public void Promote()
     {
         if (!data.canPromote || isPromoted) return;
@@ -66,6 +77,17 @@ public class PieceInstance
         // 成り時にHP差分を追加
         int hpDiff = data.promotedHP - data.baseHP;
         if (hpDiff > 0) currentHP += hpDiff;
+    }
+
+    /// <summary>成りを解除する（李白の裏返し）。成りで増えたHPを差し引く（最低1）</summary>
+    public void Demote()
+    {
+        if (!isPromoted) return;
+        isPromoted = false;
+        int hpDiff = data.promotedHP - data.baseHP;
+        if (hpDiff > 0) currentHP -= hpDiff;
+        if (currentHP > MaxHP) currentHP = MaxHP;
+        if (currentHP < 1) currentHP = 1;
     }
 
     public bool CanPromoteAt(int boardRow, int boardSize)

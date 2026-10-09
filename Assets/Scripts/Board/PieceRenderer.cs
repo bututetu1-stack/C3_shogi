@@ -21,7 +21,7 @@ public class PieceRenderer : MonoBehaviour
     private PieceInstance pieceInstance;
     private bool isEnemyPiece;
     private Texture2D cachedIconTex;
-    private bool promotedTextureApplied;
+    private Rarity appliedRarity;
 
     private const float LABEL_SIZE_1CHAR = 3.5f;
     private const float LABEL_SIZE_2CHAR = 2.3f;
@@ -40,7 +40,8 @@ public class PieceRenderer : MonoBehaviour
         bool isEnemy = (piece.team == Team.Enemy);
 
         int texSize = 512;
-        Texture2D tex = ShogiPieceShape.CreatePieceTexture(texSize, piece.data.rarity, isEnemy);
+        appliedRarity = piece.CurrentRarity;
+        Texture2D tex = ShogiPieceShape.CreatePieceTexture(texSize, appliedRarity, isEnemy);
         Sprite sprite = Sprite.Create(tex, new Rect(0, 0, texSize, texSize), new Vector2(0.5f, 0.5f), texSize);
 
         bodyRenderer = gameObject.AddComponent<SpriteRenderer>();
@@ -114,7 +115,7 @@ public class PieceRenderer : MonoBehaviour
         textMesh.alignment = TextAlignmentOptions.Center;
         textMesh.color = (color.a > 0f) ? color : new Color(0.1f, 0.1f, 0.1f);
         textMesh.fontStyle = FontStyles.Bold;
-        textMesh.enableWordWrapping = false;
+        textMesh.textWrappingMode = TextWrappingModes.NoWrap;
         textMesh.overflowMode = TextOverflowModes.Overflow;
 
         TMP_FontAsset font = GetTMPFont();
@@ -160,7 +161,7 @@ public class PieceRenderer : MonoBehaviour
         text.alignment = TextAlignmentOptions.Center;
         text.color = Color.white;
         text.fontStyle = FontStyles.Bold;
-        text.enableWordWrapping = false;
+        text.textWrappingMode = TextWrappingModes.NoWrap;
         text.overflowMode = TextOverflowModes.Overflow;
 
         TMP_FontAsset font = GetTMPFont();
@@ -188,11 +189,12 @@ public class PieceRenderer : MonoBehaviour
     {
         if (pieceInstance == null) return;
 
-        if (pieceInstance.isPromoted && pieceInstance.data.hasPromotedRarity && !promotedTextureApplied)
+        // 成り・成り解除でレアリティが変わったら駒の地色を差し替える
+        if (pieceInstance.CurrentRarity != appliedRarity)
         {
-            promotedTextureApplied = true;
+            appliedRarity = pieceInstance.CurrentRarity;
             int texSize = 512;
-            Texture2D newTex = ShogiPieceShape.CreatePieceTexture(texSize, pieceInstance.CurrentRarity, isEnemyPiece);
+            Texture2D newTex = ShogiPieceShape.CreatePieceTexture(texSize, appliedRarity, isEnemyPiece);
             Sprite newSprite = Sprite.Create(newTex, new Rect(0, 0, texSize, texSize), new Vector2(0.5f, 0.5f), texSize);
             if (bodyRenderer != null) bodyRenderer.sprite = newSprite;
         }

@@ -18,7 +18,7 @@ public class BattleEffects : MonoBehaviour
     void Awake()
     {
         if (Instance == null) Instance = this;
-        else { Destroy(gameObject); return; }
+        else { Destroy(this); return; }
 
         audioSource = gameObject.AddComponent<AudioSource>();
         audioSource.playOnAwake = false;
@@ -171,7 +171,7 @@ public class BattleEffects : MonoBehaviour
         {
             startOffsetX[i] = Random.Range(-1.5f, 1.5f);
             endOffsetX[i] = Random.Range(-0.5f, 0.5f);
-            Vector3 startPos = new Vector3(worldPos.x + startOffsetX[i], worldPos.y + 4f, -2f);
+            Vector3 startPos = new Vector3(worldPos.x + startOffsetX[i], worldPos.y + 3f, -2f);
             Color c = new Color(1f, Random.Range(0.1f, 0.4f), 0.1f);
             particles[i] = CreateEffectSprite(startPos, c, 0.15f);
         }
@@ -368,24 +368,33 @@ public class BattleEffects : MonoBehaviour
         Destroy(flash);
 
         // 画面揺れ
-        if (Camera.main != null)
-            StartCoroutine(CameraShake(0.3f, 0.15f));
+        ShakeCamera(0.3f, 0.15f);
+    }
+
+    private Coroutine cameraShakeRoutine;
+
+    public void ShakeCamera(float duration, float magnitude)
+    {
+        if (Camera.main == null || BoardManager.Instance == null) return;
+        if (cameraShakeRoutine != null) StopCoroutine(cameraShakeRoutine);
+        cameraShakeRoutine = StartCoroutine(CameraShake(duration, magnitude));
     }
 
     private IEnumerator CameraShake(float duration, float magnitude)
     {
-        Transform camTransform = Camera.main.transform;
-        Vector3 originalPos = camTransform.position;
+        // 基準位置は毎フレーム盤から取得する（揺れの最中に盤サイズが変わっても正しい位置に戻る）
         float elapsed = 0f;
-        while (elapsed < duration)
+        while (elapsed < duration && Camera.main != null)
         {
             elapsed += Time.deltaTime;
-            float x = originalPos.x + Random.Range(-magnitude, magnitude);
-            float y = originalPos.y + Random.Range(-magnitude, magnitude);
-            camTransform.position = new Vector3(x, y, originalPos.z);
+            Vector3 home = BoardManager.Instance.CameraHomePosition;
+            Camera.main.transform.position = home + new Vector3(
+                Random.Range(-magnitude, magnitude), Random.Range(-magnitude, magnitude), 0f);
             yield return null;
         }
-        camTransform.position = originalPos;
+        if (Camera.main != null)
+            Camera.main.transform.position = BoardManager.Instance.CameraHomePosition;
+        cameraShakeRoutine = null;
     }
 
     private GameObject CreateEffectSprite(Vector3 pos, Color color, float size)
