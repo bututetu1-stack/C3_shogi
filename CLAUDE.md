@@ -6,7 +6,7 @@
 - 現状と次の作業は `docs/HANDOFF.md` にまとめてある。最初に読む。
 
 ## git
-- 作業ごとにブランチを切って PR を出す。マージはユーザーがする。PR は前の PR の上に積む（#1 fix/core-bugs → #2 feat/visual-overhaul → #3 feat/ai → #4 feat/game-tuning → #5 feat/feedback-1 → #6 feat/presentation-balance → …）。
+- 作業ごとにブランチを切って PR を出す（#1〜#6 は main にマージ済み。これからの PR は main 向け）。マージはユーザーの指示があればこちらで行う。
 - スクリプトの改行は LF（`core.autocrlf=false`、`core.eol=lf`）。PowerShell やエディタで書くと CRLF になることがあるので、コミット前に `sed -i 's/\r$//' <file>` でそろえる。
 - `BalanceReports/` は自動プレイの出力なので git に入れない。
 

@@ -10,7 +10,7 @@
 5. Claude にエディタを操作させるなら、`isuzu-unity-cli` を入れてエディタとつなぐ。
 6. バランステストの集計には Node.js を使う（`node --version` で確認）。
 
-## ブランチと PR（すべて未マージ・積み上げ式）
+## ブランチと PR（#1〜#6 は 2026-10-10 に main へマージ済み）
 | PR | ブランチ | 中身 |
 |---|---|---|
 | #1 | fix/core-bugs | 進行・戦闘のバグ修正、攻撃処理の一本化 |
@@ -19,7 +19,7 @@
 | #4 | feat/game-tuning | ドラフト強化・タイトル／リザルト |
 | #5 | feat/feedback-1 | 読みやすさ・成り強制・提督の艦隊演出・盤と駒の画像 |
 | #6 | feat/presentation-balance | 第五局の飛車角、部員の演出とカットイン、バランステスト用の自動プレイ、「部」表記 |
-| （次） | feat/balance-v1 | バランス調整の第1版（下） |
+| （未提出） | feat/balance-v1 | バランス調整の第1版（下）。調整が済んだら main 向けに PR を出す |
 
 ## いまの状況
 - 自動プレイで、調整前の基準を測った（`docs/balance/baseline_2026-10-10.json`、報告ページ https://claude.ai/artifact/Jp2KngEe49sWEQRFNfBRDo）。
