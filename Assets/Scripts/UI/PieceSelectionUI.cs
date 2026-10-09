@@ -2,7 +2,10 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using System.Collections.Generic;
 
-/// <summary>ステージ開始前に仲間（駒）を1つ選ぶ画面</summary>
+/// <summary>
+/// ステージ開始前に仲間（駒）か全軍強化を1つ選ぶ画面。
+/// カードには絵と名前だけを出し、選んだカードの説明は画面下部に大きく表示する。
+/// </summary>
 public class PieceSelectionUI : MonoBehaviour
 {
     private UIDocument uiDocument;
@@ -57,85 +60,82 @@ public class PieceSelectionUI : MonoBehaviour
         scroll.style.flexGrow = 1;
         scroll.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
         scroll.contentContainer.style.alignItems = Align.Center;
-        scroll.contentContainer.style.paddingTop = CameraFitter.TopReserve + 8;
-        scroll.contentContainer.style.paddingBottom = 36;
+        scroll.contentContainer.style.paddingTop = 18;
+        scroll.contentContainer.style.paddingBottom = 18;
         root.Add(scroll);
 
         // 見出し
         StageManager sm = StageManager.Instance;
         if (sm != null)
         {
-            var stage = UIFactory.Label("第" + UIFactory.Kanji(sm.currentStage) + "局「" + sm.GetStageName(sm.currentStage) + "」を前に", 18, Palette.Gold, "c3-mincho");
+            var stage = UIFactory.Label("第" + UIFactory.Kanji(sm.currentStage) + "局「" + sm.GetStageName(sm.currentStage) + "」を前に", 20, Palette.Gold, "c3-mincho");
             stage.style.marginBottom = 4;
             scroll.Add(stage);
         }
         var title = UIFactory.Label("仲間か強化をひとつ選んでください", 34, Palette.Text, "c3-mincho");
         title.style.letterSpacing = 4;
-        title.style.marginBottom = 26;
+        title.style.marginBottom = 14;
         scroll.Add(title);
 
-        // カード
+        // カード（絵と名前だけ）
         var row = new VisualElement();
         row.style.flexDirection = FlexDirection.Row;
         row.style.flexWrap = Wrap.Wrap;
         row.style.justifyContent = Justify.Center;
-        row.style.marginBottom = 20;
+        row.style.marginBottom = 14;
         foreach (var option in choices)
-            row.Add(option.IsUpgrade ? CreateUpgradeCard(option) : CreateCard(option));
+            row.Add(option.IsUpgrade ? CreateUpgradeCard(option) : CreatePieceCard(option));
         scroll.Add(row);
 
+        // 画面下部: 選んだカードの説明
+        detailPanel = UIFactory.Panel();
+        detailPanel.style.width = Length.Percent(92);
+        detailPanel.style.maxWidth = 1040;
+        detailPanel.style.minHeight = 120;
+        detailPanel.style.paddingTop = 16;
+        detailPanel.style.paddingBottom = 16;
+        detailPanel.style.paddingLeft = 28;
+        detailPanel.style.paddingRight = 28;
+        scroll.Add(detailPanel);
+        ShowHint();
+
+        // 決定と引き直しは横に並べる
+        var buttons = new VisualElement();
+        buttons.style.flexDirection = FlexDirection.Row;
+        buttons.style.alignItems = Align.Center;
+        buttons.style.marginTop = 14;
+        confirmButton = UIFactory.Button("これに決める", OnConfirm, "c3-button--primary", "c3-button--big");
+        confirmButton.SetEnabled(false);
+        buttons.Add(confirmButton);
         if (onReroll != null && rerollsLeft > 0)
         {
-            var reroll = UIFactory.Button("引き直す（残り" + rerollsLeft + "回）", () =>
+            buttons.Add(UIFactory.Button("引き直す（残り" + rerollsLeft + "回）", () =>
             {
                 onPieceSelected = null;
                 onReroll();
-            });
-            reroll.style.marginBottom = 14;
-            scroll.Add(reroll);
+            }));
         }
-
-        // 選んだ駒の詳しい説明
-        detailPanel = UIFactory.Panel();
-        detailPanel.style.width = Length.Percent(90);
-        detailPanel.style.maxWidth = 820;
-        detailPanel.style.flexDirection = FlexDirection.Row;
-        detailPanel.style.display = DisplayStyle.None;
-        scroll.Add(detailPanel);
-
-        confirmButton = UIFactory.Button("これに決める", OnConfirm, "c3-button--primary", "c3-button--big");
-        confirmButton.style.marginTop = 22;
-        confirmButton.SetEnabled(false);
-        scroll.Add(confirmButton);
+        scroll.Add(buttons);
     }
 
-    private VisualElement CreateCard(DraftOption option)
+    // ------------------------------------------------------------
+    // カード
+    // ------------------------------------------------------------
+
+    private VisualElement CreatePieceCard(DraftOption option)
     {
         PieceData piece = option.piece;
-        var card = new VisualElement();
-        card.AddToClassList("c3-card");
+        var card = NewCard();
 
-        card.Add(UIFactory.PieceIcon(piece, false, piece.portrait != null ? 150 : 110));
+        card.Add(UIFactory.PieceIcon(piece, false, piece.portrait != null ? 130 : 104));
 
-        var name = UIFactory.Label(piece.pieceName, 22, Palette.Text, "c3-mincho");
-        name.style.marginTop = 8;
+        var name = UIFactory.Label(piece.pieceName, 28, Palette.Text, "c3-mincho");
+        name.style.marginTop = 10;
         card.Add(name);
 
         var chip = UIFactory.Chip(Palette.RarityName(piece.rarity), Palette.RarityLabel(piece.rarity));
-        chip.style.marginTop = 4;
+        chip.style.marginTop = 6;
         card.Add(chip);
-
-        var stats = new VisualElement();
-        stats.style.flexDirection = FlexDirection.Row;
-        stats.style.marginTop = 8;
-        stats.Add(StatText("攻", piece.baseATK.ToString(), Palette.ATK));
-        stats.Add(StatText("防", piece.baseDEF.ToString(), Palette.DEF));
-        stats.Add(StatText("体", UIFactory.FormatHP(piece.baseHP), Palette.HP));
-        card.Add(stats);
-
-        var grid = UIFactory.MoveGrid(piece.moveDirections, false, 11f, 3);
-        grid.style.marginTop = 10;
-        card.Add(grid);
 
         card.RegisterCallback<ClickEvent>(evt => SelectCard(option));
         cards.Add(card);
@@ -145,14 +145,13 @@ public class PieceSelectionUI : MonoBehaviour
     /// <summary>全軍強化のカード</summary>
     private VisualElement CreateUpgradeCard(DraftOption option)
     {
-        var card = new VisualElement();
-        card.AddToClassList("c3-card");
+        var card = NewCard();
 
         var icon = new VisualElement();
         icon.style.width = 100;
         icon.style.height = 100;
-        icon.style.marginTop = 5;
-        icon.style.marginBottom = 5;
+        icon.style.marginTop = 4;
+        icon.style.marginBottom = 4;
         icon.style.alignItems = Align.Center;
         icon.style.justifyContent = Justify.Center;
         icon.style.borderTopLeftRadius = icon.style.borderTopRightRadius = icon.style.borderBottomLeftRadius = icon.style.borderBottomRightRadius = 50;
@@ -161,40 +160,27 @@ public class PieceSelectionUI : MonoBehaviour
         icon.style.borderTopWidth = icon.style.borderBottomWidth = icon.style.borderLeftWidth = icon.style.borderRightWidth = 3;
         icon.style.borderTopColor = icon.style.borderBottomColor = icon.style.borderLeftColor = icon.style.borderRightColor = c;
         icon.pickingMode = PickingMode.Ignore;
-        icon.Add(UIFactory.Label(option.Glyph, option.Glyph.Length > 1 ? 34 : 46, Color.Lerp(c, Color.white, 0.4f), "c3-mincho"));
+        icon.Add(UIFactory.Label(option.Glyph, option.Glyph.Length > 1 ? 40 : 54, Color.Lerp(c, Color.white, 0.4f), "c3-mincho"));
         card.Add(icon);
 
-        var name = UIFactory.Label(option.Title, 22, Palette.Text, "c3-mincho");
-        name.style.marginTop = 8;
+        var name = UIFactory.Label(option.Title, 28, Palette.Text, "c3-mincho");
+        name.style.marginTop = 10;
         card.Add(name);
 
         var chip = UIFactory.Chip("全軍強化", Palette.GoldLight);
-        chip.style.marginTop = 4;
+        chip.style.marginTop = 6;
         card.Add(chip);
-
-        var desc = UIFactory.Label(KinsokuHelper.Apply(option.Description), 14, Palette.TextSub);
-        desc.style.whiteSpace = WhiteSpace.Normal;
-        desc.style.marginTop = 10;
-        desc.style.unityTextAlign = TextAnchor.UpperCenter;
-        card.Add(desc);
 
         card.RegisterCallback<ClickEvent>(evt => SelectCard(option));
         cards.Add(card);
         return card;
     }
 
-    private static VisualElement StatText(string label, string value, Color color)
+    private static VisualElement NewCard()
     {
-        var box = new VisualElement();
-        box.style.flexDirection = FlexDirection.Row;
-        box.style.alignItems = Align.Center;
-        box.style.marginLeft = 6;
-        box.style.marginRight = 6;
-        box.Add(UIFactory.Label(label, 13, color, "c3-bold"));
-        var v = UIFactory.Label(value, 18, Palette.Text, "c3-bold");
-        v.style.marginLeft = 3;
-        box.Add(v);
-        return box;
+        var card = new VisualElement();
+        card.AddToClassList("c3-card");
+        return card;
     }
 
     private void SelectCard(DraftOption option)
@@ -203,27 +189,54 @@ public class PieceSelectionUI : MonoBehaviour
         showingPromoted = false;
 
         if (BattleEffects.Instance != null)
-            BattleEffects.Instance.PlayMoveEffect();
+            BattleEffects.Instance.PlayClick();
 
         for (int i = 0; i < cards.Count; i++)
             cards[i].EnableInClassList("c3-card--selected", i < currentChoices.Count && currentChoices[i] == option);
 
-        // 強化カードはカードに説明が全部書いてあるので詳細欄は出さない
-        if (option.IsUpgrade)
-        {
-            detailPanel.style.display = DisplayStyle.None;
-        }
-        else
-        {
-            RenderDetailPanel(option.piece, false);
-            detailPanel.style.display = DisplayStyle.Flex;
-        }
+        if (option.IsUpgrade) RenderUpgradeDetail(option);
+        else RenderPieceDetail(option.piece, false);
         confirmButton.SetEnabled(true);
     }
 
-    private void RenderDetailPanel(PieceData piece, bool promoted)
+    // ------------------------------------------------------------
+    // 画面下部の説明
+    // ------------------------------------------------------------
+
+    private void ShowHint()
     {
         detailPanel.Clear();
+        detailPanel.style.flexDirection = FlexDirection.Column;
+        detailPanel.style.justifyContent = Justify.Center;
+        var hint = UIFactory.Label("カードを選ぶと、ここに説明が表示されます", 20, Palette.TextSub);
+        hint.style.unityTextAlign = TextAnchor.MiddleCenter;
+        detailPanel.Add(hint);
+    }
+
+    private void RenderUpgradeDetail(DraftOption option)
+    {
+        detailPanel.Clear();
+        detailPanel.style.flexDirection = FlexDirection.Column;
+        detailPanel.style.justifyContent = Justify.FlexStart;
+
+        var head = new VisualElement();
+        head.style.flexDirection = FlexDirection.Row;
+        head.style.alignItems = Align.Center;
+        head.style.marginBottom = 12;
+        head.Add(UIFactory.Label(option.Title, 30, Palette.Text, "c3-mincho"));
+        var chip = UIFactory.Chip("全軍強化", Palette.GoldLight);
+        chip.style.marginLeft = 12;
+        head.Add(chip);
+        detailPanel.Add(head);
+
+        detailPanel.Add(UIFactory.Paragraph(option.Description, 21, Palette.Text));
+    }
+
+    private void RenderPieceDetail(PieceData piece, bool promoted)
+    {
+        detailPanel.Clear();
+        detailPanel.style.flexDirection = FlexDirection.Row;
+        detailPanel.style.justifyContent = Justify.FlexStart;
         promoted = promoted && piece.canPromote;
 
         string fullName = promoted ? piece.promotedName : piece.pieceName;
@@ -231,54 +244,64 @@ public class PieceSelectionUI : MonoBehaviour
         int atk = promoted ? piece.promotedATK : piece.baseATK;
         int def = promoted ? piece.promotedDEF : piece.baseDEF;
         int hp = promoted ? piece.promotedHP : piece.baseHP;
+        Rarity rarity = (promoted && piece.hasPromotedRarity) ? piece.promotedRarity : piece.rarity;
 
         // 左: 名前・ステータス・説明
         var left = new VisualElement();
         left.style.flexGrow = 1;
         left.style.flexShrink = 1;
-        left.style.marginRight = 16;
+        left.style.flexBasis = 0;
 
         var head = new VisualElement();
         head.style.flexDirection = FlexDirection.Row;
         head.style.alignItems = Align.Center;
-        head.style.marginBottom = 10;
-        head.Add(UIFactory.Label(fullName, 24, Palette.Text, "c3-mincho"));
-        if (promoted)
-        {
-            var chip = UIFactory.Chip("成り", Palette.EnemyLight);
-            chip.style.marginLeft = 8;
-            head.Add(chip);
-        }
+        head.style.flexWrap = Wrap.Wrap;
+        head.style.marginBottom = 12;
+        head.Add(UIFactory.Label(fullName, 30, Palette.Text, "c3-mincho"));
+        var rarityChip = UIFactory.Chip(Palette.RarityName(rarity), Palette.RarityLabel(rarity));
+        rarityChip.style.marginLeft = 12;
+        head.Add(rarityChip);
+        if (promoted) head.Add(UIFactory.Chip("成り", Palette.EnemyLight));
         left.Add(head);
+
         left.Add(UIFactory.StatRow(atk, def, UIFactory.FormatHP(hp)));
 
-        var descLabel = UIFactory.Label(KinsokuHelper.Apply(desc), 15, Palette.TextSub);
-        descLabel.style.whiteSpace = WhiteSpace.Normal;
-        descLabel.style.marginTop = 12;
+        var descLabel = UIFactory.Paragraph(desc, 20, Palette.Text);
+        descLabel.style.marginTop = 14;
         left.Add(descLabel);
 
         if (piece.canPromote)
         {
             bool nextState = !promoted;
-            var toggle = UIFactory.Button(promoted ? "成る前を見る" : "成りを見る", () =>
+            var toggle = UIFactory.Button(promoted ? "成る前を見る" : "成った姿を見る", () =>
             {
                 showingPromoted = nextState;
-                RenderDetailPanel(piece, nextState);
+                RenderPieceDetail(piece, nextState);
             });
             toggle.style.alignSelf = Align.FlexStart;
-            toggle.style.marginTop = 12;
+            toggle.style.marginTop = 16;
             toggle.style.marginLeft = 0;
             left.Add(toggle);
         }
         detailPanel.Add(left);
 
+        // 区切り線
+        var divider = new VisualElement();
+        divider.style.width = 1;
+        divider.style.marginLeft = 32;
+        divider.style.marginRight = 32;
+        divider.style.backgroundColor = new Color(Palette.Gold.r, Palette.Gold.g, Palette.Gold.b, 0.25f);
+        detailPanel.Add(divider);
+
         // 右: 動き
         var right = new VisualElement();
         right.style.alignItems = Align.Center;
-        right.Add(UIFactory.Label(promoted ? "動き（成り）" : "動き", 15, Palette.Gold, "c3-bold"));
+        right.style.flexShrink = 0;
+        right.Add(UIFactory.Label(promoted ? "動き（成り）" : "動き", 20, Palette.Gold, "c3-bold"));
         var grid = UIFactory.MoveGrid(UIFactory.MovesOf(piece, promoted), false, 22f);
-        grid.style.marginTop = 6;
+        grid.style.marginTop = 10;
         right.Add(grid);
+        right.Add(UIFactory.MoveLegend());
         detailPanel.Add(right);
     }
 

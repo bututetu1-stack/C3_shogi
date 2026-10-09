@@ -174,10 +174,10 @@ public class TitleScreenUI : MonoBehaviour
         scroll.style.flexShrink = 1;
         panel.Add(scroll);
 
-        AddSection(scroll, "勝ち負け", "相手の「C3」を倒せばその局に勝利。自分の「C3」が倒されると敗北です。全十五局を勝ち抜きましょう。");
-        AddSection(scroll, "動かし方", "自分の駒をクリックすると、動けるマスに点が表示されます。点をクリックで移動。橙の点は敵に狙われるマス、赤い枠は攻撃できる敵です。");
+        AddSection(scroll, "勝ち負け", "相手の「C3」を倒せば、その局は勝利。自分の「C3」が倒されると敗北です。全十五局を勝ち抜きましょう。");
+        AddSection(scroll, "動かし方", "自分の駒をクリックすると、動けるマスに点が表示されます。点をクリックすると移動します。橙の点は敵に狙われるマス、赤い枠は攻撃できる敵です。");
         AddSection(scroll, "戦い", "ダメージは「攻撃力 − 防御力」。体力が0になった駒は撃破されます。倒しきれなかったときは、攻撃した駒はその場に留まります。");
-        AddSection(scroll, "成り", "敵陣（奥の2〜3段）に入ると成ることができます。成るかどうかは選べます。SNや小錦のように、成ると退場してしまう駒もいるので注意。");
+        AddSection(scroll, "成り", "敵陣（奥の2〜3段）に入るか、敵陣から出ると、駒は必ず成ります。SNや小錦のように、成ると退場してしまう駒もいるので注意。");
         AddSection(scroll, "仲間と強化", "各局の前に、新しい仲間か全軍の強化をひとつ選びます。仲間は次の局にも連れて行けます。選び直しは1局につき1回まで。");
         AddSection(scroll, "手数の上限", "1局が" + GameManager.MoveLimit + "手を超えると、残った駒の強さとC3の体力で判定になります。");
 
@@ -189,13 +189,12 @@ public class TitleScreenUI : MonoBehaviour
 
     private static void AddSection(VisualElement parent, string heading, string body)
     {
-        var h = UIFactory.Label(heading, 18, Palette.GoldLight, "c3-bold");
-        h.style.marginTop = 8;
+        var h = UIFactory.Label(heading, 21, Palette.GoldLight, "c3-bold");
+        h.style.marginTop = 10;
         parent.Add(h);
-        var b = UIFactory.Label(KinsokuHelper.Apply(body), 15, Palette.Text);
-        b.style.whiteSpace = WhiteSpace.Normal;
-        b.style.marginTop = 2;
-        b.style.marginBottom = 6;
+        var b = UIFactory.Paragraph(body, 19, Palette.Text);
+        b.style.marginTop = 4;
+        b.style.marginBottom = 8;
         parent.Add(b);
     }
 }

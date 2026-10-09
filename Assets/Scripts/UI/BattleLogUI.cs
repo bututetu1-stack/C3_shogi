@@ -52,11 +52,10 @@ public class BattleLogUI : MonoBehaviour
     {
         if (scrollView == null) return;
 
-        var label = new Label(KinsokuHelper.Apply(message));
+        var label = new WrappedLabel(message);
         label.enableRichText = true;
-        label.style.fontSize = 15;
+        label.style.fontSize = 17;
         label.style.color = Palette.Text;
-        label.style.whiteSpace = WhiteSpace.Normal;
         label.style.paddingTop = 4;
         label.style.paddingBottom = 4;
         label.style.borderBottomWidth = 1;

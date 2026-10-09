@@ -340,9 +340,10 @@ public class SimpleAI : MonoBehaviour
                         priority += 120;
                     // 前進
                     priority += (team == Team.Enemy ? (size - 1 - move.position.y) : move.position.y) * 2;
-                    // 成れる位置への移動（成ると死ぬ駒は成らないので加点しない）
-                    if (!piece.isPromoted && piece.data.canPromote && !piece.data.diesOnPromotion && piece.CanPromoteAt(move.position.y, size))
-                        priority += 300;
+                    // 成る手（成ると死ぬ駒は避ける）
+                    if (!piece.isPromoted && piece.data.canPromote
+                        && (piece.CanPromoteAt(piece.boardPosition.y, size) || piece.CanPromoteAt(move.position.y, size)))
+                        priority += piece.data.diesOnPromotion ? -3000 : 300;
                 }
 
                 entries.Add(new MoveEntry { piece = piece, move = move, priority = priority });
@@ -393,6 +394,7 @@ public class SimpleAI : MonoBehaviour
         }
 
         if (!bm.IsEmpty(move.position)) return mark;
+        int fromRow = piece.boardPosition.y;
         bm.RemovePieceFromBoard(piece.boardPosition);
         bm.PlacePieceOnBoard(piece, move.position);
 
@@ -403,13 +405,15 @@ public class SimpleAI : MonoBehaviour
             if (piece.currentHP <= 0) { SimKill(piece, 0); return mark; }
         }
 
-        // 成り（実際の対局と同じく、成ると死ぬ駒は成らない）
-        if (!piece.isPromoted && piece.data.canPromote && !piece.data.diesOnPromotion
-            && piece.CanPromoteAt(move.position.y, bm.CurrentBoardSize))
+        // 成り（強制。敵陣に入る・敵陣から出る手で成る。成ると死ぬ駒はここで退場）
+        int size = bm.CurrentBoardSize;
+        if (!piece.isPromoted && piece.data.canPromote
+            && (piece.CanPromoteAt(fromRow, size) || piece.CanPromoteAt(move.position.y, size)))
         {
             piece.isPromoted = true;
             int hpDiff = piece.data.promotedHP - piece.data.baseHP;
             if (hpDiff > 0) piece.currentHP += hpDiff;
+            if (piece.data.diesOnPromotion) SimKill(piece, 0);
         }
         return mark;
     }

@@ -46,4 +46,5 @@ public class PieceData : ScriptableObject
 
     [Header("Art")]
     public Sprite portrait;                        // 立ち絵（選択画面・詳細画面に表示。未設定なら駒のアイコン）
+    public Sprite promotedPortrait;                // 成った姿の立ち絵（提督など。未設定なら portrait）
 }

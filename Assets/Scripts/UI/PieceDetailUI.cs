@@ -105,9 +105,7 @@ public class PieceDetailUI : MonoBehaviour
         titleCol.style.flexGrow = 1;
         titleCol.style.flexShrink = 1;
         titleCol.style.minWidth = 0;
-        var nameLabel = UIFactory.Label(fullName, 24, Palette.Text, "c3-mincho");
-        nameLabel.style.whiteSpace = WhiteSpace.Normal;
-        titleCol.Add(nameLabel);
+        titleCol.Add(UIFactory.Paragraph(fullName, 27, Palette.Text, "c3-mincho"));
 
         var chips = new VisualElement();
         chips.style.flexDirection = FlexDirection.Row;
@@ -129,23 +127,27 @@ public class PieceDetailUI : MonoBehaviour
         content.Add(UIFactory.StatRow(atk, def, hpText));
 
         // 説明文
-        var descLabel = UIFactory.Label(KinsokuHelper.Apply(desc), 15, Palette.TextSub);
-        descLabel.style.whiteSpace = WhiteSpace.Normal;
-        descLabel.style.marginTop = 12;
+        var descLabel = UIFactory.Paragraph(desc, 18, Palette.Text);
+        descLabel.style.marginTop = 14;
         content.Add(descLabel);
 
-        content.Add(UIFactory.Separator());
+        // 説明と動きの図の間はしっかり空ける
+        var sep = UIFactory.Separator();
+        sep.style.marginTop = 18;
+        sep.style.marginBottom = 16;
+        content.Add(sep);
 
         // 動き（敵駒は盤上の向きに合わせて上下反転）
-        var moveTitle = UIFactory.Label(promoted ? "動き（成り）" : "動き", 15, Palette.Gold, "c3-bold");
-        moveTitle.style.marginBottom = 6;
+        var moveTitle = UIFactory.Label(promoted ? "動き（成り）" : "動き", 18, Palette.Gold, "c3-bold");
+        moveTitle.style.marginBottom = 8;
         content.Add(moveTitle);
-        content.Add(UIFactory.MoveGrid(UIFactory.MovesOf(d, promoted), piece.team == Team.Enemy, 22f));
+        content.Add(UIFactory.MoveGrid(UIFactory.MovesOf(d, promoted), piece.team == Team.Enemy, 24f));
+        content.Add(UIFactory.MoveLegend());
 
         if (d.canPromote)
         {
             bool nextState = !promoted;
-            var toggle = UIFactory.Button(promoted ? "成る前を見る" : "成りを見る", () =>
+            var toggle = UIFactory.Button(promoted ? "成る前を見る" : "成った姿を見る", () =>
             {
                 showingPromoted = nextState;
                 RenderDetail(piece, nextState);
@@ -168,9 +170,8 @@ public class PieceDetailUI : MonoBehaviour
         content.Clear();
 
         content.Add(UIFactory.PanelTitle("駒の情報"));
-        var hint = UIFactory.Label("駒をクリックすると、ここに詳しい情報が表示されます。自分の駒を選ぶと動ける場所が盤に表示されます。", 15, Palette.TextSub);
-        hint.style.whiteSpace = WhiteSpace.Normal;
-        hint.style.marginBottom = 12;
+        var hint = UIFactory.Paragraph("駒をクリックすると、ここに詳しい情報が表示されます。自分の駒を選ぶと、動ける場所が盤に表示されます。", 18, Palette.TextSub);
+        hint.style.marginBottom = 14;
         content.Add(hint);
 
         content.Add(GuideRow(Badge(Palette.ATK), "攻撃力 … 相手に与えるダメージ"));
@@ -182,8 +183,9 @@ public class PieceDetailUI : MonoBehaviour
         content.Add(GuideRow(Badge(Palette.AttackRing), "攻撃できる敵（予想ダメージ付き）"));
         content.Add(UIFactory.Separator());
 
-        var rule = UIFactory.Label("ダメージ ＝ 攻撃力 − 防御力。倒しきれないときは攻撃した駒はその場に留まります。相手の「C3」を倒せば勝ち、自分の「C3」が倒されると負けです。", 14, Palette.TextSub);
-        rule.style.whiteSpace = WhiteSpace.Normal;
+        content.Add(UIFactory.Paragraph("ダメージは「攻撃力 − 防御力」。倒しきれないときは、攻撃した駒はその場に留まります。", 17, Palette.TextSub));
+        var rule = UIFactory.Paragraph("相手の「C3」を倒せば勝ち、自分の「C3」が倒されると負けです。", 17, Palette.TextSub);
+        rule.style.marginTop = 8;
         content.Add(rule);
     }
 
@@ -192,12 +194,12 @@ public class PieceDetailUI : MonoBehaviour
         var row = new VisualElement();
         row.style.flexDirection = FlexDirection.Row;
         row.style.alignItems = Align.Center;
-        row.style.marginBottom = 6;
+        row.style.marginBottom = 8;
         row.Add(icon);
-        var label = UIFactory.Label(text, 14, Palette.Text);
+        var label = UIFactory.Paragraph(text, 17, Palette.Text);
         label.style.marginLeft = 10;
-        label.style.whiteSpace = WhiteSpace.Normal;
         label.style.flexShrink = 1;
+        label.style.flexGrow = 1;
         row.Add(label);
         return row;
     }
@@ -205,10 +207,10 @@ public class PieceDetailUI : MonoBehaviour
     private static VisualElement Badge(Color color)
     {
         var dot = new VisualElement();
-        dot.style.width = 14;
-        dot.style.height = 14;
+        dot.style.width = 16;
+        dot.style.height = 16;
         dot.style.flexShrink = 0;
-        dot.style.borderTopLeftRadius = dot.style.borderTopRightRadius = dot.style.borderBottomLeftRadius = dot.style.borderBottomRightRadius = 7;
+        dot.style.borderTopLeftRadius = dot.style.borderTopRightRadius = dot.style.borderBottomLeftRadius = dot.style.borderBottomRightRadius = 8;
         dot.style.backgroundColor = new Color(color.r, color.g, color.b, 1f);
         return dot;
     }

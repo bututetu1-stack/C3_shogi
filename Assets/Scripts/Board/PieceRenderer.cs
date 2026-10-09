@@ -29,6 +29,8 @@ public class PieceRenderer : MonoBehaviour
     private Transform stats;
     private SpriteRenderer bodyRenderer;
     private SpriteRenderer shadowRenderer;
+    private SpriteRenderer emblemRenderer;
+    private SpriteRenderer auraRenderer;
     private TextMeshPro labelTop;
     private TextMeshPro labelBottom;
 
@@ -48,6 +50,8 @@ public class PieceRenderer : MonoBehaviour
     public Transform Stats { get { return stats; } }
     public SpriteRenderer Body { get { return bodyRenderer; } }
     public float BaseScale { get; private set; }
+    /// <summary>海に浮かぶ駒（艦娘・深海）はゆらゆら揺らす</summary>
+    public bool IsFloating { get; private set; }
 
     public void Init(PieceInstance piece)
     {
@@ -74,11 +78,27 @@ public class PieceRenderer : MonoBehaviour
         labelTop = CreateLabel("LabelTop");
         labelBottom = CreateLabel("LabelBottom");
 
+        // 紋章（錨）は尖った先のあたりに小さく
+        var emblemObj = CreateChild("Emblem", visual);
+        emblemObj.localPosition = new Vector3(0f, 0.41f, 0f);
+        emblemObj.localScale = new Vector3(0.17f, 0.17f, 1f);
+        emblemRenderer = emblemObj.gameObject.AddComponent<SpriteRenderer>();
+        emblemRenderer.sortingOrder = OrderLabel;
+
+        // 足元の光（提督）
+        var auraObj = CreateChild("Aura", transform);
+        auraObj.localScale = new Vector3(1.5f, 1.5f, 1f);
+        auraRenderer = auraObj.gameObject.AddComponent<SpriteRenderer>();
+        auraRenderer.sprite = SpriteFactory.SoftCircle;
+        auraRenderer.sortingOrder = OrderShadow - 1;
+        auraRenderer.enabled = false;
+
+        // ステータスは駒から見て 左肩=攻撃、右肩=防御、右下=体力（数字は常に正立）
         stats = CreateChild("Stats", transform);
-        atkBadge = CreateBadge("ATK", SpriteFactory.Circle, Palette.ATK, new Vector3(-0.34f, 0.34f, 0f), 0.26f);
-        defBadge = CreateBadge("DEF", SpriteFactory.Shield, Palette.DEF, new Vector3(0.34f, 0.34f, 0f), 0.26f);
-        hpBadge = CreateBadge("HP", SpriteFactory.RoundedRect, Palette.HP, new Vector3(0f, -0.44f, 0f), 0.24f);
-        hpBadge.icon.drawMode = SpriteDrawMode.Sliced;
+        float flip = isEnemyPiece ? -1f : 1f;
+        atkBadge = CreateBadge("ATK", SpriteFactory.Circle, Palette.ATK, new Vector3(-0.34f, 0.34f, 0f) * flip, 0.27f);
+        defBadge = CreateBadge("DEF", SpriteFactory.Shield, Palette.DEF, new Vector3(0.34f, 0.34f, 0f) * flip, 0.27f);
+        hpBadge = CreateBadge("HP", SpriteFactory.Circle, Palette.HP, new Vector3(0.34f, -0.36f, 0f) * flip, 0.27f);
 
         appliedName = null;
         RefreshBody(true);
@@ -184,26 +204,13 @@ public class PieceRenderer : MonoBehaviour
     private void SetHPBadge()
     {
         int hp = pieceInstance.currentHP;
-        bool infinite = hp >= 999;
-        string text = infinite ? "∞" : hp.ToString();
+        string text = hp >= 999 ? "∞" : hp.ToString();
         hpBadge.text.text = text;
+        hpBadge.text.fontSize = text.Length >= 2 ? 1.6f : 1.9f;
         hpBadge.root.SetActive(hp > 0);
-
-        // 桁数に合わせて横幅を伸ばす
-        // （スライス描画の角丸を細くするため 1/3 に縮小して3倍のサイズで描く）
-        float width = text.Length >= 2 ? 0.40f : 0.30f;
-        hpBadge.icon.transform.localScale = new Vector3(1f / 3f, 1f / 3f, 1f);
-        hpBadge.icon.size = new Vector2(width, 0.22f) * 3f;
-
-        // 減っていたら色を変える
-        int max = pieceInstance.MaxHP;
-        Color c = Palette.HP;
-        if (!infinite && max > 0 && hp < max)
-            c = hp * 3 <= max ? Palette.Enemy : Palette.Hex(0xD9A23A);
-        hpBadge.icon.color = c;
     }
 
-    /// <summary>本体の色（レアリティ）と文字（成り）を状態に合わせる</summary>
+    /// <summary>本体の色・文字・紋章を状態（レアリティ・成り）に合わせる</summary>
     private void RefreshBody(bool force)
     {
         Rarity rarity = pieceInstance.CurrentRarity;
@@ -215,17 +222,24 @@ public class PieceRenderer : MonoBehaviour
         appliedPromoted = promoted;
         appliedName = name;
 
-        bodyRenderer.sprite = SpriteFactory.PieceBody(rarity);
-        Color ink = Palette.PieceInk(rarity, promoted);
-        labelTop.color = ink;
-        labelBottom.color = ink;
+        PieceLook look = PieceSkin.For(pieceInstance.data, promoted);
+        bodyRenderer.sprite = look.body;
+        labelTop.color = look.ink;
+        labelBottom.color = look.ink;
+        emblemRenderer.sprite = look.emblem;
+        emblemRenderer.color = look.emblemColor;
+        emblemRenderer.enabled = look.emblem != null;
+        auraRenderer.enabled = look.aura;
+        IsFloating = look.floating;
 
+        // 紋章がある駒は文字を少し下げる
+        float shift = look.emblem != null ? -0.04f : 0f;
         if (IsAscii(name) || name.Length == 1)
         {
             // 1文字または英数字（C3・SN）は1行で大きく
             labelTop.text = name;
             labelTop.fontSize = name.Length == 1 ? 4.6f : (name.Length == 2 ? 3.6f : 2.8f);
-            labelTop.transform.localPosition = new Vector3(0f, -0.06f, 0f);
+            labelTop.transform.localPosition = new Vector3(0f, -0.06f + shift, 0f);
             labelBottom.text = "";
         }
         else
@@ -235,11 +249,20 @@ public class PieceRenderer : MonoBehaviour
             labelBottom.text = name.Length > 1 ? name.Substring(1, 1) : "";
             labelTop.fontSize = 3.1f;
             labelBottom.fontSize = 3.1f;
-            labelTop.transform.localPosition = new Vector3(0f, 0.16f, 0f);
-            labelBottom.transform.localPosition = new Vector3(0f, -0.19f, 0f);
+            labelTop.transform.localPosition = new Vector3(0f, 0.16f + shift, 0f);
+            labelBottom.transform.localPosition = new Vector3(0f, -0.19f + shift, 0f);
         }
     }
 
+    void Update()
+    {
+        // 提督の足元の光はゆっくり明滅
+        if (auraRenderer != null && auraRenderer.enabled)
+        {
+            float a = 0.22f + 0.12f * Mathf.Sin(Time.time * 2.2f);
+            auraRenderer.color = new Color(Palette.Gold.r, Palette.Gold.g, Palette.Gold.b, a);
+        }
+    }
     private static bool IsAscii(string s)
     {
         foreach (char ch in s)

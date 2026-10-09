@@ -160,6 +160,15 @@ public class BoardManager : MonoBehaviour
         }
     }
 
+    /// <summary>見た目のオブジェクトを盤の管理から外して返す（破棄は呼び出し側で）</summary>
+    public PieceController DetachPieceController(Vector2Int pos)
+    {
+        PieceController pc;
+        if (pieceObjects.TryGetValue(pos, out pc))
+            pieceObjects.Remove(pos);
+        return pc;
+    }
+
     public void RemovePieceController(Vector2Int pos, bool animate = true)
     {
         PieceController pc;

@@ -26,20 +26,27 @@ public class HighlightManager : MonoBehaviour
         BoardRenderer renderer = bm.GetRenderer();
         HashSet<Vector2Int> danger = GetAttackedSquares(piece.team == Team.Player ? Team.Enemy : Team.Player);
 
+        int size = bm.CurrentBoardSize;
+        bool canPromote = !piece.isPromoted && piece.data.canPromote;
+        bool startsInZone = canPromote && piece.CanPromoteAt(piece.boardPosition.y, size);
+
         foreach (var move in moves)
         {
             BoardCell cell = renderer.GetCell(move.position);
             if (cell == null) continue;
 
+            // この手で成るか（敵陣に入る・敵陣から出る）
+            bool promotes = canPromote && (startsInZone || piece.CanPromoteAt(move.position.y, size));
             if (move.isAttack)
             {
                 cell.SetMark(CellMark.Attack);
                 PieceInstance target = bm.GetPieceAt(move.position);
-                if (target != null) ShowDamagePreview(piece, target);
+                if (target != null) ShowDamagePreview(piece, target, promotes);
             }
             else
             {
                 cell.SetMark(danger.Contains(move.position) ? CellMark.MoveDanger : CellMark.Move);
+                if (promotes) ShowPromotionPreview(piece, move.position);
             }
             markedCells.Add(cell);
         }
@@ -98,7 +105,19 @@ public class HighlightManager : MonoBehaviour
             if (label != null) label.gameObject.SetActive(false);
     }
 
-    private void ShowDamagePreview(PieceInstance attacker, PieceInstance target)
+    /// <summary>移動すると成るマスの上側に小さく「成」（成ると退場する駒は「退場」）を出す</summary>
+    private void ShowPromotionPreview(PieceInstance piece, Vector2Int pos)
+    {
+        TextMeshPro label = GetPreviewLabel();
+        bool dies = piece.data.diesOnPromotion;
+        label.text = dies ? "退場" : "成";
+        label.color = dies ? Palette.EnemyLight : Palette.GoldLight;
+        label.fontSize = 2.5f;
+        label.transform.position = new Vector3(pos.x, pos.y + 0.3f, 0f);
+        label.gameObject.SetActive(true);
+    }
+
+    private void ShowDamagePreview(PieceInstance attacker, PieceInstance target, bool promotes)
     {
         string text;
         Color color;
@@ -107,6 +126,8 @@ public class HighlightManager : MonoBehaviour
         {
             text = "撃破";
             color = Palette.GoldLight;
+            // 倒して前に出ると成る場合は、マスの上側に「成」「退場」を添える
+            if (promotes) ShowPromotionPreview(attacker, target.boardPosition);
         }
         else
         {
@@ -117,7 +138,8 @@ public class HighlightManager : MonoBehaviour
         TextMeshPro label = GetPreviewLabel();
         label.text = text;
         label.color = color;
-        label.transform.position = new Vector3(target.boardPosition.x, target.boardPosition.y + 0.02f, 0f);
+        label.fontSize = 3.4f;
+        label.transform.position = new Vector3(target.boardPosition.x, target.boardPosition.y - 0.04f, 0f);
         label.gameObject.SetActive(true);
     }
 
