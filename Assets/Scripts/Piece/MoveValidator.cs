@@ -55,6 +55,30 @@ public static class MoveValidator
                 if (!dir.canJump && targetPiece != null) break;
             }
         }
+
+        ApplyTaunt(results, bm);
+    }
+
+    /// <summary>
+    /// 挑発: 攻撃できる位置に相手の挑発駒（小錦）がいるなら、攻撃はその駒にしかできない（移動はできる）
+    /// </summary>
+    private static void ApplyTaunt(List<MoveResult> results, BoardManager bm)
+    {
+        bool tauntInRange = false;
+        for (int i = 0; i < results.Count; i++)
+        {
+            if (!results[i].isAttack) continue;
+            PieceInstance t = bm.GetPieceAt(results[i].position);
+            if (t != null && t.data.isTauntPiece) { tauntInRange = true; break; }
+        }
+        if (!tauntInRange) return;
+
+        for (int i = results.Count - 1; i >= 0; i--)
+        {
+            if (!results[i].isAttack) continue;
+            PieceInstance t = bm.GetPieceAt(results[i].position);
+            if (t == null || !t.data.isTauntPiece) results.RemoveAt(i);
+        }
     }
 
     // 駒の攻撃範囲を取得（味方駒の位置も含む = 防衛範囲）

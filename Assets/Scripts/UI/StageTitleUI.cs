@@ -42,9 +42,21 @@ public class StageTitleUI : MonoBehaviour
 
     public void ShowTitle(int stageNumber, string stageName)
     {
+        bool boss = IsBossStage(stageNumber);
+        Show("第" + UIFactory.Kanji(stageNumber) + "局", stageName, boss ? "― 強敵出現 ―" : null, Palette.Text);
+    }
+
+    /// <summary>ステージクリアなどの見出し（大きな文字＋小さな添え書き）</summary>
+    public void ShowBanner(string title, string subtitle, Color titleColor)
+    {
+        Show(subtitle, title, null, titleColor);
+    }
+
+    private void Show(string upper, string main, string sub, Color mainColor)
+    {
         EnsureUIDocument();
         StopAllCoroutines();
-        StartCoroutine(ShowTitleCoroutine(stageNumber, stageName));
+        StartCoroutine(ShowTitleCoroutine(upper, main, sub, mainColor));
     }
 
     private static bool IsBossStage(int stage)
@@ -52,7 +64,7 @@ public class StageTitleUI : MonoBehaviour
         return stage == 10 || stage == 12 || stage == 15;
     }
 
-    private IEnumerator ShowTitleCoroutine(int stageNumber, string stageName)
+    private IEnumerator ShowTitleCoroutine(string upperText, string mainText, string subText, Color mainColor)
     {
         VisualElement root = UIFactory.SetupRoot(uiDocument);
 
@@ -79,20 +91,19 @@ public class StageTitleUI : MonoBehaviour
         band.pickingMode = PickingMode.Ignore;
         overlay.Add(band);
 
-        bool boss = IsBossStage(stageNumber);
-        var number = UIFactory.Label("第" + UIFactory.Kanji(stageNumber) + "局", 26, Palette.Gold, "c3-mincho");
+        var number = UIFactory.Label(upperText, 26, Palette.Gold, "c3-mincho");
         number.style.letterSpacing = 10;
         band.Add(number);
 
-        var name = UIFactory.Label(stageName, 64, Palette.Text, "c3-mincho");
+        var name = UIFactory.Label(mainText, 64, mainColor, "c3-mincho");
         name.style.letterSpacing = 16;
         name.style.marginTop = 2;
         band.Add(name);
 
         Label sub = null;
-        if (boss)
+        if (!string.IsNullOrEmpty(subText))
         {
-            sub = UIFactory.Label("― 強敵出現 ―", 18, Palette.EnemyLight, "c3-bold");
+            sub = UIFactory.Label(subText, 18, Palette.EnemyLight, "c3-bold");
             sub.style.letterSpacing = 6;
             sub.style.marginTop = 4;
             band.Add(sub);

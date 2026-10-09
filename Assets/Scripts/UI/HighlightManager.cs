@@ -102,24 +102,16 @@ public class HighlightManager : MonoBehaviour
     {
         string text;
         Color color;
-        if (target.data.isTauntPiece)
+        int damage = CombatResolver.CalcDamage(attacker, target);
+        if (damage >= target.currentHP)
         {
-            text = "無効";
-            color = Palette.TextSub;
+            text = "撃破";
+            color = Palette.GoldLight;
         }
         else
         {
-            int damage = CombatResolver.CalcDamage(attacker, target);
-            if (damage >= target.currentHP)
-            {
-                text = "撃破";
-                color = Palette.GoldLight;
-            }
-            else
-            {
-                text = "-" + damage;
-                color = damage > 0 ? Palette.EnemyLight : Palette.TextSub;
-            }
+            text = "-" + damage;
+            color = damage > 0 ? Palette.EnemyLight : Palette.TextSub;
         }
 
         TextMeshPro label = GetPreviewLabel();

@@ -10,6 +10,7 @@ public class TurnIndicatorUI : MonoBehaviour
     private Label turnLabel;
     private Label moveCountLabel;
     private VisualElement buttonContainer;
+    private VisualElement bar;
     private bool isSubscribed;
 
     void Start()
@@ -21,7 +22,7 @@ public class TurnIndicatorUI : MonoBehaviour
         uiDocument.sortingOrder = 30;
         VisualElement root = UIFactory.SetupRoot(uiDocument);
 
-        var bar = new VisualElement();
+        bar = new VisualElement();
         bar.style.position = Position.Absolute;
         bar.style.top = 14;
         bar.style.left = 0;
@@ -123,6 +124,7 @@ public class TurnIndicatorUI : MonoBehaviour
 
         GamePhase phase = GameManager.Instance.currentPhase;
         bool battle = phase == GamePhase.Battle;
+        bar.style.display = phase == GamePhase.Title ? DisplayStyle.None : DisplayStyle.Flex;
         turnBadge.style.display = battle ? DisplayStyle.Flex : DisplayStyle.None;
 
         if (team == Team.Player)
@@ -135,7 +137,10 @@ public class TurnIndicatorUI : MonoBehaviour
             turnLabel.text = "相手の番";
             turnBadge.style.backgroundColor = new Color(Palette.Enemy.r, Palette.Enemy.g, Palette.Enemy.b, 0.9f);
         }
-        moveCountLabel.text = GameManager.Instance.MoveCount + "手目";
+        // 手数（上限が近づいたら残りを表示）
+        int remaining = GameManager.MoveLimit - GameManager.Instance.MoveCount + 1;
+        moveCountLabel.text = GameManager.Instance.MoveCount + "手目" + (remaining <= 30 ? "（残り" + remaining + "手）" : "");
+        moveCountLabel.style.color = remaining <= 30 ? new Color(1f, 0.85f, 0.5f) : new Color(1f, 1f, 1f, 0.75f);
 
         buttonContainer.style.display = (battle && team == Team.Player) ? DisplayStyle.Flex : DisplayStyle.None;
     }

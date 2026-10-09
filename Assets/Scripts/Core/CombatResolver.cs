@@ -15,7 +15,8 @@ public static class CombatResolver
     // ================================================================
     // 1手の実行（攻撃 → 撃破なら前進 → SN消耗 → 成り → 李白）
     // ================================================================
-    public static IEnumerator ExecuteMove(PieceInstance piece, MoveValidator.MoveResult move)
+    /// <param name="askPromotion">成れるときにプレイヤーに確認する（手動で指した手のみ）</param>
+    public static IEnumerator ExecuteMove(PieceInstance piece, MoveValidator.MoveResult move, bool askPromotion = false)
     {
         if (piece == null || !piece.isAlive) yield break;
 
@@ -68,8 +69,24 @@ public static class CombatResolver
             }
         }
 
-        if (GameManager.Instance != null)
-            GameManager.Instance.CheckPromotion(piece);
+        // 成り（手動で指した手は確認、それ以外は自動で判断）
+        GameManager gm = GameManager.Instance;
+        if (gm != null && gm.CanPromoteNow(piece))
+        {
+            bool promote;
+            if (gm.MustPromote(piece))
+                promote = true;
+            else if (askPromotion && piece.team == Team.Player)
+            {
+                bool answer = false;
+                yield return PromotionDialogUI.Ask(piece, result => answer = result);
+                promote = answer;
+            }
+            else
+                promote = !piece.data.diesOnPromotion;
+
+            if (promote) gm.PromotePiece(piece);
+        }
         if (!piece.isAlive) yield break;
 
         // 李白の裏返し能力（移動後に発動）
@@ -80,14 +97,6 @@ public static class CombatResolver
     /// <summary>通常攻撃。撃破したらtrue</summary>
     public static bool Attack(PieceInstance attacker, PieceInstance target)
     {
-        if (target.data.isTauntPiece)
-        {
-            PlayHit(target);
-            FloatingText.Spawn(target.boardPosition, "無効", Palette.TextSub);
-            Log(Name(attacker) + " → " + Name(target) + " ダメージ無効");
-            return false;
-        }
-
         int damage = CalcDamage(attacker, target);
         target.currentHP -= damage;
         RefreshHP(target);
@@ -114,13 +123,6 @@ public static class CombatResolver
     public static bool ApplyDamage(PieceInstance target, int amount, bool piercing)
     {
         if (target == null || !target.isAlive) return false;
-
-        if (target.data.isTauntPiece)
-        {
-            PlayHit(target);
-            FloatingText.Spawn(target.boardPosition, "無効", Palette.TextSub);
-            return false;
-        }
 
         int damage = piercing ? amount : Mathf.Max(0, amount - target.DEF);
         target.currentHP -= damage;
@@ -178,6 +180,8 @@ public static class CombatResolver
 
         if (BattleEffects.Instance != null)
             BattleEffects.Instance.PlayDefeatEffect(pos);
+        if (target.team == Team.Enemy && GameManager.Instance != null)
+            GameManager.Instance.RegisterKill();
 
         bm.RemovePieceController(pos);
         bm.RemovePiece(pos);

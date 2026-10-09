@@ -7,9 +7,9 @@ public class PieceSelectionUI : MonoBehaviour
 {
     private UIDocument uiDocument;
     private VisualElement root;
-    private List<PieceData> currentChoices;
-    private System.Action<PieceData> onPieceSelected;
-    private PieceData selectedPiece;
+    private List<DraftOption> currentChoices;
+    private System.Action<DraftOption> onPieceSelected;
+    private DraftOption selectedOption;
     private bool showingPromoted;
     private readonly List<VisualElement> cards = new List<VisualElement>();
     private VisualElement detailPanel;
@@ -33,7 +33,8 @@ public class PieceSelectionUI : MonoBehaviour
         if (root == null && EnsureRoot()) root.style.display = DisplayStyle.None;
     }
 
-    public void ShowSelection(List<PieceData> choices, System.Action<PieceData> callback)
+    /// <param name="onReroll">引き直しボタンを押したとき（null なら引き直し不可）</param>
+    public void ShowSelection(List<DraftOption> choices, System.Action<DraftOption> callback, System.Action onReroll = null, int rerollsLeft = 0)
     {
         if (!EnsureRoot())
         {
@@ -44,7 +45,7 @@ public class PieceSelectionUI : MonoBehaviour
 
         currentChoices = choices;
         onPieceSelected = callback;
-        selectedPiece = null;
+        selectedOption = null;
         showingPromoted = false;
         cards.Clear();
 
@@ -68,7 +69,7 @@ public class PieceSelectionUI : MonoBehaviour
             stage.style.marginBottom = 4;
             scroll.Add(stage);
         }
-        var title = UIFactory.Label("仲間をひとり選んでください", 34, Palette.Text, "c3-mincho");
+        var title = UIFactory.Label("仲間か強化をひとつ選んでください", 34, Palette.Text, "c3-mincho");
         title.style.letterSpacing = 4;
         title.style.marginBottom = 26;
         scroll.Add(title);
@@ -79,9 +80,20 @@ public class PieceSelectionUI : MonoBehaviour
         row.style.flexWrap = Wrap.Wrap;
         row.style.justifyContent = Justify.Center;
         row.style.marginBottom = 20;
-        foreach (var piece in choices)
-            row.Add(CreateCard(piece));
+        foreach (var option in choices)
+            row.Add(option.IsUpgrade ? CreateUpgradeCard(option) : CreateCard(option));
         scroll.Add(row);
+
+        if (onReroll != null && rerollsLeft > 0)
+        {
+            var reroll = UIFactory.Button("引き直す（残り" + rerollsLeft + "回）", () =>
+            {
+                onPieceSelected = null;
+                onReroll();
+            });
+            reroll.style.marginBottom = 14;
+            scroll.Add(reroll);
+        }
 
         // 選んだ駒の詳しい説明
         detailPanel = UIFactory.Panel();
@@ -91,14 +103,15 @@ public class PieceSelectionUI : MonoBehaviour
         detailPanel.style.display = DisplayStyle.None;
         scroll.Add(detailPanel);
 
-        confirmButton = UIFactory.Button("この仲間で挑む", OnConfirm, "c3-button--primary", "c3-button--big");
+        confirmButton = UIFactory.Button("これに決める", OnConfirm, "c3-button--primary", "c3-button--big");
         confirmButton.style.marginTop = 22;
         confirmButton.SetEnabled(false);
         scroll.Add(confirmButton);
     }
 
-    private VisualElement CreateCard(PieceData piece)
+    private VisualElement CreateCard(DraftOption option)
     {
+        PieceData piece = option.piece;
         var card = new VisualElement();
         card.AddToClassList("c3-card");
 
@@ -124,8 +137,48 @@ public class PieceSelectionUI : MonoBehaviour
         grid.style.marginTop = 10;
         card.Add(grid);
 
-        PieceData captured = piece;
-        card.RegisterCallback<ClickEvent>(evt => SelectCard(captured));
+        card.RegisterCallback<ClickEvent>(evt => SelectCard(option));
+        cards.Add(card);
+        return card;
+    }
+
+    /// <summary>全軍強化のカード</summary>
+    private VisualElement CreateUpgradeCard(DraftOption option)
+    {
+        var card = new VisualElement();
+        card.AddToClassList("c3-card");
+
+        var icon = new VisualElement();
+        icon.style.width = 100;
+        icon.style.height = 100;
+        icon.style.marginTop = 5;
+        icon.style.marginBottom = 5;
+        icon.style.alignItems = Align.Center;
+        icon.style.justifyContent = Justify.Center;
+        icon.style.borderTopLeftRadius = icon.style.borderTopRightRadius = icon.style.borderBottomLeftRadius = icon.style.borderBottomRightRadius = 50;
+        Color c = option.GlyphColor;
+        icon.style.backgroundColor = new Color(c.r, c.g, c.b, 0.22f);
+        icon.style.borderTopWidth = icon.style.borderBottomWidth = icon.style.borderLeftWidth = icon.style.borderRightWidth = 3;
+        icon.style.borderTopColor = icon.style.borderBottomColor = icon.style.borderLeftColor = icon.style.borderRightColor = c;
+        icon.pickingMode = PickingMode.Ignore;
+        icon.Add(UIFactory.Label(option.Glyph, option.Glyph.Length > 1 ? 34 : 46, Color.Lerp(c, Color.white, 0.4f), "c3-mincho"));
+        card.Add(icon);
+
+        var name = UIFactory.Label(option.Title, 22, Palette.Text, "c3-mincho");
+        name.style.marginTop = 8;
+        card.Add(name);
+
+        var chip = UIFactory.Chip("全軍強化", Palette.GoldLight);
+        chip.style.marginTop = 4;
+        card.Add(chip);
+
+        var desc = UIFactory.Label(KinsokuHelper.Apply(option.Description), 14, Palette.TextSub);
+        desc.style.whiteSpace = WhiteSpace.Normal;
+        desc.style.marginTop = 10;
+        desc.style.unityTextAlign = TextAnchor.UpperCenter;
+        card.Add(desc);
+
+        card.RegisterCallback<ClickEvent>(evt => SelectCard(option));
         cards.Add(card);
         return card;
     }
@@ -144,19 +197,27 @@ public class PieceSelectionUI : MonoBehaviour
         return box;
     }
 
-    private void SelectCard(PieceData piece)
+    private void SelectCard(DraftOption option)
     {
-        selectedPiece = piece;
+        selectedOption = option;
         showingPromoted = false;
 
         if (BattleEffects.Instance != null)
             BattleEffects.Instance.PlayMoveEffect();
 
         for (int i = 0; i < cards.Count; i++)
-            cards[i].EnableInClassList("c3-card--selected", i < currentChoices.Count && currentChoices[i] == piece);
+            cards[i].EnableInClassList("c3-card--selected", i < currentChoices.Count && currentChoices[i] == option);
 
-        RenderDetailPanel(piece, false);
-        detailPanel.style.display = DisplayStyle.Flex;
+        // 強化カードはカードに説明が全部書いてあるので詳細欄は出さない
+        if (option.IsUpgrade)
+        {
+            detailPanel.style.display = DisplayStyle.None;
+        }
+        else
+        {
+            RenderDetailPanel(option.piece, false);
+            detailPanel.style.display = DisplayStyle.Flex;
+        }
         confirmButton.SetEnabled(true);
     }
 
@@ -223,12 +284,18 @@ public class PieceSelectionUI : MonoBehaviour
 
     private void OnConfirm()
     {
-        if (selectedPiece == null) return;
+        if (selectedOption == null) return;
+        Hide();
+        var callback = onPieceSelected;
+        onPieceSelected = null;
+        if (callback != null) callback(selectedOption);
+    }
+
+    public void Hide()
+    {
+        if (root == null) return;
         root.style.display = DisplayStyle.None;
         root.pickingMode = PickingMode.Ignore;
         root.Clear();
-        var callback = onPieceSelected;
-        onPieceSelected = null;
-        if (callback != null) callback(selectedPiece);
     }
 }

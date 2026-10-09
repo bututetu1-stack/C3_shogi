@@ -6,9 +6,9 @@ using System.Collections.Generic;
 /// RPG将棋用AI - 反復深化 Alpha-Beta 探索 + RPG戦闘理解型評価関数
 ///
 /// 設計方針:
-/// - 効果のない攻撃（0ダメージ・挑発駒への攻撃）はしない
+/// - 効果のない攻撃（0ダメージ）はしない。挑発（小錦）の制限は MoveValidator が掛ける
 /// - 自分の手 → 相手の応手まで読んでから判断する（偶数手で評価して楽観しすぎない）
-/// - 挑発・髑髏の爆発・SNの消耗・成り・過労死を探索の中でも再現する
+/// - 髑髏の爆発・SNの消耗・成り・過労死を探索の中でも再現する
 /// - 時間予算を超えたら打ち切り、そこまでの最善手を指す（フリーズしない）
 /// - ほぼ同点の手からはランダムに選び、毎回同じ展開にならないようにする
 /// </summary>
@@ -24,11 +24,24 @@ public class SimpleAI : MonoBehaviour
     public bool logSearchStats;
 
     // 反復深化で試す深さ（自分の手→相手の応手 で1組）
-    private static readonly int[] SearchDepths = { 2, 4 };
+    private static readonly int[] ShallowDepths = { 2 };
+    private static readonly int[] FullDepths = { 2, 4 };
     // 各ノードで読む手の上限（ルートは全手）
     private const int InnerMaxMoves = 14;
+
+    // ステージに応じた強さ（序盤は浅く読み、悪手もそこそこ指す）
+    private int[] searchDepths = FullDepths;
     // この点差以内の手は同じくらい良いとみなしてランダムに選ぶ
-    private const int RandomMargin = 25;
+    private int randomMargin = 25;
+
+    private void ConfigureDifficulty()
+    {
+        int stage = StageManager.Instance != null ? StageManager.Instance.currentStage : 5;
+        if (stage <= 2) { searchDepths = ShallowDepths; randomMargin = 140; }
+        else if (stage <= 4) { searchDepths = ShallowDepths; randomMargin = 60; }
+        else if (stage <= 9) { searchDepths = FullDepths; randomMargin = 30; }
+        else { searchDepths = FullDepths; randomMargin = 15; }
+    }
 
     private const int WinScore = 100000;
 
@@ -120,6 +133,7 @@ public class SimpleAI : MonoBehaviour
         clock = System.Diagnostics.Stopwatch.StartNew();
         timeUp = false;
         nodes = 0;
+        ConfigureDifficulty();
 
         BoardManager bm = BoardManager.Instance;
         List<MoveEntry> root = new List<MoveEntry>();
@@ -141,7 +155,7 @@ public class SimpleAI : MonoBehaviour
         int completedDepth = 0;
         List<MoveEntry> best = null;
 
-        foreach (int depth in SearchDepths)
+        foreach (int depth in searchDepths)
         {
             var scored = new List<MoveEntry>(root.Count);
             int alpha = -WinScore * 2;
@@ -150,7 +164,7 @@ public class SimpleAI : MonoBehaviour
                 MoveEntry e = root[i];
                 int mark = Simulate(e.piece, e.move);
                 // 最善候補との差を見るため、alphaより少し下までは正確に読む
-                e.score = AlphaBeta(depth - 1, false, alpha - RandomMargin, WinScore * 2, 1);
+                e.score = AlphaBeta(depth - 1, false, alpha - randomMargin, WinScore * 2, 1);
                 Restore(mark);
                 if (timeUp) break;
                 scored.Add(e);
@@ -178,7 +192,7 @@ public class SimpleAI : MonoBehaviour
         // ほぼ同点の手からランダムに選ぶ
         int top = best[0].score;
         int count = 1;
-        while (count < best.Count && best[count].score >= top - RandomMargin) count++;
+        while (count < best.Count && best[count].score >= top - randomMargin) count++;
         MoveEntry chosen = best[Random.Range(0, count)];
 
         if (logSearchStats)
@@ -302,7 +316,6 @@ public class SimpleAI : MonoBehaviour
                     PieceInstance target = bm.GetPieceAt(move.position);
                     if (target == null) continue;
                     // 効果のない攻撃は読まない
-                    if (target.data.isTauntPiece) continue;
                     int damage = CombatResolver.CalcDamage(piece, target);
                     if (damage <= 0) continue;
 
@@ -327,9 +340,9 @@ public class SimpleAI : MonoBehaviour
                         priority += 120;
                     // 前進
                     priority += (team == Team.Enemy ? (size - 1 - move.position.y) : move.position.y) * 2;
-                    // 成れる位置への移動
-                    if (!piece.isPromoted && piece.data.canPromote && piece.CanPromoteAt(move.position.y, size))
-                        priority += piece.data.diesOnPromotion ? -2000 : 300;
+                    // 成れる位置への移動（成ると死ぬ駒は成らないので加点しない）
+                    if (!piece.isPromoted && piece.data.canPromote && !piece.data.diesOnPromotion && piece.CanPromoteAt(move.position.y, size))
+                        priority += 300;
                 }
 
                 entries.Add(new MoveEntry { piece = piece, move = move, priority = priority });
@@ -371,7 +384,6 @@ public class SimpleAI : MonoBehaviour
             PieceInstance target = bm.GetPieceAt(move.position);
             if (target != null && target.team != piece.team)
             {
-                if (target.data.isTauntPiece) return mark; // ダメージ無効
                 Save(target);
                 target.currentHP -= CombatResolver.CalcDamage(piece, target);
                 if (target.currentHP > 0) return mark;      // 倒せなければその場に留まる
@@ -391,13 +403,13 @@ public class SimpleAI : MonoBehaviour
             if (piece.currentHP <= 0) { SimKill(piece, 0); return mark; }
         }
 
-        // 成り（成ると死ぬ駒は成らない前提。成りの選択はPR4で任意化）
-        if (!piece.isPromoted && piece.data.canPromote && piece.CanPromoteAt(move.position.y, bm.CurrentBoardSize))
+        // 成り（実際の対局と同じく、成ると死ぬ駒は成らない）
+        if (!piece.isPromoted && piece.data.canPromote && !piece.data.diesOnPromotion
+            && piece.CanPromoteAt(move.position.y, bm.CurrentBoardSize))
         {
             piece.isPromoted = true;
             int hpDiff = piece.data.promotedHP - piece.data.baseHP;
             if (hpDiff > 0) piece.currentHP += hpDiff;
-            if (piece.data.diesOnPromotion) SimKill(piece, 0);
         }
         return mark;
     }
@@ -418,7 +430,7 @@ public class SimpleAI : MonoBehaviour
             {
                 if (dx == 0 && dy == 0) continue;
                 PieceInstance n = bm.GetPieceAt(new Vector2Int(c.x + dx, c.y + dy));
-                if (n == null || !n.isAlive || n.data.pieceType == PieceType.C3 || n.data.isTauntPiece) continue;
+                if (n == null || !n.isAlive || n.data.pieceType == PieceType.C3) continue;
                 Save(n);
                 n.currentHP -= 1;
                 if (n.currentHP <= 0) SimKill(n, chain + 1);
@@ -462,7 +474,6 @@ public class SimpleAI : MonoBehaviour
 
     private int PieceValue(PieceInstance p)
     {
-        if (p.data.isTauntPiece) return 60;
         int hp = Mathf.Min(p.currentHP, 20);
         int v = p.ATK * 30 + p.DEF * 22 + hp * 18 + 20;
         if (p.isPromoted) v += 30;
@@ -514,7 +525,7 @@ public class SimpleAI : MonoBehaviour
         int enemyHanging = 0, playerHanging = 0;
         foreach (var p in evalPlayer)
         {
-            if (p.data.pieceType == PieceType.C3 || p.data.isTauntPiece) continue;
+            if (p.data.pieceType == PieceType.C3) continue;
             int idx = p.boardPosition.x + p.boardPosition.y * size;
             if (reachCountE[idx] > 0 && reachMaxAtkE[idx] - p.DEF >= p.currentHP)
             {

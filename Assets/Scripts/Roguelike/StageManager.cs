@@ -277,9 +277,15 @@ public class StageManager : MonoBehaviour
     {
         int hpBonus = stage / 3;
         int atkBonus = stage / 5;
+        int c3Bonus = (stage - 1) / 2;   // 後半ほど敵C3も打たれ強くなる
         foreach (var enemy in bm.GetTeamPieces(Team.Enemy))
         {
-            if (enemy.data.pieceType == PieceType.C3) continue;
+            if (enemy.data.pieceType == PieceType.C3)
+            {
+                enemy.AddMaxHP(c3Bonus);
+                CombatResolver.RefreshStats(enemy);
+                continue;
+            }
             enemy.AddMaxHP(hpBonus);
             enemy.bonusATK += atkBonus;
             CombatResolver.RefreshStats(enemy);
