@@ -1,0 +1,151 @@
+/* ================================================================
+   C3将棋 UIテーマ（漆黒 × 金 × 生成り）
+   ================================================================ */
+
+.c3-root {
+    -unity-font-definition: resource("Fonts/ZenKakuGothicNew-Medium");
+    color: rgb(243, 235, 221);
+    font-size: 16px;
+}
+
+.c3-bold { -unity-font-definition: resource("Fonts/ZenKakuGothicNew-Bold"); }
+.c3-mincho { -unity-font-definition: resource("Fonts/ShipporiMinchoB1-ExtraBold"); }
+.c3-sub { color: rgb(191, 179, 160); }
+.c3-gold { color: rgb(212, 175, 95); }
+
+/* ---------------- パネル ---------------- */
+.c3-panel {
+    background-color: rgba(20, 16, 14, 0.93);
+    border-width: 1px;
+    border-color: rgba(212, 175, 95, 0.45);
+    border-radius: 10px;
+    padding: 14px;
+}
+
+.c3-panel-title {
+    -unity-font-definition: resource("Fonts/ShipporiMinchoB1-ExtraBold");
+    font-size: 18px;
+    color: rgb(212, 175, 95);
+    -unity-text-align: middle-center;
+    letter-spacing: 6px;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(212, 175, 95, 0.3);
+}
+
+.c3-separator {
+    height: 1px;
+    background-color: rgba(212, 175, 95, 0.25);
+    margin: 10px 0;
+}
+
+/* ---------------- ボタン ---------------- */
+.c3-button {
+    -unity-font-definition: resource("Fonts/ZenKakuGothicNew-Bold");
+    font-size: 18px;
+    color: rgb(243, 235, 221);
+    background-color: rgb(52, 43, 37);
+    border-width: 1px;
+    border-color: rgba(212, 175, 95, 0.55);
+    border-radius: 6px;
+    padding: 7px 22px;
+    margin: 0 5px;
+    -unity-text-align: middle-center;
+    transition-property: background-color, border-color, scale;
+    transition-duration: 0.12s, 0.12s, 0.12s;
+}
+.c3-button:hover {
+    background-color: rgb(78, 64, 54);
+    border-color: rgb(242, 213, 142);
+    scale: 1.04 1.04;
+}
+.c3-button:active {
+    background-color: rgb(36, 30, 26);
+    scale: 0.97 0.97;
+}
+.c3-button--primary { background-color: rgb(170, 52, 38); border-color: rgba(242, 213, 142, 0.8); }
+.c3-button--primary:hover { background-color: rgb(200, 72, 54); }
+.c3-button--primary:active { background-color: rgb(130, 40, 30); }
+.c3-button--danger { background-color: rgb(92, 34, 30); }
+.c3-button--danger:hover { background-color: rgb(128, 46, 40); }
+.c3-button--big { font-size: 24px; padding: 12px 48px; }
+.c3-button:disabled { opacity: 0.4; }
+
+/* ---------------- チップ（小さなラベル） ---------------- */
+.c3-chip {
+    font-size: 13px;
+    padding: 2px 10px;
+    border-radius: 10px;
+    border-width: 1px;
+    margin: 0 3px;
+    -unity-text-align: middle-center;
+}
+
+/* ---------------- ステータス表示 ---------------- */
+.c3-stat-row {
+    flex-direction: row;
+    justify-content: space-between;
+}
+.c3-stat {
+    flex-grow: 1;
+    margin: 0 3px;
+    padding: 6px 4px;
+    background-color: rgba(255, 255, 255, 0.04);
+    border-top-width: 3px;
+    border-radius: 4px;
+    align-items: center;
+}
+.c3-stat__label { font-size: 12px; color: rgb(191, 179, 160); }
+.c3-stat__value { -unity-font-definition: resource("Fonts/ZenKakuGothicNew-Bold"); font-size: 22px; }
+
+/* ---------------- 動きの図 ---------------- */
+.c3-move-grid { align-self: center; padding: 4px; background-color: rgb(170, 128, 70); border-radius: 4px; }
+.c3-move-row { flex-direction: row; }
+.c3-move-cell {
+    margin: 1px;
+    background-color: rgb(226, 184, 110);
+    align-items: center;
+    justify-content: center;
+}
+
+/* ---------------- スクロールバー ---------------- */
+.c3-root .unity-scroller--vertical { width: 8px; }
+.c3-root .unity-scroller--vertical .unity-base-slider__tracker {
+    background-color: rgba(255, 255, 255, 0.04);
+    border-width: 0;
+}
+.c3-root .unity-scroller--vertical .unity-base-slider__dragger {
+    background-color: rgba(212, 175, 95, 0.45);
+    border-width: 0;
+    border-radius: 4px;
+    width: 6px;
+    margin-left: 1px;
+}
+.c3-root .unity-scroller__low-button,
+.c3-root .unity-scroller__high-button { display: none; }
+.c3-root .unity-scroll-view__vertical-scroller { margin-left: 4px; }
+
+/* ---------------- 駒選択カード ---------------- */
+.c3-card {
+    width: 230px;
+    margin: 0 12px;
+    padding: 16px 12px 14px 12px;
+    background-color: rgba(28, 22, 19, 0.96);
+    border-width: 2px;
+    border-color: rgba(212, 175, 95, 0.35);
+    border-radius: 12px;
+    align-items: center;
+    transition-property: scale, border-color, background-color, translate;
+    transition-duration: 0.15s, 0.15s, 0.15s, 0.15s;
+}
+.c3-card:hover {
+    scale: 1.03 1.03;
+    border-color: rgba(242, 213, 142, 0.8);
+    translate: 0 -4px;
+}
+.c3-card--selected {
+    border-color: rgb(242, 213, 142);
+    background-color: rgba(58, 44, 30, 0.98);
+    translate: 0 -8px;
+}

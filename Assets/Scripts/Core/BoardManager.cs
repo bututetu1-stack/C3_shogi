@@ -19,8 +19,16 @@ public class BoardManager : MonoBehaviour
 
     public int CurrentBoardSize { get { return boardSize; } }
 
-    /// <summary>盤中央を映すカメラの基準位置（揺れ演出の戻り先）</summary>
-    public Vector3 CameraHomePosition { get; private set; }
+    /// <summary>盤を映すカメラの基準位置（揺れ演出の戻り先）</summary>
+    public Vector3 CameraHomePosition
+    {
+        get
+        {
+            if (CameraFitter.Instance != null) return CameraFitter.Instance.HomePosition;
+            float c = (boardSize - 1) * 0.5f;
+            return new Vector3(c, c, -10f);
+        }
+    }
 
     void Awake()
     {
@@ -64,14 +72,12 @@ public class BoardManager : MonoBehaviour
         allPieces.Clear();
         pieceObjects.Clear();
 
+        if (HighlightManager.Instance != null)
+            HighlightManager.Instance.ResetBoard();
+
+        // 盤の描画とカメラ合わせ
         boardRenderer.BuildBoard(size);
         BuildPlacementOrder();
-
-        // カメラ調整
-        float center = (size - 1) * 0.5f;
-        CameraHomePosition = new Vector3(center, center, -10);
-        Camera.main.transform.position = CameraHomePosition;
-        Camera.main.orthographicSize = size * 0.45f + 1.5f;
     }
 
     private void BuildPlacementOrder()
@@ -154,13 +160,13 @@ public class BoardManager : MonoBehaviour
         }
     }
 
-    public void RemovePieceController(Vector2Int pos)
+    public void RemovePieceController(Vector2Int pos, bool animate = true)
     {
         PieceController pc;
         if (pieceObjects.TryGetValue(pos, out pc))
         {
             pieceObjects.Remove(pos);
-            if (pc != null) pc.DestroyPiece();
+            if (pc != null) pc.DestroyPiece(animate);
         }
     }
 
@@ -270,7 +276,7 @@ public class BoardManager : MonoBehaviour
                 if (board[x, y] != null) toRemove.Add(new Vector2Int(x, y));
         foreach (var pos in toRemove)
         {
-            RemovePieceController(pos);
+            RemovePieceController(pos, false);
             RemovePiece(pos, false);
         }
     }

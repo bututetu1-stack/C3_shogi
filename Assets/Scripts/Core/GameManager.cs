@@ -14,8 +14,8 @@ public class GameManager : MonoBehaviour
     public event Action<GamePhase> OnPhaseChanged;
     public event Action<Team> OnGameOver;
 
-    // ステージタイトル表示中に入力を止める時間
-    private const float StageIntroDuration = 1.6f;
+    // ステージタイトル表示中に入力を止める時間（タイトルが消え始めたら操作できる）
+    private const float StageIntroDuration = StageTitleUI.Duration - 0.3f;
 
     private BoardManager boardManager;
     private PieceSelectionUI pieceSelectionUI;
@@ -23,6 +23,9 @@ public class GameManager : MonoBehaviour
     private bool isGameOver;
     public bool IsTurnProcessing { get { return isTurnProcessing; } }
     private bool isTurnProcessing;
+
+    /// <summary>現在のステージでの手数（1手目から）</summary>
+    public int MoveCount { get; private set; }
 
     // プレイヤーが持っている駒データのリスト(ステージ間で引き継ぎ)
     private List<PieceData> playerOwnedPieces = new List<PieceData>();
@@ -118,6 +121,7 @@ public class GameManager : MonoBehaviour
         // タイトル表示中は入力を受け付けない
         isTurnProcessing = true;
         currentTurn = Team.Player;
+        MoveCount = 1;
 
         if (stageManager != null)
         {
@@ -168,6 +172,7 @@ public class GameManager : MonoBehaviour
         if (isGameOver || CheckGameOver()) { isTurnProcessing = false; yield break; }
 
         currentTurn = (currentTurn == Team.Player) ? Team.Enemy : Team.Player;
+        MoveCount++;
 
         // ターン開始時能力（門人自動移動・ヲツ中華生成）を実行してからOnTurnChanged
         yield return ExecuteTurnStartThenNotify(currentTurn);
@@ -278,7 +283,8 @@ public class GameManager : MonoBehaviour
         if (piece == null || !piece.isAlive || piece.isPromoted || !piece.data.canPromote) return;
 
         piece.Promote();
-        CombatResolver.RefreshStats(piece);
+        CombatResolver.PlayFlip(piece);
+        FloatingText.Spawn(piece.boardPosition, "成", Palette.GoldLight, 4f);
 
         // 過労死チェック（SN・小錦）
         if (piece.data.diesOnPromotion)

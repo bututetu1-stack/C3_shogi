@@ -1,270 +1,249 @@
 using UnityEngine;
 using TMPro;
 
+/// <summary>
+/// 駒の見た目。構成:
+///   root（論理位置）
+///    ├ ShadowHolder … 落ち影（ずらして表示）
+///    ├ Visual       … 本体・文字（敵駒は180度回転、揺れ・持ち上げはここに掛ける）
+///    └ Stats        … 攻・防・体のバッジ（常に正立）
+/// </summary>
 public class PieceRenderer : MonoBehaviour
 {
-    public static readonly Color ATKColor = new Color(0.9f, 0.25f, 0.25f);
-    public static readonly Color DEFColor = new Color(0.25f, 0.5f, 0.9f);
-    public static readonly Color HPColor = new Color(0.2f, 0.8f, 0.3f);
+    public const int OrderShadow = 9;
+    public const int OrderBody = 10;
+    public const int OrderLabel = 11;
+    public const int OrderBadge = 12;
+    public const int OrderBadgeText = 13;
 
-    private static TMP_FontAsset tmpFont;
+    private static readonly Vector3 ShadowOffset = new Vector3(0.035f, -0.055f, 0f);
 
-    private SpriteRenderer bodyRenderer;
-    private TextMeshPro labelTop;
-    private TextMeshPro labelBottom;
-    private TextMeshPro atkText;
-    private TextMeshPro defText;
-    private TextMeshPro hpText;
-    private SpriteRenderer atkIcon;
-    private SpriteRenderer defIcon;
-    private SpriteRenderer hpIcon;
     private PieceInstance pieceInstance;
     private bool isEnemyPiece;
-    private Texture2D cachedIconTex;
     private Rarity appliedRarity;
+    private bool appliedPromoted;
+    private string appliedName;
 
-    private const float LABEL_SIZE_1CHAR = 3.5f;
-    private const float LABEL_SIZE_2CHAR = 2.3f;
-    private const float STAT_FONT_SIZE = 1.5f;
+    private Transform visual;
+    private Transform shadowHolder;
+    private Transform stats;
+    private SpriteRenderer bodyRenderer;
+    private SpriteRenderer shadowRenderer;
+    private TextMeshPro labelTop;
+    private TextMeshPro labelBottom;
 
-    private static TMP_FontAsset GetTMPFont()
+    private Badge atkBadge;
+    private Badge defBadge;
+    private Badge hpBadge;
+
+    private class Badge
     {
-        if (tmpFont == null)
-            tmpFont = Resources.Load<TMP_FontAsset>("NotoSansJP-TMP");
-        return tmpFont;
+        public GameObject root;
+        public SpriteRenderer icon;
+        public TextMeshPro text;
     }
+
+    public Transform Visual { get { return visual; } }
+    public Transform ShadowHolder { get { return shadowHolder; } }
+    public Transform Stats { get { return stats; } }
+    public SpriteRenderer Body { get { return bodyRenderer; } }
+    public float BaseScale { get; private set; }
 
     public void Init(PieceInstance piece)
     {
         pieceInstance = piece;
-        bool isEnemy = (piece.team == Team.Enemy);
+        isEnemyPiece = piece.team == Team.Enemy;
+        BaseScale = GetPieceScale(piece.data.pieceType);
+        Quaternion facing = isEnemyPiece ? Quaternion.Euler(0, 0, 180) : Quaternion.identity;
 
-        int texSize = 512;
-        appliedRarity = piece.CurrentRarity;
-        Texture2D tex = ShogiPieceShape.CreatePieceTexture(texSize, appliedRarity, isEnemy);
-        Sprite sprite = Sprite.Create(tex, new Rect(0, 0, texSize, texSize), new Vector2(0.5f, 0.5f), texSize);
+        shadowHolder = CreateChild("ShadowHolder", transform);
+        shadowHolder.localPosition = ShadowOffset;
+        shadowHolder.localRotation = facing;
+        shadowHolder.localScale = Vector3.one * BaseScale;
+        shadowRenderer = shadowHolder.gameObject.AddComponent<SpriteRenderer>();
+        shadowRenderer.sprite = SpriteFactory.PieceShadow;
+        shadowRenderer.color = Palette.PieceShadow;
+        shadowRenderer.sortingOrder = OrderShadow;
 
-        bodyRenderer = gameObject.AddComponent<SpriteRenderer>();
-        bodyRenderer.sprite = sprite;
-        bodyRenderer.sortingOrder = 1;
+        visual = CreateChild("Visual", transform);
+        visual.localRotation = facing;
+        visual.localScale = Vector3.one * BaseScale;
+        bodyRenderer = visual.gameObject.AddComponent<SpriteRenderer>();
+        bodyRenderer.sortingOrder = OrderBody;
 
-        transform.localScale = new Vector3(0.95f, 0.95f, 1f);
+        labelTop = CreateLabel("LabelTop");
+        labelBottom = CreateLabel("LabelBottom");
 
-        string displayName = piece.DisplayName;
-        Color labelColor = piece.isPromoted ? new Color(0.85f, 0.1f, 0.1f) : new Color(0.1f, 0.1f, 0.1f);
+        stats = CreateChild("Stats", transform);
+        atkBadge = CreateBadge("ATK", SpriteFactory.Circle, Palette.ATK, new Vector3(-0.34f, 0.34f, 0f), 0.26f);
+        defBadge = CreateBadge("DEF", SpriteFactory.Shield, Palette.DEF, new Vector3(0.34f, 0.34f, 0f), 0.26f);
+        hpBadge = CreateBadge("HP", SpriteFactory.RoundedRect, Palette.HP, new Vector3(0f, -0.44f, 0f), 0.24f);
+        hpBadge.icon.drawMode = SpriteDrawMode.Sliced;
 
-        if (displayName.Length == 1)
-        {
-            CreateLabel("LabelTop", displayName, new Vector3(0f, 0.02f, -0.1f), isEnemy, out labelTop, labelColor, LABEL_SIZE_1CHAR);
-            CreateLabel("LabelBottom", "", new Vector3(0f, -0.14f, -0.1f), isEnemy, out labelBottom, labelColor, LABEL_SIZE_1CHAR);
-        }
-        else
-        {
-            string topChar = displayName.Substring(0, 1);
-            string bottomChar = displayName.Length > 1 ? displayName.Substring(1, 1) : "";
-            if (isEnemy)
-            {
-                CreateLabel("LabelTop", bottomChar, new Vector3(0f, 0.18f, -0.1f), true, out labelTop, labelColor, LABEL_SIZE_2CHAR);
-                CreateLabel("LabelBottom", topChar, new Vector3(0f, -0.14f, -0.1f), true, out labelBottom, labelColor, LABEL_SIZE_2CHAR);
-            }
-            else
-            {
-                CreateLabel("LabelTop", topChar, new Vector3(0f, 0.18f, -0.1f), false, out labelTop, labelColor, LABEL_SIZE_2CHAR);
-                CreateLabel("LabelBottom", bottomChar, new Vector3(0f, -0.14f, -0.1f), false, out labelBottom, labelColor, LABEL_SIZE_2CHAR);
-            }
-        }
-
-        isEnemyPiece = isEnemy;
-        Texture2D iconTex = ShogiPieceShape.CreateStatIcon(128, Color.white);
-        cachedIconTex = iconTex;
-
-        if (piece.ATK > 0)
-        {
-            Vector3 atkPos = isEnemy ? new Vector3(0.30f, -0.30f, -0.1f) : new Vector3(-0.30f, 0.30f, -0.1f);
-            CreateStatDisplay("ATK", piece.ATK, ATKColor, iconTex, atkPos, isEnemy, out atkIcon, out atkText);
-        }
-
-        if (piece.DEF > 0)
-        {
-            Vector3 defPos = isEnemy ? new Vector3(-0.30f, -0.30f, -0.1f) : new Vector3(0.30f, 0.30f, -0.1f);
-            CreateStatDisplay("DEF", piece.DEF, DEFColor, iconTex, defPos, isEnemy, out defIcon, out defText);
-        }
-
-        if (piece.currentHP > 0)
-        {
-            Vector3 hpPos = isEnemy ? new Vector3(-0.30f, 0.35f, -0.1f) : new Vector3(0.30f, -0.35f, -0.1f);
-            CreateStatDisplay("HP", piece.currentHP, HPColor, iconTex, hpPos, isEnemy, out hpIcon, out hpText);
-            if (hpText != null) hpText.text = FormatHP(piece.currentHP);
-        }
+        appliedName = null;
+        RefreshBody(true);
+        UpdateAllStats();
     }
 
-    private void CreateLabel(string objName, string text, Vector3 localPos, bool rotate180,
-        out TextMeshPro textMesh, Color color, float fontSize)
+    /// <summary>駒の種類ごとの大きさ（本物の将棋駒のように格で大きさを変える）</summary>
+    private static float GetPieceScale(PieceType type)
     {
-        GameObject obj = new GameObject(objName);
-        obj.transform.parent = transform;
-        obj.transform.localPosition = localPos;
-        if (rotate180)
-            obj.transform.localRotation = Quaternion.Euler(0, 0, 180);
-        else
-            obj.transform.localRotation = Quaternion.identity;
-
-        textMesh = obj.AddComponent<TextMeshPro>();
-        textMesh.text = text;
-        textMesh.fontSize = fontSize;
-        textMesh.alignment = TextAlignmentOptions.Center;
-        textMesh.color = (color.a > 0f) ? color : new Color(0.1f, 0.1f, 0.1f);
-        textMesh.fontStyle = FontStyles.Bold;
-        textMesh.textWrappingMode = TextWrappingModes.NoWrap;
-        textMesh.overflowMode = TextOverflowModes.Overflow;
-
-        TMP_FontAsset font = GetTMPFont();
-        if (font != null)
+        switch (type)
         {
-            textMesh.font = font;
-            // FaceDilate で文字の線を太くする
-            Material boldMat = new Material(font.material);
-            boldMat.SetFloat("_FaceDilate", 0.2f);
-            textMesh.fontSharedMaterial = boldMat;
+            case PieceType.C3: return 0.94f;
+            case PieceType.Pawn: return 0.80f;
+            case PieceType.Chuka:
+            case PieceType.Dopa: return 0.72f;
+            case PieceType.Maou:
+            case PieceType.Ryuujin:
+            case PieceType.Raitei: return 0.92f;
+            default: return 0.86f;
         }
-
-        RectTransform rt = obj.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(1f, 0.5f);
-
-        MeshRenderer mr = obj.GetComponent<MeshRenderer>();
-        if (mr != null) mr.sortingOrder = 2;
     }
 
-    private void CreateStatDisplay(string name, int value, Color color, Texture2D iconTex,
-        Vector3 localPos, bool isEnemy, out SpriteRenderer icon, out TextMeshPro text)
+    private static Transform CreateChild(string name, Transform parent)
     {
-        // Icon sprite
-        GameObject iconObj = new GameObject(name + "Icon");
-        iconObj.transform.parent = transform;
-        iconObj.transform.localPosition = localPos;
-        iconObj.transform.localScale = new Vector3(0.15f, 0.15f, 1f);
-
-        icon = iconObj.AddComponent<SpriteRenderer>();
-        Sprite iconSprite = Sprite.Create(iconTex, new Rect(0, 0, iconTex.width, iconTex.width), new Vector2(0.5f, 0.5f), iconTex.width);
-        icon.sprite = iconSprite;
-        icon.color = color;
-        icon.sortingOrder = 3;
-
-        // Text - direct child of piece (not icon) to avoid scale distortion
-        GameObject textObj = new GameObject(name + "Text");
-        textObj.transform.parent = transform;
-        textObj.transform.localPosition = new Vector3(localPos.x, localPos.y, localPos.z - 0.5f);
-
-        text = textObj.AddComponent<TextMeshPro>();
-        text.text = value.ToString();
-        text.fontSize = STAT_FONT_SIZE;
-        text.alignment = TextAlignmentOptions.Center;
-        text.color = Color.white;
-        text.fontStyle = FontStyles.Bold;
-        text.textWrappingMode = TextWrappingModes.NoWrap;
-        text.overflowMode = TextOverflowModes.Overflow;
-
-        TMP_FontAsset font = GetTMPFont();
-        if (font != null) text.font = font;
-
-        RectTransform rt = textObj.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(0.5f, 0.4f);
-
-        MeshRenderer mr = textObj.GetComponent<MeshRenderer>();
-        if (mr != null) mr.sortingOrder = 4;
+        var obj = new GameObject(name);
+        obj.transform.SetParent(parent, false);
+        return obj.transform;
     }
 
-    private static string FormatHP(int hp)
+    private TextMeshPro CreateLabel(string name)
     {
-        return hp >= 999 ? "\u221E" : hp.ToString();
+        var obj = new GameObject(name);
+        obj.transform.SetParent(visual, false);
+        var tmp = obj.AddComponent<TextMeshPro>();
+        tmp.font = GameFonts.PieceTMP;
+        if (GameFonts.PieceLabelMaterial != null) tmp.fontSharedMaterial = GameFonts.PieceLabelMaterial;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.textWrappingMode = TextWrappingModes.NoWrap;
+        tmp.overflowMode = TextOverflowModes.Overflow;
+        tmp.rectTransform.sizeDelta = new Vector2(1f, 0.5f);
+        var mr = obj.GetComponent<MeshRenderer>();
+        if (mr != null) mr.sortingOrder = OrderLabel;
+        return tmp;
     }
+
+    private Badge CreateBadge(string name, Sprite sprite, Color color, Vector3 pos, float size)
+    {
+        var badge = new Badge();
+        badge.root = new GameObject(name);
+        badge.root.transform.SetParent(stats, false);
+        badge.root.transform.localPosition = pos;
+
+        var iconObj = new GameObject("Icon");
+        iconObj.transform.SetParent(badge.root.transform, false);
+        iconObj.transform.localScale = new Vector3(size, size, 1f);
+        badge.icon = iconObj.AddComponent<SpriteRenderer>();
+        badge.icon.sprite = sprite;
+        badge.icon.color = color;
+        badge.icon.sortingOrder = OrderBadge;
+
+        var textObj = new GameObject("Text");
+        textObj.transform.SetParent(badge.root.transform, false);
+        textObj.transform.localPosition = new Vector3(0f, -0.005f, 0f);
+        badge.text = textObj.AddComponent<TextMeshPro>();
+        badge.text.font = GameFonts.NumberTMP;
+        if (GameFonts.NumberOutlineMaterial != null) badge.text.fontSharedMaterial = GameFonts.NumberOutlineMaterial;
+        badge.text.fontSize = 1.9f;
+        badge.text.alignment = TextAlignmentOptions.Center;
+        badge.text.textWrappingMode = TextWrappingModes.NoWrap;
+        badge.text.color = Color.white;
+        badge.text.rectTransform.sizeDelta = new Vector2(0.6f, 0.3f);
+        var mr = textObj.GetComponent<MeshRenderer>();
+        if (mr != null) mr.sortingOrder = OrderBadgeText;
+        return badge;
+    }
+
+    // ------------------------------------------------------------
+    // 更新
+    // ------------------------------------------------------------
 
     public void UpdateHP()
     {
         if (pieceInstance == null) return;
-        if (hpText != null) hpText.text = FormatHP(pieceInstance.currentHP);
+        SetHPBadge();
     }
 
     public void UpdateAllStats()
     {
         if (pieceInstance == null) return;
+        RefreshBody(false);
 
-        // 成り・成り解除でレアリティが変わったら駒の地色を差し替える
-        if (pieceInstance.CurrentRarity != appliedRarity)
+        SetBadge(atkBadge, pieceInstance.ATK);
+        SetBadge(defBadge, pieceInstance.DEF);
+        SetHPBadge();
+    }
+
+    private void SetBadge(Badge badge, int value)
+    {
+        badge.root.SetActive(value > 0);
+        badge.text.text = value.ToString();
+    }
+
+    private void SetHPBadge()
+    {
+        int hp = pieceInstance.currentHP;
+        bool infinite = hp >= 999;
+        string text = infinite ? "∞" : hp.ToString();
+        hpBadge.text.text = text;
+        hpBadge.root.SetActive(hp > 0);
+
+        // 桁数に合わせて横幅を伸ばす
+        // （スライス描画の角丸を細くするため 1/3 に縮小して3倍のサイズで描く）
+        float width = text.Length >= 2 ? 0.40f : 0.30f;
+        hpBadge.icon.transform.localScale = new Vector3(1f / 3f, 1f / 3f, 1f);
+        hpBadge.icon.size = new Vector2(width, 0.22f) * 3f;
+
+        // 減っていたら色を変える
+        int max = pieceInstance.MaxHP;
+        Color c = Palette.HP;
+        if (!infinite && max > 0 && hp < max)
+            c = hp * 3 <= max ? Palette.Enemy : Palette.Hex(0xD9A23A);
+        hpBadge.icon.color = c;
+    }
+
+    /// <summary>本体の色（レアリティ）と文字（成り）を状態に合わせる</summary>
+    private void RefreshBody(bool force)
+    {
+        Rarity rarity = pieceInstance.CurrentRarity;
+        bool promoted = pieceInstance.isPromoted;
+        string name = pieceInstance.DisplayName ?? "";
+        if (!force && rarity == appliedRarity && promoted == appliedPromoted && name == appliedName) return;
+
+        appliedRarity = rarity;
+        appliedPromoted = promoted;
+        appliedName = name;
+
+        bodyRenderer.sprite = SpriteFactory.PieceBody(rarity);
+        Color ink = Palette.PieceInk(rarity, promoted);
+        labelTop.color = ink;
+        labelBottom.color = ink;
+
+        if (IsAscii(name) || name.Length == 1)
         {
-            appliedRarity = pieceInstance.CurrentRarity;
-            int texSize = 512;
-            Texture2D newTex = ShogiPieceShape.CreatePieceTexture(texSize, appliedRarity, isEnemyPiece);
-            Sprite newSprite = Sprite.Create(newTex, new Rect(0, 0, texSize, texSize), new Vector2(0.5f, 0.5f), texSize);
-            if (bodyRenderer != null) bodyRenderer.sprite = newSprite;
-        }
-
-        Vector3 atkPos = isEnemyPiece ? new Vector3(0.30f, -0.30f, -0.1f) : new Vector3(-0.30f, 0.30f, -0.1f);
-        EnsureStatDisplay(ref atkIcon, ref atkText, "ATK", pieceInstance.ATK, ATKColor, atkPos);
-
-        Vector3 defPos = isEnemyPiece ? new Vector3(-0.30f, -0.30f, -0.1f) : new Vector3(0.30f, 0.30f, -0.1f);
-        EnsureStatDisplay(ref defIcon, ref defText, "DEF", pieceInstance.DEF, DEFColor, defPos);
-
-        Vector3 hpPos = isEnemyPiece ? new Vector3(-0.30f, 0.35f, -0.1f) : new Vector3(0.30f, -0.35f, -0.1f);
-        EnsureStatDisplay(ref hpIcon, ref hpText, "HP", pieceInstance.currentHP, HPColor, hpPos);
-
-        Color labelColor = pieceInstance.isPromoted ? new Color(0.85f, 0.1f, 0.1f) : new Color(0.1f, 0.1f, 0.1f);
-        if (labelTop != null) labelTop.color = labelColor;
-        if (labelBottom != null) labelBottom.color = labelColor;
-
-        string displayName = pieceInstance.DisplayName;
-        if (displayName.Length == 1)
-        {
-            if (labelTop != null)
-            {
-                labelTop.text = displayName;
-                labelTop.gameObject.transform.localPosition = new Vector3(0f, 0.02f, -0.1f);
-                labelTop.fontSize = LABEL_SIZE_1CHAR;
-            }
-            if (labelBottom != null) labelBottom.text = "";
+            // 1文字または英数字（C3・SN）は1行で大きく
+            labelTop.text = name;
+            labelTop.fontSize = name.Length == 1 ? 4.6f : (name.Length == 2 ? 3.6f : 2.8f);
+            labelTop.transform.localPosition = new Vector3(0f, -0.06f, 0f);
+            labelBottom.text = "";
         }
         else
         {
-            string topChar = displayName.Substring(0, 1);
-            string bottomChar = displayName.Length > 1 ? displayName.Substring(1, 1) : "";
-            if (labelTop != null)
-            {
-                labelTop.gameObject.transform.localPosition = new Vector3(0f, 0.18f, -0.1f);
-                labelTop.fontSize = LABEL_SIZE_2CHAR;
-            }
-            if (labelBottom != null) labelBottom.fontSize = LABEL_SIZE_2CHAR;
-            if (isEnemyPiece)
-            {
-                if (labelTop != null) labelTop.text = bottomChar;
-                if (labelBottom != null) labelBottom.text = topChar;
-            }
-            else
-            {
-                if (labelTop != null) labelTop.text = topChar;
-                if (labelBottom != null) labelBottom.text = bottomChar;
-            }
+            // 2文字は縦書き
+            labelTop.text = name.Substring(0, 1);
+            labelBottom.text = name.Length > 1 ? name.Substring(1, 1) : "";
+            labelTop.fontSize = 3.1f;
+            labelBottom.fontSize = 3.1f;
+            labelTop.transform.localPosition = new Vector3(0f, 0.16f, 0f);
+            labelBottom.transform.localPosition = new Vector3(0f, -0.19f, 0f);
         }
     }
 
-    private void EnsureStatDisplay(ref SpriteRenderer icon, ref TextMeshPro text,
-        string statName, int value, Color color, Vector3 pos)
+    private static bool IsAscii(string s)
     {
-        if (value > 0 && text == null)
-        {
-            if (cachedIconTex == null)
-                cachedIconTex = ShogiPieceShape.CreateStatIcon(128, Color.white);
-            CreateStatDisplay(statName, value, color, cachedIconTex, pos, isEnemyPiece, out icon, out text);
-        }
-        if (text != null)
-        {
-            text.text = (statName == "HP") ? FormatHP(value) : value.ToString();
-            if (icon != null) icon.gameObject.SetActive(value > 0);
-            text.gameObject.SetActive(value > 0);
-        }
-    }
-
-    public PieceInstance GetPieceInstance()
-    {
-        return pieceInstance;
+        foreach (char ch in s)
+            if (ch > 0x7F) return false;
+        return s.Length > 0;
     }
 }

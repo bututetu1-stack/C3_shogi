@@ -1,9 +1,13 @@
 using UnityEngine;
 using System.Collections;
 
+/// <summary>戦闘の演出（効果音・光・衝撃波・パーティクル・画面揺れ）</summary>
 public class BattleEffects : MonoBehaviour
 {
     public static BattleEffects Instance { get; private set; }
+
+    private const int OrderGlow = 50;
+    private const int OrderParticle = 55;
 
     private AudioSource audioSource;
 
@@ -14,6 +18,20 @@ public class BattleEffects : MonoBehaviour
     private AudioClip airRaidClip;
     private AudioClip torpedoClip;
     private AudioClip bombardmentClip;
+    private AudioClip promoteClip;
+
+    private Transform effectsRoot;
+    private Coroutine cameraShakeRoutine;
+
+    /// <summary>演出用オブジェクトの親（シーン直下に散らからないように）</summary>
+    public Transform EffectsRoot
+    {
+        get
+        {
+            if (effectsRoot == null) effectsRoot = new GameObject("Effects").transform;
+            return effectsRoot;
+        }
+    }
 
     void Awake()
     {
@@ -31,347 +49,183 @@ public class BattleEffects : MonoBehaviour
         airRaidClip = Resources.Load<AudioClip>("Audio/AirRaid");
         torpedoClip = Resources.Load<AudioClip>("Audio/Torpedo");
         bombardmentClip = Resources.Load<AudioClip>("Audio/Bombardment");
+        promoteClip = Resources.Load<AudioClip>("Audio/Promote");
     }
 
-    // 駒移動SE
-    public void PlayMoveEffect()
+    private void Play(AudioClip clip, AudioClip fallback = null)
     {
-        if (moveClip != null)
-            audioSource.PlayOneShot(moveClip);
+        AudioClip c = clip != null ? clip : fallback;
+        if (c != null) audioSource.PlayOneShot(c);
     }
 
-    // 対局開始SE
-    public void PlayBattleStartEffect()
-    {
-        if (battleStartClip != null)
-            audioSource.PlayOneShot(battleStartClip);
-    }
+    private static Vector3 World(Vector2Int pos) { return new Vector3(pos.x, pos.y, 0f); }
 
-    // ヒットエフェクト (非撃破)
+    // ============================================================
+    // 公開API
+    // ============================================================
+
+    public void PlayMoveEffect() { Play(moveClip); }
+
+    public void PlayBattleStartEffect() { Play(battleStartClip); }
+
+    /// <summary>被弾（撃破なし）</summary>
     public void PlayHitEffect(Vector2Int pos)
     {
-        if (hitClip != null)
-            audioSource.PlayOneShot(hitClip);
-        StartCoroutine(ShowHitMark(new Vector3(pos.x, pos.y, -1f)));
+        Play(hitClip);
+        Vector3 p = World(pos);
+        StartCoroutine(Glow(p, new Color(1f, 0.95f, 0.85f, 0.9f), 0.5f, 1.1f, 0.2f));
+        StartCoroutine(RingWave(p, new Color(1f, 0.9f, 0.7f, 0.9f), 0.35f, 1.0f, 0.25f));
+        StartCoroutine(Burst(p, 7, new Color(1f, 0.95f, 0.7f), new Color(1f, 0.7f, 0.3f), 2f, 4.5f, 0.10f, 0.28f, 0f));
     }
 
-    // 撃破エフェクト
+    /// <summary>撃破</summary>
     public void PlayDefeatEffect(Vector2Int pos)
     {
-        if (defeatClip != null)
-            audioSource.PlayOneShot(defeatClip);
-        StartCoroutine(ShowDefeatEffect(new Vector3(pos.x, pos.y, -1f)));
+        Play(defeatClip);
+        Vector3 p = World(pos);
+        StartCoroutine(Glow(p, new Color(1f, 0.8f, 0.45f, 0.85f), 0.6f, 1.9f, 0.32f));
+        StartCoroutine(RingWave(p, Palette.GoldLight, 0.4f, 1.6f, 0.35f));
+        StartCoroutine(Burst(p, 12, new Color(1f, 0.75f, 0.3f), new Color(0.95f, 0.35f, 0.15f), 1.5f, 4.2f, 0.13f, 0.5f, -5f));
+        StartCoroutine(Burst(p, 6, Palette.BoardWoodDark, Palette.BoardFrame, 1.2f, 3f, 0.09f, 0.55f, -7f, SpriteFactory.Pixel));
+        ShakeCamera(0.12f, 0.04f);
     }
 
-    private IEnumerator ShowHitMark(Vector3 worldPos)
+    /// <summary>髑髏の爆発</summary>
+    public void PlayExplosionEffect(Vector2Int pos)
     {
-        GameObject hitMark = CreateEffectSprite(worldPos, Color.white, 0.4f);
-        float duration = 0.3f;
-        float elapsed = 0f;
-        while (elapsed < duration)
-        {
-            elapsed += Time.deltaTime;
-            float t = elapsed / duration;
-            float scale = 0.4f * (1f - t);
-            hitMark.transform.localScale = new Vector3(scale, scale, 1f);
-            SpriteRenderer sr = hitMark.GetComponent<SpriteRenderer>();
-            if (sr != null) sr.color = new Color(1f, 1f, 1f, 1f - t);
-            yield return null;
-        }
-        Destroy(hitMark);
+        Play(bombardmentClip, defeatClip);
+        Vector3 p = World(pos);
+        StartCoroutine(Glow(p, new Color(1f, 0.55f, 0.15f, 0.95f), 0.8f, 3.2f, 0.4f));
+        StartCoroutine(RingWave(p, new Color(1f, 0.6f, 0.2f, 1f), 0.5f, 3.2f, 0.4f));
+        StartCoroutine(Burst(p, 22, new Color(1f, 0.85f, 0.3f), new Color(0.85f, 0.2f, 0.1f), 2.5f, 6.5f, 0.16f, 0.55f, -3f));
+        ShakeCamera(0.25f, 0.12f);
     }
 
-    private IEnumerator ShowDefeatEffect(Vector3 worldPos)
+    /// <summary>成り（金色の光）</summary>
+    public void PlayPromoteEffect(Vector2Int pos)
     {
-        int particleCount = 8;
-        GameObject[] particles = new GameObject[particleCount];
-        Vector2[] velocities = new Vector2[particleCount];
-
-        for (int i = 0; i < particleCount; i++)
-        {
-            float angle = (360f / particleCount) * i + Random.Range(-15f, 15f);
-            float rad = angle * Mathf.Deg2Rad;
-            velocities[i] = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad)) * Random.Range(1.5f, 3f);
-
-            Color pColor = new Color(
-                Random.Range(0.8f, 1f),
-                Random.Range(0.3f, 0.7f),
-                Random.Range(0.1f, 0.3f)
-            );
-            particles[i] = CreateEffectSprite(worldPos, pColor, 0.15f);
-        }
-
-        // 画面フラッシュ
-        GameObject flash = new GameObject("Flash");
-        SpriteRenderer flashSR = flash.AddComponent<SpriteRenderer>();
-        Texture2D whiteTex = new Texture2D(4, 4);
-        Color[] whitePixels = new Color[16];
-        for (int i = 0; i < 16; i++) whitePixels[i] = Color.white;
-        whiteTex.SetPixels(whitePixels);
-        whiteTex.Apply();
-        flashSR.sprite = Sprite.Create(whiteTex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 4);
-        flash.transform.position = new Vector3(worldPos.x, worldPos.y, -2f);
-        flash.transform.localScale = new Vector3(2f, 2f, 1f);
-        flashSR.sortingOrder = 100;
-
-        float duration = 0.4f;
-        float elapsed = 0f;
-        while (elapsed < duration)
-        {
-            elapsed += Time.deltaTime;
-            float t = elapsed / duration;
-
-            for (int i = 0; i < particleCount; i++)
-            {
-                if (particles[i] != null)
-                {
-                    particles[i].transform.position += new Vector3(velocities[i].x * Time.deltaTime, velocities[i].y * Time.deltaTime, 0);
-                    float scale = 0.15f * (1f - t);
-                    particles[i].transform.localScale = new Vector3(scale, scale, 1f);
-                    SpriteRenderer sr = particles[i].GetComponent<SpriteRenderer>();
-                    if (sr != null)
-                    {
-                        Color c = sr.color;
-                        sr.color = new Color(c.r, c.g, c.b, 1f - t);
-                    }
-                }
-            }
-
-            if (t < 0.25f)
-                flashSR.color = new Color(1f, 1f, 1f, 0.5f * (1f - t / 0.25f));
-            else
-                flashSR.color = new Color(1f, 1f, 1f, 0f);
-
-            yield return null;
-        }
-
-        for (int i = 0; i < particleCount; i++)
-            if (particles[i] != null) Destroy(particles[i]);
-        Destroy(flash);
+        Play(promoteClip);
+        Vector3 p = World(pos);
+        StartCoroutine(Glow(p, new Color(1f, 0.85f, 0.4f, 0.8f), 0.6f, 1.6f, 0.45f));
+        StartCoroutine(RingWave(p, Palette.GoldLight, 0.5f, 1.5f, 0.45f));
+        StartCoroutine(Burst(p, 12, Palette.GoldLight, Palette.Gold, 0.8f, 2.4f, 0.09f, 0.7f, 2.5f));
     }
 
-    // 空爆エフェクト
+    /// <summary>召喚（ぽんと現れる）</summary>
+    public void PlaySpawnEffect(Vector2Int pos)
+    {
+        Vector3 p = World(pos);
+        StartCoroutine(Glow(p, new Color(1f, 1f, 1f, 0.6f), 0.4f, 1.2f, 0.25f));
+    }
+
+    // --- 艦娘の攻撃 ---
+
     public void PlayAirRaidEffect(Vector2Int pos)
     {
-        if (airRaidClip != null)
-            audioSource.PlayOneShot(airRaidClip);
-        else if (defeatClip != null)
-            audioSource.PlayOneShot(defeatClip);
-        StartCoroutine(ShowAirRaidEffect(new Vector3(pos.x, pos.y, -1f)));
+        Play(airRaidClip, defeatClip);
+        StartCoroutine(AirRaidRoutine(World(pos)));
     }
 
-    private IEnumerator ShowAirRaidEffect(Vector3 worldPos)
-    {
-        int particleCount = 15;
-        GameObject[] particles = new GameObject[particleCount];
-        float[] startOffsetX = new float[particleCount];
-        float[] endOffsetX = new float[particleCount];
-
-        for (int i = 0; i < particleCount; i++)
-        {
-            startOffsetX[i] = Random.Range(-1.5f, 1.5f);
-            endOffsetX[i] = Random.Range(-0.5f, 0.5f);
-            Vector3 startPos = new Vector3(worldPos.x + startOffsetX[i], worldPos.y + 3f, -2f);
-            Color c = new Color(1f, Random.Range(0.1f, 0.4f), 0.1f);
-            particles[i] = CreateEffectSprite(startPos, c, 0.15f);
-        }
-
-        float duration = 1.0f;
-        float elapsed = 0f;
-        while (elapsed < duration)
-        {
-            elapsed += Time.deltaTime;
-            float t = elapsed / duration;
-            for (int i = 0; i < particleCount; i++)
-            {
-                if (particles[i] == null) continue;
-                float startY = worldPos.y + 3f;
-                float x = Mathf.Lerp(worldPos.x + startOffsetX[i], worldPos.x + endOffsetX[i], t);
-                float y = Mathf.Lerp(startY, worldPos.y, t);
-                particles[i].transform.position = new Vector3(x, y, -2f);
-                float scale = 0.12f * (1f - t * 0.5f);
-                particles[i].transform.localScale = new Vector3(scale, scale, 1f);
-                SpriteRenderer sr = particles[i].GetComponent<SpriteRenderer>();
-                if (sr != null) sr.color = new Color(sr.color.r, sr.color.g, sr.color.b, 1f - t);
-            }
-            yield return null;
-        }
-
-        for (int i = 0; i < particleCount; i++)
-            if (particles[i] != null) Destroy(particles[i]);
-    }
-
-    // 雷撃エフェクト
     public void PlayTorpedoEffect(Vector2Int from, Vector2Int to)
     {
-        if (torpedoClip != null)
-            audioSource.PlayOneShot(torpedoClip);
-        else if (hitClip != null)
-            audioSource.PlayOneShot(hitClip);
-        Vector3 fromPos = new Vector3(from.x, from.y, -2f);
-        Vector3 toPos = new Vector3(to.x, to.y, -2f);
-        StartCoroutine(ShowTorpedoEffect(fromPos, toPos));
+        Play(torpedoClip, hitClip);
+        StartCoroutine(TorpedoRoutine(World(from), World(to)));
     }
 
-    private IEnumerator ShowTorpedoEffect(Vector3 fromPos, Vector3 toPos)
-    {
-        Color torpedoColor = new Color(0.8f, 0.9f, 0.2f);
-        GameObject projectile = CreateEffectSprite(fromPos, torpedoColor, 0.22f);
-
-        // 軌跡
-        int trailCount = 6;
-        GameObject[] trail = new GameObject[trailCount];
-        for (int i = 0; i < trailCount; i++)
-        {
-            Color trailColor = new Color(0.6f, 0.7f, 0.15f, 0.5f);
-            trail[i] = CreateEffectSprite(fromPos, trailColor, 0.1f);
-        }
-
-        float duration = 0.8f;
-        float elapsed = 0f;
-        while (elapsed < duration)
-        {
-            elapsed += Time.deltaTime;
-            float t = elapsed / duration;
-            projectile.transform.position = Vector3.Lerp(fromPos, toPos, t);
-
-            for (int i = 0; i < trailCount; i++)
-            {
-                float trailT = Mathf.Max(0f, t - (i + 1) * 0.06f);
-                trail[i].transform.position = Vector3.Lerp(fromPos, toPos, trailT);
-                SpriteRenderer sr = trail[i].GetComponent<SpriteRenderer>();
-                if (sr != null) sr.color = new Color(0.6f, 0.7f, 0.15f, 0.5f * (1f - t));
-            }
-            yield return null;
-        }
-
-        // ヒット時フラッシュ
-        SpriteRenderer psr = projectile.GetComponent<SpriteRenderer>();
-        if (psr != null) psr.color = Color.white;
-        projectile.transform.localScale = new Vector3(0.4f, 0.4f, 1f);
-
-        // 着弾爆発パーティクル
-        int burstCount = 6;
-        GameObject[] burst = new GameObject[burstCount];
-        Vector2[] burstVel = new Vector2[burstCount];
-        for (int i = 0; i < burstCount; i++)
-        {
-            float angle = (360f / burstCount) * i + Random.Range(-20f, 20f);
-            float rad = angle * Mathf.Deg2Rad;
-            burstVel[i] = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad)) * Random.Range(1.5f, 3f);
-            Color bColor = new Color(0.9f, 0.8f, 0.2f);
-            burst[i] = CreateEffectSprite(toPos, bColor, 0.12f);
-        }
-
-        float burstDur = 0.3f;
-        float burstElapsed = 0f;
-        while (burstElapsed < burstDur)
-        {
-            burstElapsed += Time.deltaTime;
-            float bt = burstElapsed / burstDur;
-            for (int i = 0; i < burstCount; i++)
-            {
-                if (burst[i] != null)
-                {
-                    burst[i].transform.position += new Vector3(burstVel[i].x * Time.deltaTime, burstVel[i].y * Time.deltaTime, 0);
-                    float s = 0.12f * (1f - bt);
-                    burst[i].transform.localScale = new Vector3(s, s, 1f);
-                    SpriteRenderer bsr = burst[i].GetComponent<SpriteRenderer>();
-                    if (bsr != null) bsr.color = new Color(0.9f, 0.8f, 0.2f, 1f - bt);
-                }
-            }
-            yield return null;
-        }
-
-        Destroy(projectile);
-        for (int i = 0; i < trailCount; i++)
-            if (trail[i] != null) Destroy(trail[i]);
-        for (int i = 0; i < burstCount; i++)
-            if (burst[i] != null) Destroy(burst[i]);
-    }
-
-    // 砲撃エフェクト
     public void PlayBombardmentEffect(Vector2Int pos)
     {
-        if (bombardmentClip != null)
-            audioSource.PlayOneShot(bombardmentClip);
-        else if (defeatClip != null)
-            audioSource.PlayOneShot(defeatClip);
-        StartCoroutine(ShowBombardmentEffect(new Vector3(pos.x, pos.y, -1f)));
+        Play(bombardmentClip, defeatClip);
+        StartCoroutine(BombardmentRoutine(World(pos)));
     }
 
-    private IEnumerator ShowBombardmentEffect(Vector3 worldPos)
+    private IEnumerator AirRaidRoutine(Vector3 target)
     {
-        // 大きなオレンジ爆発
-        int particleCount = 16;
-        GameObject[] particles = new GameObject[particleCount];
-        Vector2[] velocities = new Vector2[particleCount];
-
-        for (int i = 0; i < particleCount; i++)
+        // 上空から爆弾が降ってくる
+        const int count = 12;
+        var bombs = new SpriteRenderer[count];
+        var offsets = new Vector3[count];
+        var delays = new float[count];
+        for (int i = 0; i < count; i++)
         {
-            float angle = (360f / particleCount) * i + Random.Range(-20f, 20f);
-            float rad = angle * Mathf.Deg2Rad;
-            velocities[i] = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad)) * Random.Range(2f, 5f);
-            Color pColor = new Color(1f, Random.Range(0.4f, 0.7f), Random.Range(0f, 0.2f));
-            particles[i] = CreateEffectSprite(worldPos, pColor, 0.25f);
+            offsets[i] = new Vector3(Random.Range(-1.2f, 1.2f), 0f, 0f);
+            delays[i] = Random.Range(0f, 0.35f);
+            bombs[i] = CreateSprite(SpriteFactory.SoftCircle, target, new Color(1f, 0.5f, 0.2f, 0f), 0.22f, OrderParticle);
         }
-
-        // 画面フラッシュ
-        GameObject flash = new GameObject("BombFlash");
-        SpriteRenderer flashSR = flash.AddComponent<SpriteRenderer>();
-        Texture2D whiteTex = new Texture2D(4, 4);
-        Color[] whitePixels = new Color[16];
-        for (int i = 0; i < 16; i++) whitePixels[i] = Color.white;
-        whiteTex.SetPixels(whitePixels);
-        whiteTex.Apply();
-        flashSR.sprite = Sprite.Create(whiteTex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 4);
-        flash.transform.position = new Vector3(worldPos.x, worldPos.y, -3f);
-        flash.transform.localScale = new Vector3(3f, 3f, 1f);
-        flashSR.sortingOrder = 100;
-        flashSR.color = new Color(1f, 0.6f, 0f, 0.8f);
-
-        float duration = 1.2f;
+        const float fall = 0.45f;
         float elapsed = 0f;
+        while (elapsed < 0.8f + fall)
+        {
+            elapsed += Time.deltaTime;
+            for (int i = 0; i < count; i++)
+            {
+                if (bombs[i] == null) continue;
+                float t = (elapsed - delays[i]) / fall;
+                if (t < 0f) continue;
+                if (t >= 1f)
+                {
+                    Vector3 hit = target + offsets[i] * 0.6f;
+                    StartCoroutine(Glow(hit, new Color(1f, 0.6f, 0.2f, 0.8f), 0.3f, 0.9f, 0.22f));
+                    Destroy(bombs[i].gameObject);
+                    bombs[i] = null;
+                    continue;
+                }
+                bombs[i].transform.position = Vector3.Lerp(target + offsets[i] + new Vector3(0.4f, 3.2f, 0f), target + offsets[i] * 0.6f, Ease.InCubic(t));
+                bombs[i].color = new Color(1f, 0.55f, 0.2f, Mathf.Clamp01(t * 3f));
+            }
+            yield return null;
+        }
+        for (int i = 0; i < count; i++) if (bombs[i] != null) Destroy(bombs[i].gameObject);
+    }
+
+    private IEnumerator TorpedoRoutine(Vector3 from, Vector3 to)
+    {
+        var head = CreateSprite(SpriteFactory.SoftCircle, from, new Color(0.7f, 0.95f, 1f, 1f), 0.4f, OrderParticle + 1);
+        const float duration = 0.8f;
+        float elapsed = 0f;
+        float trailTimer = 0f;
         while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
-            float t = elapsed / duration;
-
-            for (int i = 0; i < particleCount; i++)
+            trailTimer += Time.deltaTime;
+            Vector3 p = Vector3.Lerp(from, to, Ease.InOutCubic(elapsed / duration));
+            head.transform.position = p;
+            if (trailTimer > 0.03f)
             {
-                if (particles[i] != null)
-                {
-                    particles[i].transform.position += new Vector3(
-                        velocities[i].x * Time.deltaTime,
-                        velocities[i].y * Time.deltaTime, 0);
-                    float scale = 0.2f * (1f - t);
-                    particles[i].transform.localScale = new Vector3(scale, scale, 1f);
-                    SpriteRenderer sr = particles[i].GetComponent<SpriteRenderer>();
-                    if (sr != null)
-                    {
-                        Color c = sr.color;
-                        sr.color = new Color(c.r, c.g, c.b, 1f - t);
-                    }
-                }
+                trailTimer = 0f;
+                StartCoroutine(Glow(p, new Color(0.5f, 0.85f, 1f, 0.5f), 0.25f, 0.1f, 0.35f));
             }
-
-            if (t < 0.3f)
-                flashSR.color = new Color(1f, 0.6f, 0f, 0.8f * (1f - t / 0.3f));
-            else
-                flashSR.color = new Color(1f, 0.6f, 0f, 0f);
-
             yield return null;
         }
+        Destroy(head.gameObject);
+        StartCoroutine(Glow(to, new Color(0.7f, 0.95f, 1f, 0.9f), 0.6f, 2f, 0.3f));
+        StartCoroutine(RingWave(to, new Color(0.6f, 0.9f, 1f, 1f), 0.4f, 1.8f, 0.35f));
+        StartCoroutine(Burst(to, 12, new Color(0.8f, 0.97f, 1f), new Color(0.3f, 0.6f, 0.95f), 2f, 5f, 0.12f, 0.45f, -2f));
+    }
 
-        for (int i = 0; i < particleCount; i++)
-            if (particles[i] != null) Destroy(particles[i]);
-        Destroy(flash);
+    private IEnumerator BombardmentRoutine(Vector3 target)
+    {
+        // 着弾までの予告（赤い照準）
+        var marker = CreateSprite(SpriteFactory.Ring, target, new Color(1f, 0.3f, 0.2f, 0f), 2.2f, OrderGlow);
+        float elapsed = 0f;
+        while (elapsed < 0.9f)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / 0.9f;
+            marker.transform.localScale = Vector3.one * Mathf.Lerp(2.2f, 1.1f, Ease.OutCubic(t));
+            marker.color = new Color(1f, 0.3f, 0.2f, 0.9f * Mathf.Clamp01(t * 2f));
+            yield return null;
+        }
+        Destroy(marker.gameObject);
 
-        // 画面揺れ
+        StartCoroutine(Glow(target, new Color(1f, 0.6f, 0.15f, 1f), 1f, 3.6f, 0.45f));
+        StartCoroutine(RingWave(target, new Color(1f, 0.65f, 0.25f, 1f), 0.6f, 3.4f, 0.45f));
+        StartCoroutine(Burst(target, 26, new Color(1f, 0.85f, 0.3f), new Color(0.8f, 0.2f, 0.1f), 2.5f, 7f, 0.18f, 0.6f, -3f));
         ShakeCamera(0.3f, 0.15f);
     }
 
-    private Coroutine cameraShakeRoutine;
+    // ============================================================
+    // 画面揺れ
+    // ============================================================
 
     public void ShakeCamera(float duration, float magnitude)
     {
@@ -382,14 +236,14 @@ public class BattleEffects : MonoBehaviour
 
     private IEnumerator CameraShake(float duration, float magnitude)
     {
-        // 基準位置は毎フレーム盤から取得する（揺れの最中に盤サイズが変わっても正しい位置に戻る）
+        // 基準位置は毎フレーム取得する（揺れの最中に盤サイズが変わっても正しい位置に戻る）
         float elapsed = 0f;
         while (elapsed < duration && Camera.main != null)
         {
             elapsed += Time.deltaTime;
-            Vector3 home = BoardManager.Instance.CameraHomePosition;
-            Camera.main.transform.position = home + new Vector3(
-                Random.Range(-magnitude, magnitude), Random.Range(-magnitude, magnitude), 0f);
+            float m = magnitude * (1f - elapsed / duration);
+            Camera.main.transform.position = BoardManager.Instance.CameraHomePosition
+                + new Vector3(Random.Range(-m, m), Random.Range(-m, m), 0f);
             yield return null;
         }
         if (Camera.main != null)
@@ -397,37 +251,97 @@ public class BattleEffects : MonoBehaviour
         cameraShakeRoutine = null;
     }
 
-    private GameObject CreateEffectSprite(Vector3 pos, Color color, float size)
+    // ============================================================
+    // 演出の部品
+    // ============================================================
+
+    private SpriteRenderer CreateSprite(Sprite sprite, Vector3 pos, Color color, float size, int order)
     {
-        GameObject obj = new GameObject("Effect");
+        var obj = new GameObject("Fx");
+        obj.transform.SetParent(EffectsRoot, false);
         obj.transform.position = pos;
         obj.transform.localScale = new Vector3(size, size, 1f);
-
-        SpriteRenderer sr = obj.AddComponent<SpriteRenderer>();
-
-        Texture2D tex = new Texture2D(16, 16, TextureFormat.RGBA32, false);
-        Color[] pixels = new Color[256];
-        float center = 8f;
-        for (int y = 0; y < 16; y++)
-        {
-            for (int x = 0; x < 16; x++)
-            {
-                float dx = x - center;
-                float dy = y - center;
-                float dist = Mathf.Sqrt(dx * dx + dy * dy);
-                if (dist < 6f)
-                    pixels[y * 16 + x] = color;
-                else
-                    pixels[y * 16 + x] = new Color(0, 0, 0, 0);
-            }
-        }
-        tex.SetPixels(pixels);
-        tex.Apply();
-
-        sr.sprite = Sprite.Create(tex, new Rect(0, 0, 16, 16), new Vector2(0.5f, 0.5f), 16);
-        sr.sortingOrder = 50;
+        var sr = obj.AddComponent<SpriteRenderer>();
+        sr.sprite = sprite;
         sr.color = color;
+        sr.sortingOrder = order;
+        return sr;
+    }
 
-        return obj;
+    /// <summary>ふわっと広がって消える光</summary>
+    private IEnumerator Glow(Vector3 pos, Color color, float startSize, float endSize, float life)
+    {
+        var sr = CreateSprite(SpriteFactory.SoftCircle, pos, color, startSize, OrderGlow);
+        float elapsed = 0f;
+        while (elapsed < life)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / life;
+            sr.transform.localScale = Vector3.one * Mathf.Lerp(startSize, endSize, Ease.OutCubic(t));
+            Color c = color;
+            c.a = color.a * (1f - t);
+            sr.color = c;
+            yield return null;
+        }
+        Destroy(sr.gameObject);
+    }
+
+    /// <summary>衝撃波のリング</summary>
+    private IEnumerator RingWave(Vector3 pos, Color color, float startSize, float endSize, float life)
+    {
+        var sr = CreateSprite(SpriteFactory.Ring, pos, color, startSize, OrderGlow + 1);
+        float elapsed = 0f;
+        while (elapsed < life)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / life;
+            sr.transform.localScale = Vector3.one * Mathf.Lerp(startSize, endSize, Ease.OutCubic(t));
+            Color c = color;
+            c.a = color.a * (1f - t) * (1f - t);
+            sr.color = c;
+            yield return null;
+        }
+        Destroy(sr.gameObject);
+    }
+
+    /// <summary>放射状に飛び散るパーティクル（gravity: 正で上昇、負で落下）</summary>
+    private IEnumerator Burst(Vector3 pos, int count, Color colorA, Color colorB, float speedMin, float speedMax,
+        float size, float life, float gravity, Sprite sprite = null)
+    {
+        if (sprite == null) sprite = SpriteFactory.SoftCircle;
+        var parts = new SpriteRenderer[count];
+        var vel = new Vector3[count];
+        var spin = new float[count];
+        var baseColor = new Color[count];
+        for (int i = 0; i < count; i++)
+        {
+            float ang = (360f / count) * i + Random.Range(-20f, 20f);
+            float rad = ang * Mathf.Deg2Rad;
+            vel[i] = new Vector3(Mathf.Cos(rad), Mathf.Sin(rad), 0f) * Random.Range(speedMin, speedMax);
+            spin[i] = Random.Range(-360f, 360f);
+            baseColor[i] = Color.Lerp(colorA, colorB, Random.value);
+            parts[i] = CreateSprite(sprite, pos, baseColor[i], size * Random.Range(0.7f, 1.3f), OrderParticle);
+        }
+
+        float elapsed = 0f;
+        while (elapsed < life)
+        {
+            float dt = Time.deltaTime;
+            elapsed += dt;
+            float t = elapsed / life;
+            for (int i = 0; i < count; i++)
+            {
+                vel[i] *= 1f - 3.5f * dt;          // 空気抵抗
+                vel[i].y += gravity * dt;
+                Transform tr = parts[i].transform;
+                tr.position += vel[i] * dt;
+                tr.Rotate(0f, 0f, spin[i] * dt);
+                Color c = baseColor[i];
+                c.a = 1f - t * t;
+                parts[i].color = c;
+            }
+            yield return null;
+        }
+        for (int i = 0; i < count; i++) Destroy(parts[i].gameObject);
     }
 }
