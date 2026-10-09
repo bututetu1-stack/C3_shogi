@@ -61,6 +61,9 @@ public static class PieceSkin
                 look.floating = true;
                 break;
         }
+        // 錨を画像に差し替えたときは、画像の色をそのまま使う（濃さだけ残す）
+        if (look.emblem != null && EffectArt.Has("Anchor"))
+            look.emblemColor = new Color(1f, 1f, 1f, look.emblemColor.a);
         return look;
     }
 }

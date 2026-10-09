@@ -162,6 +162,8 @@ public class AbilitySystem : MonoBehaviour
                     PieceInstance victim = targets[Random.Range(0, targets.Count)];
                     if (BattleLogUI.Instance != null)
                         BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("魔王", Team.Enemy) + " の雷撃！" + BattleLogUI.ColorName(victim.DisplayName, victim.team) + " に貫通1ダメージ");
+                    if (BattleEffects.Instance != null) BattleEffects.Instance.PlayLightningEffect(victim.boardPosition);
+                    yield return new WaitForSeconds(0.2f);
                     CombatResolver.ApplyDamage(victim, 1, true);
                     yield return new WaitForSeconds(0.4f);
                 }
@@ -239,6 +241,7 @@ public class AbilitySystem : MonoBehaviour
                             target.gundaishouStacks++;
                             CombatResolver.RefreshStats(target);
                             FloatingText.Spawn(target.boardPosition, "攻+1", Palette.ATK);
+                            if (BattleEffects.Instance != null) BattleEffects.Instance.PlayBuffEffect(target.boardPosition, true);
                             buffed = true;
                         }
                     }
@@ -1053,6 +1056,7 @@ public class AbilitySystem : MonoBehaviour
                     ally.turnsNearBoku = 0;
                     CombatResolver.RefreshStats(ally);
                     FloatingText.Spawn(ally.boardPosition, (buffATK ? "攻+" : "防+") + buffAmount, buffATK ? Palette.ATK : Palette.DEF);
+                    if (BattleEffects.Instance != null) BattleEffects.Instance.PlayBuffEffect(ally.boardPosition, buffATK);
 
                     if (BattleLogUI.Instance != null)
                         BattleLogUI.Instance.AddLog(BattleLogUI.ColorName(ally.DisplayName, ally.team) + " に" + statName + "+" + buffAmount + "バフ");

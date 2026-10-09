@@ -94,6 +94,78 @@ public class BattleEffects : MonoBehaviour
         audioSource.PlayOneShot(c);
     }
 
+    // 長い効果音は、音が大きくなるところから必要な長さだけ鳴らして消す（差し替えた音が演出より長くても合う）
+    private readonly System.Collections.Generic.Dictionary<AudioClip, float> loudStart = new System.Collections.Generic.Dictionary<AudioClip, float>();
+    private readonly System.Collections.Generic.List<AudioSource> sectionSources = new System.Collections.Generic.List<AudioSource>();
+
+    private void PlayLimited(AudioClip clip, float maxLength, AudioClip fallback = null)
+    {
+        AudioClip c = clip != null ? clip : fallback;
+        if (c == null) return;
+        if (c.length <= maxLength + 0.3f) { Play(c); return; }
+        StartCoroutine(PlaySection(c, LoudStart(c), maxLength));
+    }
+
+    /// <summary>音量が最大の半分に届く時刻（その少し手前から鳴らす）</summary>
+    private float LoudStart(AudioClip clip)
+    {
+        float start;
+        if (loudStart.TryGetValue(clip, out start)) return start;
+        start = 0f;
+        try
+        {
+            var data = new float[clip.samples * clip.channels];
+            if (clip.GetData(data, 0))
+            {
+                int window = Mathf.Max(1, clip.frequency / 10) * clip.channels;
+                var levels = new System.Collections.Generic.List<float>();
+                for (int i = 0; i < data.Length; i += window)
+                {
+                    double sum = 0;
+                    int end = Mathf.Min(i + window, data.Length);
+                    for (int j = i; j < end; j++) sum += data[j] * data[j];
+                    levels.Add((float)System.Math.Sqrt(sum / (end - i)));
+                }
+                float max = 0f;
+                foreach (float l in levels) max = Mathf.Max(max, l);
+                for (int i = 0; i < levels.Count; i++)
+                {
+                    if (levels[i] >= max * 0.5f) { start = Mathf.Max(0f, i * 0.1f - 0.3f); break; }
+                }
+            }
+        }
+        catch (System.Exception) { start = 0f; }
+        loudStart[clip] = start;
+        return start;
+    }
+
+    private IEnumerator PlaySection(AudioClip clip, float start, float length)
+    {
+        AudioSource src = null;
+        foreach (AudioSource s in sectionSources)
+            if (!s.isPlaying) { src = s; break; }
+        if (src == null)
+        {
+            src = gameObject.AddComponent<AudioSource>();
+            src.playOnAwake = false;
+            sectionSources.Add(src);
+        }
+        const float fade = 0.4f;
+        src.clip = clip;
+        src.volume = audioSource.volume;
+        src.time = Mathf.Min(start, Mathf.Max(0f, clip.length - length));
+        src.Play();
+        yield return new WaitForSeconds(Mathf.Max(0f, length - fade));
+        float elapsed = 0f;
+        while (elapsed < fade && src.isPlaying)
+        {
+            elapsed += Time.deltaTime;
+            src.volume = audioSource.volume * (1f - elapsed / fade);
+            yield return null;
+        }
+        src.Stop();
+    }
+
     private static Vector3 World(Vector2Int pos) { return new Vector3(pos.x, pos.y, 0f); }
 
     // ============================================================
@@ -109,9 +181,18 @@ public class BattleEffects : MonoBehaviour
     {
         Play(hitClip);
         Vector3 p = World(pos);
-        StartCoroutine(Glow(p, new Color(1f, 0.95f, 0.85f, 0.9f), 0.5f, 1.1f, 0.2f));
+        if (!ArtFx("Hit", p, 0.55f, 1.05f, 0.26f))
+            StartCoroutine(Glow(p, new Color(1f, 0.95f, 0.85f, 0.9f), 0.5f, 1.1f, 0.2f));
         StartCoroutine(RingWave(p, new Color(1f, 0.9f, 0.7f, 0.9f), 0.35f, 1.0f, 0.25f));
         StartCoroutine(Burst(p, 7, new Color(1f, 0.95f, 0.7f), new Color(1f, 0.7f, 0.3f), 2f, 4.5f, 0.10f, 0.28f, 0f));
+    }
+
+    /// <summary>近接攻撃の斬撃（画像 Slash があるときだけ）</summary>
+    public void PlaySlash(Vector2Int target, Vector2Int from)
+    {
+        Vector2 d = target - from;
+        float angle = Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg - 45f;
+        ArtFx("Slash", World(target), 0.95f, 1.15f, 0.24f, angle);
     }
 
     /// <summary>撃破</summary>
@@ -119,7 +200,8 @@ public class BattleEffects : MonoBehaviour
     {
         Play(defeatClip);
         Vector3 p = World(pos);
-        StartCoroutine(Glow(p, new Color(1f, 0.8f, 0.45f, 0.85f), 0.6f, 1.9f, 0.32f));
+        if (!ArtFx("Defeat", p, 0.7f, 1.6f, 0.42f))
+            StartCoroutine(Glow(p, new Color(1f, 0.8f, 0.45f, 0.85f), 0.6f, 1.9f, 0.32f));
         StartCoroutine(RingWave(p, Palette.GoldLight, 0.4f, 1.6f, 0.35f));
         StartCoroutine(Burst(p, 12, new Color(1f, 0.75f, 0.3f), new Color(0.95f, 0.35f, 0.15f), 1.5f, 4.2f, 0.13f, 0.5f, -5f));
         StartCoroutine(Burst(p, 6, Palette.BoardWoodDark, Palette.BoardFrame, 1.2f, 3f, 0.09f, 0.55f, -7f, SpriteFactory.Pixel));
@@ -131,7 +213,8 @@ public class BattleEffects : MonoBehaviour
     {
         Play(bombardmentClip, defeatClip);
         Vector3 p = World(pos);
-        StartCoroutine(Glow(p, new Color(1f, 0.55f, 0.15f, 0.95f), 0.8f, 3.2f, 0.4f));
+        if (!ArtFx("Explosion", p, 1.0f, 2.6f, 0.5f))
+            StartCoroutine(Glow(p, new Color(1f, 0.55f, 0.15f, 0.95f), 0.8f, 3.2f, 0.4f));
         StartCoroutine(RingWave(p, new Color(1f, 0.6f, 0.2f, 1f), 0.5f, 3.2f, 0.4f));
         StartCoroutine(Burst(p, 22, new Color(1f, 0.85f, 0.3f), new Color(0.85f, 0.2f, 0.1f), 2.5f, 6.5f, 0.16f, 0.55f, -3f));
         ShakeCamera(0.25f, 0.12f);
@@ -142,7 +225,8 @@ public class BattleEffects : MonoBehaviour
     {
         Play(promoteClip);
         Vector3 p = World(pos);
-        StartCoroutine(Glow(p, new Color(1f, 0.85f, 0.4f, 0.8f), 0.6f, 1.6f, 0.45f));
+        if (!ArtFx("Promote", p, 0.6f, 1.7f, 0.55f))
+            StartCoroutine(Glow(p, new Color(1f, 0.85f, 0.4f, 0.8f), 0.6f, 1.6f, 0.45f));
         StartCoroutine(RingWave(p, Palette.GoldLight, 0.5f, 1.5f, 0.45f));
         StartCoroutine(Burst(p, 12, Palette.GoldLight, Palette.Gold, 0.8f, 2.4f, 0.09f, 0.7f, 2.5f));
     }
@@ -152,6 +236,43 @@ public class BattleEffects : MonoBehaviour
     {
         Vector3 p = World(pos);
         StartCoroutine(Glow(p, new Color(1f, 1f, 1f, 0.6f), 0.4f, 1.2f, 0.25f));
+    }
+
+    /// <summary>回復（中華・閻魔）</summary>
+    public void PlayHealEffect(Vector2Int pos)
+    {
+        Vector3 p = World(pos);
+        if (!ArtFx("Heal", p + new Vector3(0f, 0.1f, 0f), 0.6f, 1.0f, 0.6f, 0f))
+            StartCoroutine(Glow(p, new Color(0.5f, 1f, 0.6f, 0.6f), 0.4f, 1.1f, 0.45f));
+        StartCoroutine(Burst(p, 6, new Color(0.7f, 1f, 0.7f), new Color(0.4f, 0.9f, 0.5f), 0.3f, 0.9f, 0.08f, 0.7f, 2f));
+    }
+
+    /// <summary>強化（軍将・僕）。atk=true で攻撃、false で防御</summary>
+    public void PlayBuffEffect(Vector2Int pos, bool atk)
+    {
+        Vector3 p = World(pos);
+        Color c = atk ? new Color(1f, 0.5f, 0.35f, 0.7f) : new Color(0.45f, 0.65f, 1f, 0.7f);
+        if (!ArtFx(atk ? "BuffATK" : "BuffDEF", p, 0.7f, 1.1f, 0.6f, 0f))
+            StartCoroutine(Glow(p, c, 0.5f, 1.2f, 0.45f));
+        StartCoroutine(Burst(p, 6, c, Color.white, 0.3f, 0.9f, 0.08f, 0.6f, 2.5f));
+    }
+
+    /// <summary>魔王の雷撃（空から落ちる稲妻）</summary>
+    public void PlayLightningEffect(Vector2Int pos)
+    {
+        Play(Clip("Lightning"), hitClip);
+        Vector3 p = World(pos);
+        if (!ArtFx("Lightning", p + new Vector3(0f, 0.9f, 0f), 2.0f, 2.1f, 0.35f, 0f))
+        {
+            // 画像がなければ光の点を縦に並べて稲妻の代わりにする
+            for (int i = 0; i < 8; i++)
+            {
+                Vector3 q = p + new Vector3(Random.Range(-0.12f, 0.12f), 0.25f * i, 0f);
+                StartCoroutine(Glow(q, new Color(0.85f, 0.7f, 1f, 0.9f), 0.3f, 0.12f, 0.3f));
+            }
+        }
+        StartCoroutine(Glow(p, new Color(0.9f, 0.8f, 1f, 0.9f), 0.5f, 1.6f, 0.3f));
+        ShakeCamera(0.12f, 0.06f);
     }
 
     // ============================================================
@@ -181,8 +302,11 @@ public class BattleEffects : MonoBehaviour
     {
         Play(Clip("Splash"), moveClip);
         Vector3 p = World(pos);
-        StartCoroutine(RingWave(p, Sea, 0.3f, 1.4f, 0.45f));
-        StartCoroutine(RingWave(p, SeaDeep, 0.2f, 1.0f, 0.55f));
+        if (!ArtFx("Ripple", p, 0.4f, 1.6f, 0.55f, 0f))
+        {
+            StartCoroutine(RingWave(p, Sea, 0.3f, 1.4f, 0.45f));
+            StartCoroutine(RingWave(p, SeaDeep, 0.2f, 1.0f, 0.55f));
+        }
         StartCoroutine(Burst(p, 10, Color.white, Sea, 0.6f, 1.6f, 0.08f, 0.6f, 2.5f, SpriteFactory.Ring));
     }
 
@@ -200,7 +324,8 @@ public class BattleEffects : MonoBehaviour
     public void PlayAbyssRiseEffect(Vector2Int pos)
     {
         Vector3 p = World(pos);
-        StartCoroutine(Glow(p, new Color(AbyssDark.r, AbyssDark.g, AbyssDark.b, 0.95f), 1.6f, 0.6f, 0.45f));
+        if (!ArtFx("AbyssVortex", p, 1.5f, 0.9f, 0.6f, 0f, -540f))
+            StartCoroutine(Glow(p, new Color(AbyssDark.r, AbyssDark.g, AbyssDark.b, 0.95f), 1.6f, 0.6f, 0.45f));
         StartCoroutine(RingWave(p, AbyssTeal, 1.6f, 0.2f, 0.45f));
         StartCoroutine(Implode(p, 12, AbyssTeal, AbyssDark, 1.1f, 0.4f));
         FloatingText.Spawn(pos, "浮上", AbyssTeal, 3.2f, 0.3f);
@@ -239,19 +364,19 @@ public class BattleEffects : MonoBehaviour
 
     public void PlayAirRaidEffect(Vector2Int from, Vector2Int to)
     {
-        Play(Clip("Plane"), airRaidClip);
+        PlayLimited(Clip("Plane"), 2.2f, airRaidClip);
         StartCoroutine(AirRaidRoutine(World(from), World(to)));
     }
 
     public void PlayTorpedoEffect(Vector2Int from, Vector2Int to)
     {
-        Play(torpedoClip, hitClip);
+        PlayLimited(torpedoClip, 1.8f, hitClip);
         StartCoroutine(TorpedoRoutine(World(from), World(to)));
     }
 
     public void PlayBombardmentEffect(Vector2Int from, Vector2Int to)
     {
-        Play(bombardmentClip, defeatClip);
+        PlayLimited(bombardmentClip, 2.2f, defeatClip);
         StartCoroutine(BombardmentRoutine(World(from), World(to)));
     }
 
@@ -267,10 +392,13 @@ public class BattleEffects : MonoBehaviour
         Vector3[] offsets = { Vector3.zero, -dir * 0.45f + side * 0.45f, -dir * 0.45f - side * 0.45f };
         var planes = new SpriteRenderer[3];
         var shadows = new SpriteRenderer[3];
+        Sprite planeSprite = EffectArt.GetOr("Plane", SpriteFactory.Plane);
+        bool planeArt = EffectArt.Has("Plane");
+        Color planeColor = planeArt ? Color.white : new Color(0.9f, 0.95f, 1f, 1f);
         for (int i = 0; i < 3; i++)
         {
-            shadows[i] = CreateSprite(SpriteFactory.Plane, from, new Color(0f, 0f, 0f, 0.3f), 0.42f, OrderGlow);
-            planes[i] = CreateSprite(SpriteFactory.Plane, from, new Color(0.9f, 0.95f, 1f, 1f), 0.42f, OrderParticle + 2);
+            shadows[i] = CreateSprite(planeSprite, from, new Color(0f, 0f, 0f, 0.3f), 0.42f, OrderGlow);
+            planes[i] = CreateSprite(planeSprite, from, planeColor, 0.42f, OrderParticle + 2);
             planes[i].transform.rotation = Quaternion.Euler(0, 0, angle);
             shadows[i].transform.rotation = Quaternion.Euler(0, 0, angle);
         }
@@ -292,7 +420,7 @@ public class BattleEffects : MonoBehaviour
                 planes[i].transform.position = p + new Vector3(0f, 0.35f, 0f);   // 高度
                 shadows[i].transform.position = p + new Vector3(0.25f, -0.2f, 0f);
                 float a = t < 0.1f ? t / 0.1f : (t > 0.85f ? (1f - t) / 0.15f : 1f);
-                planes[i].color = new Color(0.9f, 0.95f, 1f, a);
+                planes[i].color = new Color(planeColor.r, planeColor.g, planeColor.b, a);
                 shadows[i].color = new Color(0f, 0f, 0f, 0.3f * a);
             }
             if (!dropped && t >= dropAt * 0.75f)
@@ -311,18 +439,23 @@ public class BattleEffects : MonoBehaviour
 
     private IEnumerator FallingBomb(Vector3 from, Vector3 hit, float duration)
     {
-        var bomb = CreateSprite(SpriteFactory.Circle, from, new Color(0.2f, 0.2f, 0.25f, 1f), 0.16f, OrderParticle + 1);
+        bool bombArt = EffectArt.Has("Bomb");
+        var bomb = CreateSprite(EffectArt.GetOr("Bomb", SpriteFactory.Circle), from,
+            bombArt ? Color.white : new Color(0.2f, 0.2f, 0.25f, 1f), 0.16f, OrderParticle + 1);
+        float start = bombArt ? 0.3f : 0.16f;
+        float end = bombArt ? 0.14f : 0.07f;
         float elapsed = 0f;
         while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
             float t = Ease.InCubic(elapsed / duration);
             bomb.transform.position = Vector3.Lerp(from, hit, t);
-            bomb.transform.localScale = Vector3.one * Mathf.Lerp(0.16f, 0.07f, t);
+            bomb.transform.localScale = Vector3.one * Mathf.Lerp(start, end, t);
             yield return null;
         }
         Destroy(bomb.gameObject);
-        StartCoroutine(Glow(hit, new Color(1f, 0.65f, 0.25f, 0.95f), 0.3f, 1.1f, 0.28f));
+        if (!ArtFx("Explosion", hit, 0.35f, 0.9f, 0.32f))
+            StartCoroutine(Glow(hit, new Color(1f, 0.65f, 0.25f, 0.95f), 0.3f, 1.1f, 0.28f));
         StartCoroutine(Burst(hit, 8, new Color(1f, 0.85f, 0.4f), new Color(0.9f, 0.3f, 0.1f), 1.5f, 3.5f, 0.1f, 0.35f, -2f));
         ShakeCamera(0.08f, 0.04f);
     }
@@ -332,9 +465,11 @@ public class BattleEffects : MonoBehaviour
     {
         Vector3 dir = to - from;
         float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
-        var head = CreateSprite(SpriteFactory.SoftCircle, from, new Color(0.85f, 1f, 1f, 1f), 0.3f, OrderParticle + 1);
+        bool torpedoArt = EffectArt.Has("Torpedo");
+        var head = CreateSprite(EffectArt.GetOr("Torpedo", SpriteFactory.SoftCircle), from,
+            torpedoArt ? Color.white : new Color(0.85f, 1f, 1f, 1f), 0.3f, OrderParticle + 1);
         head.transform.rotation = Quaternion.Euler(0, 0, angle);
-        head.transform.localScale = new Vector3(0.5f, 0.2f, 1f);
+        head.transform.localScale = torpedoArt ? new Vector3(0.55f, 0.55f, 1f) : new Vector3(0.5f, 0.2f, 1f);
 
         const float duration = 0.8f;
         float elapsed = 0f;
@@ -356,12 +491,14 @@ public class BattleEffects : MonoBehaviour
         StartCoroutine(Glow(to, new Color(Sea.r, Sea.g, Sea.b, 0.9f), 0.6f, 2f, 0.3f));
         StartCoroutine(RingWave(to, Color.white, 0.4f, 1.8f, 0.35f));
         StartCoroutine(WaterColumn(to, 22, 1.4f));
+        ArtFx("Explosion", to, 0.5f, 1.3f, 0.35f);
         ShakeCamera(0.15f, 0.07f);
     }
 
     private IEnumerator WakeStreak(Vector3 pos, float angle)
     {
-        var sr = CreateSprite(SpriteFactory.SoftCircle, pos, new Color(1f, 1f, 1f, 0.6f), 0.3f, OrderGlow);
+        bool wakeArt = EffectArt.Has("Wake");
+        var sr = CreateSprite(EffectArt.GetOr("Wake", SpriteFactory.SoftCircle), pos, new Color(1f, 1f, 1f, 0.6f), 0.3f, OrderGlow);
         sr.transform.rotation = Quaternion.Euler(0, 0, angle);
         const float life = 0.6f;
         float elapsed = 0f;
@@ -369,8 +506,10 @@ public class BattleEffects : MonoBehaviour
         {
             elapsed += Time.deltaTime;
             float t = elapsed / life;
-            sr.transform.localScale = new Vector3(0.45f + 0.3f * t, 0.16f + 0.2f * t, 1f);
-            sr.color = new Color(0.85f, 0.97f, 1f, 0.55f * (1f - t));
+            sr.transform.localScale = wakeArt
+                ? new Vector3(0.45f + 0.25f * t, 0.45f + 0.25f * t, 1f)
+                : new Vector3(0.45f + 0.3f * t, 0.16f + 0.2f * t, 1f);
+            sr.color = wakeArt ? new Color(1f, 1f, 1f, 0.8f * (1f - t)) : new Color(0.85f, 0.97f, 1f, 0.55f * (1f - t));
             yield return null;
         }
         Destroy(sr.gameObject);
@@ -383,10 +522,17 @@ public class BattleEffects : MonoBehaviour
         var marker = CreateSprite(SpriteFactory.Ring, target, new Color(1f, 0.3f, 0.2f, 0f), 1.8f, OrderGlow);
 
         // 発砲
-        StartCoroutine(Glow(from, new Color(1f, 0.8f, 0.4f, 1f), 0.4f, 1.3f, 0.22f));
+        Vector3 aim = target - from;
+        float aimAngle = Mathf.Atan2(aim.y, aim.x) * Mathf.Rad2Deg;
+        if (!ArtFx("MuzzleFlash", from + aim.normalized * 0.35f, 0.6f, 1.0f, 0.22f, aimAngle))
+            StartCoroutine(Glow(from, new Color(1f, 0.8f, 0.4f, 1f), 0.4f, 1.3f, 0.22f));
+        ArtFx("Smoke", from, 0.5f, 1.2f, 0.8f);
         StartCoroutine(Burst(from, 6, new Color(0.6f, 0.6f, 0.62f), new Color(0.35f, 0.35f, 0.4f), 0.8f, 1.6f, 0.22f, 0.7f, 0.8f));
 
-        var shell = CreateSprite(SpriteFactory.SoftCircle, from, new Color(1f, 0.9f, 0.6f, 1f), 0.22f, OrderParticle + 2);
+        bool shellArt = EffectArt.Has("Shell");
+        var shell = CreateSprite(EffectArt.GetOr("Shell", SpriteFactory.SoftCircle), from,
+            shellArt ? Color.white : new Color(1f, 0.9f, 0.6f, 1f), 0.22f, OrderParticle + 2);
+        Vector3 prev = from;
         const float flight = 0.7f;
         float elapsed = 0f;
         float trailTimer = 0f;
@@ -397,7 +543,13 @@ public class BattleEffects : MonoBehaviour
             float t = elapsed / flight;
             Vector3 p = Vector3.Lerp(from, target, t) + new Vector3(0f, Mathf.Sin(t * Mathf.PI) * 1.4f, 0f);
             shell.transform.position = p;
-            shell.transform.localScale = Vector3.one * (0.2f + Mathf.Sin(t * Mathf.PI) * 0.12f);
+            float baseSize = shellArt ? 0.42f : 0.2f;
+            shell.transform.localScale = Vector3.one * (baseSize + Mathf.Sin(t * Mathf.PI) * 0.12f);
+            // 画像の砲弾は進む向きに回す
+            Vector3 v = p - prev;
+            if (shellArt && v.sqrMagnitude > 0.00001f)
+                shell.transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(v.y, v.x) * Mathf.Rad2Deg);
+            prev = p;
             marker.transform.localScale = Vector3.one * Mathf.Lerp(1.8f, 1.0f, t);
             marker.color = new Color(1f, 0.3f, 0.2f, 0.9f * Mathf.Clamp01(t * 2f));
             if (trailTimer > 0.03f)
@@ -410,7 +562,8 @@ public class BattleEffects : MonoBehaviour
         Destroy(shell.gameObject);
         Destroy(marker.gameObject);
 
-        StartCoroutine(Glow(target, new Color(1f, 0.6f, 0.15f, 1f), 1f, 3.6f, 0.45f));
+        if (!ArtFx("Explosion", target, 1.0f, 2.8f, 0.5f))
+            StartCoroutine(Glow(target, new Color(1f, 0.6f, 0.15f, 1f), 1f, 3.6f, 0.45f));
         StartCoroutine(RingWave(target, new Color(1f, 0.65f, 0.25f, 1f), 0.6f, 3.4f, 0.45f));
         StartCoroutine(Burst(target, 26, new Color(1f, 0.85f, 0.3f), new Color(0.8f, 0.2f, 0.1f), 2.5f, 7f, 0.18f, 0.6f, -3f));
         StartCoroutine(WaterColumn(target, 14, 1.1f));
@@ -419,6 +572,15 @@ public class BattleEffects : MonoBehaviour
 
     private IEnumerator AbyssStrikeRoutine(Vector3 from, Vector3 to)
     {
+        Sprite tendril = EffectArt.Get("AbyssTendril");
+        if (tendril != null)
+        {
+            yield return StretchFx(tendril, from, to, 0.35f);
+            StartCoroutine(RingWave(to, AbyssTeal, 0.3f, 1.2f, 0.4f));
+            StartCoroutine(Burst(to, 10, AbyssTeal, AbyssDark, 1f, 2.5f, 0.12f, 0.45f, -2f));
+            yield break;
+        }
+
         // 暗い触手がうねりながら伸びる
         Vector3 dir = to - from;
         Vector3 side = new Vector3(-dir.y, dir.x, 0f).normalized;
@@ -439,6 +601,9 @@ public class BattleEffects : MonoBehaviour
     /// <summary>水柱（上に吹き上がって落ちる水しぶき）</summary>
     private IEnumerator WaterColumn(Vector3 pos, int count, float height)
     {
+        Sprite splash = EffectArt.Get("Splash");
+        if (splash != null) StartCoroutine(SplashFx(splash, pos, height));
+
         var parts = new SpriteRenderer[count];
         var vel = new Vector3[count];
         for (int i = 0; i < count; i++)
@@ -555,6 +720,79 @@ public class BattleEffects : MonoBehaviour
         sr.color = color;
         sr.sortingOrder = order;
         return sr;
+    }
+
+    /// <summary>
+    /// エフェクト画像（Resources/Effects/名前）があれば、広がりながら消える形で出して true を返す。
+    /// 画像がなければ何もせず false（呼び出し側が手続き生成の演出を出す）。
+    /// rotation を省略するとランダムな向き、spin は1秒あたりの回転角。
+    /// </summary>
+    private bool ArtFx(string name, Vector3 pos, float startSize, float endSize, float life,
+        float rotation = float.NaN, float spin = 0f)
+    {
+        Sprite art = EffectArt.Get(name);
+        if (art == null) return false;
+        StartCoroutine(ArtFxRoutine(art, pos, startSize, endSize, life, float.IsNaN(rotation) ? Random.Range(0f, 360f) : rotation, spin));
+        return true;
+    }
+
+    private IEnumerator ArtFxRoutine(Sprite art, Vector3 pos, float startSize, float endSize, float life, float rotation, float spin)
+    {
+        var sr = CreateSprite(art, pos, Color.white, startSize, OrderParticle + 3);
+        float elapsed = 0f;
+        while (elapsed < life)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / life;
+            sr.transform.localScale = Vector3.one * Mathf.Lerp(startSize, endSize, Ease.OutCubic(t));
+            sr.transform.rotation = Quaternion.Euler(0, 0, rotation + spin * elapsed);
+            sr.color = new Color(1f, 1f, 1f, t < 0.6f ? 1f : 1f - (t - 0.6f) / 0.4f);
+            yield return null;
+        }
+        Destroy(sr.gameObject);
+    }
+
+    /// <summary>from から to へ伸びる画像（触手など。画像は左→右向きで描かれている前提）</summary>
+    private IEnumerator StretchFx(Sprite art, Vector3 from, Vector3 to, float life)
+    {
+        Vector3 d = to - from;
+        float length = d.magnitude;
+        float angle = Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg;
+        var sr = CreateSprite(art, from, Color.white, 1f, OrderParticle + 3);
+        sr.transform.rotation = Quaternion.Euler(0, 0, angle);
+        float elapsed = 0f;
+        while (elapsed < life)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / life;
+            float grow = Ease.OutCubic(Mathf.Clamp01(t / 0.6f));
+            float len = Mathf.Max(0.01f, length * grow);
+            sr.transform.position = from + d.normalized * (len * 0.5f);
+            sr.transform.localScale = new Vector3(len, 0.6f, 1f);
+            sr.color = new Color(1f, 1f, 1f, t < 0.7f ? 1f : 1f - (t - 0.7f) / 0.3f);
+            yield return null;
+        }
+        Destroy(sr.gameObject);
+    }
+
+    /// <summary>水柱の画像（下から上へ伸びて消える。画像は横から見た水柱の前提）</summary>
+    private IEnumerator SplashFx(Sprite art, Vector3 pos, float height)
+    {
+        var sr = CreateSprite(art, pos, Color.white, 1f, OrderParticle + 3);
+        float h = 1.3f * height;
+        const float life = 0.6f;
+        float elapsed = 0f;
+        while (elapsed < life)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / life;
+            float k = Ease.OutCubic(Mathf.Clamp01(t / 0.5f));
+            sr.transform.localScale = new Vector3(0.9f, Mathf.Max(0.01f, h * k), 1f);
+            sr.transform.position = pos + new Vector3(0f, h * k * 0.5f - 0.2f, 0f);
+            sr.color = new Color(1f, 1f, 1f, t < 0.55f ? 1f : 1f - (t - 0.55f) / 0.45f);
+            yield return null;
+        }
+        Destroy(sr.gameObject);
     }
 
     /// <summary>ふわっと広がって消える光</summary>

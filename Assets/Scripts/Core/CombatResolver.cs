@@ -82,6 +82,9 @@ public static class CombatResolver
     /// <summary>通常攻撃。撃破したらtrue</summary>
     public static bool Attack(PieceInstance attacker, PieceInstance target)
     {
+        if (BattleEffects.Instance != null)
+            BattleEffects.Instance.PlaySlash(target.boardPosition, attacker.boardPosition);
+
         int damage = CalcDamage(attacker, target);
         target.currentHP -= damage;
         RefreshHP(target);
@@ -133,6 +136,7 @@ public static class CombatResolver
         target.currentHP += healed;
         RefreshHP(target);
         FloatingText.Spawn(target.boardPosition, "+" + healed, HealColor);
+        if (BattleEffects.Instance != null) BattleEffects.Instance.PlayHealEffect(target.boardPosition);
         return healed;
     }
 

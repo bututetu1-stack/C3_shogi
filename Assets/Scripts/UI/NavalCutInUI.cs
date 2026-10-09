@@ -77,7 +77,7 @@ public class NavalCutInUI : MonoBehaviour
         art.style.marginTop = portrait != null ? -60 : 0;
         art.style.backgroundImage = new StyleBackground(portrait != null ? portrait : SpriteFactory.Anchor);
         art.style.backgroundSize = new BackgroundSize(BackgroundSizeType.Contain);
-        if (portrait == null) art.style.unityBackgroundImageTintColor = Palette.Gold;
+        if (portrait == null && !EffectArt.Has("Anchor")) art.style.unityBackgroundImageTintColor = Palette.Gold;
         art.pickingMode = PickingMode.Ignore;
         band.Add(art);
 
