@@ -4,7 +4,9 @@ using System.Collections;
 /// <summary>戦闘の演出（効果音・光・衝撃波・パーティクル・画面揺れ）</summary>
 public class BattleEffects : MonoBehaviour
 {
-    public static BattleEffects Instance { get; private set; }
+    private static BattleEffects instance;
+    /// <summary>演出の窓口（自動プレイの Headless 中は null）</summary>
+    public static BattleEffects Instance { get { return GameSim.Headless ? null : instance; } }
 
     private const int OrderGlow = 50;
     private const int OrderParticle = 55;
@@ -39,7 +41,7 @@ public class BattleEffects : MonoBehaviour
 
     void Awake()
     {
-        if (Instance == null) Instance = this;
+        if (instance == null) instance = this;
         else { Destroy(this); return; }
 
         audioSource = gameObject.AddComponent<AudioSource>();
@@ -677,6 +679,123 @@ public class BattleEffects : MonoBehaviour
         }
         Destroy(sr.gameObject);
     }
+    // ============================================================
+    // 部員たちの演出
+    // ============================================================
+
+    /// <summary>残像（素早く動く駒の後ろに、駒の形が薄く残って消える）</summary>
+    public void PlayAfterimage(SpriteRenderer body, Color tint)
+    {
+        if (body == null || body.sprite == null) return;
+        Transform t = body.transform;
+        StartCoroutine(AfterimageRoutine(body.sprite, t.position, t.rotation, t.lossyScale, tint));
+    }
+
+    private IEnumerator AfterimageRoutine(Sprite sprite, Vector3 pos, Quaternion rot, Vector3 scale, Color tint)
+    {
+        var sr = CreateSprite(sprite, pos, tint, 1f, PieceRenderer.OrderShadow);
+        sr.transform.rotation = rot;
+        sr.transform.localScale = scale;
+        const float life = 0.3f;
+        float elapsed = 0f;
+        while (elapsed < life)
+        {
+            elapsed += Time.deltaTime;
+            Color c = tint;
+            c.a = tint.a * (1f - elapsed / life);
+            sr.color = c;
+            yield return null;
+        }
+        Destroy(sr.gameObject);
+    }
+
+    /// <summary>きらめきが弾ける（なこのドパ）</summary>
+    public void PlaySparkle(Vector2Int pos, Color a, Color b)
+    {
+        Vector3 p = World(pos);
+        StartCoroutine(Glow(p, new Color(a.r, a.g, a.b, 0.7f), 0.3f, 1.2f, 0.35f));
+        StartCoroutine(RingWave(p, a, 0.3f, 1.1f, 0.35f));
+        StartCoroutine(Burst(p, 12, a, b, 1.2f, 3f, 0.08f, 0.55f, 0f, SpriteFactory.Pixel));
+    }
+
+    /// <summary>湯気が立ちのぼる（中華）</summary>
+    public void PlaySteam(Vector2Int pos, float delay = 0f)
+    {
+        Vector3 p = World(pos);
+        for (int i = 0; i < 4; i++)
+            StartCoroutine(SteamPuff(p + new Vector3(Random.Range(-0.2f, 0.2f), 0.1f, 0f), delay + i * 0.08f));
+    }
+
+    private IEnumerator SteamPuff(Vector3 pos, float delay)
+    {
+        if (delay > 0f) yield return new WaitForSeconds(delay);
+        var sr = CreateSprite(SpriteFactory.SoftCircle, pos, new Color(1f, 1f, 1f, 0f), 0.2f, OrderParticle);
+        float sway = Random.Range(0f, 6.28f);
+        const float life = 0.9f;
+        float elapsed = 0f;
+        while (elapsed < life)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / life;
+            sr.transform.position = pos + new Vector3(Mathf.Sin(t * 5f + sway) * 0.06f, t * 0.6f, 0f);
+            sr.transform.localScale = Vector3.one * Mathf.Lerp(0.18f, 0.45f, t);
+            sr.color = new Color(1f, 1f, 1f, 0.55f * Mathf.Sin(t * Mathf.PI));
+            yield return null;
+        }
+        Destroy(sr.gameObject);
+    }
+
+    /// <summary>排気の煙（SNのドライブ）。from から to へ動いたとき、後ろに出る</summary>
+    public void PlayExhaust(Vector2Int from, Vector2Int to)
+    {
+        Vector3 p = World(from);
+        Vector3 back = (p - World(to)).normalized;
+        Sprite smoke = EffectArt.Get("Smoke");
+        for (int i = 0; i < 3; i++)
+            StartCoroutine(ExhaustPuff(p + back * 0.2f, back, smoke, i * 0.06f));
+    }
+
+    private IEnumerator ExhaustPuff(Vector3 pos, Vector3 back, Sprite smoke, float delay)
+    {
+        if (delay > 0f) yield return new WaitForSeconds(delay);
+        bool art = smoke != null;
+        Color baseColor = art ? new Color(1f, 1f, 1f, 0.75f) : new Color(0.55f, 0.55f, 0.58f, 0.7f);
+        var sr = CreateSprite(art ? smoke : SpriteFactory.SoftCircle, pos, baseColor, 0.2f, OrderParticle);
+        Vector3 drift = (back + new Vector3(Random.Range(-0.4f, 0.4f), Random.Range(-0.4f, 0.4f), 0f)) * 0.5f;
+        const float life = 0.6f;
+        float elapsed = 0f;
+        while (elapsed < life)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / life;
+            sr.transform.position = pos + drift * Ease.OutCubic(t);
+            sr.transform.localScale = Vector3.one * Mathf.Lerp(0.2f, 0.5f, t);
+            Color c = baseColor;
+            c.a = baseColor.a * (1f - t);
+            sr.color = c;
+            yield return null;
+        }
+        Destroy(sr.gameObject);
+    }
+
+    /// <summary>李白の裏返し（紫の渦）。radius は届く範囲（マス）</summary>
+    public void PlayFlipSwirl(Vector2Int pos, int radius)
+    {
+        Vector3 p = World(pos);
+        Color purple = new Color(0.72f, 0.45f, 1f);
+        StartCoroutine(RingWave(p, purple, 0.4f, 1.2f + radius * 1.2f, 0.45f));
+        StartCoroutine(Implode(p, 10, purple, new Color(0.35f, 0.2f, 0.6f), 0.9f + radius * 0.5f, 0.45f));
+    }
+
+    /// <summary>鬼火（黄泉の召喚）</summary>
+    public void PlaySoulFire(Vector2Int pos)
+    {
+        Vector3 p = World(pos);
+        Color blue = new Color(0.45f, 0.75f, 1f);
+        StartCoroutine(Glow(p, new Color(blue.r, blue.g, blue.b, 0.85f), 0.3f, 1.3f, 0.45f));
+        StartCoroutine(Burst(p, 10, blue, Color.white, 0.4f, 1.2f, 0.12f, 0.8f, 2.2f));
+    }
+
     // ============================================================
     // 画面揺れ
     // ============================================================

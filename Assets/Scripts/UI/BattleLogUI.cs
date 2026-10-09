@@ -5,7 +5,9 @@ using System.Collections.Generic;
 /// <summary>画面左の対局ログ</summary>
 public class BattleLogUI : MonoBehaviour
 {
-    public static BattleLogUI Instance { get; private set; }
+    private static BattleLogUI instance;
+    /// <summary>対局記録（自動プレイの Headless 中は null）</summary>
+    public static BattleLogUI Instance { get { return GameSim.Headless ? null : instance; } }
 
     private ScrollView scrollView;
     private readonly List<Label> logEntries = new List<Label>();
@@ -18,7 +20,7 @@ public class BattleLogUI : MonoBehaviour
 
     void Awake()
     {
-        if (Instance == null) Instance = this;
+        if (instance == null) instance = this;
         else { Destroy(this); return; }
     }
 

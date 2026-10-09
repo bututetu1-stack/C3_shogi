@@ -16,6 +16,7 @@ public class NavalCutInUI : MonoBehaviour
 
     public static IEnumerator Play(string title, string subtitle, Sprite portrait, Color bandColor, float duration)
     {
+        if (GameSim.Headless) yield break;
         NavalCutInUI ui = Ensure();
         if (ui == null) yield break;
         yield return ui.Run(title, subtitle, portrait, bandColor, duration);

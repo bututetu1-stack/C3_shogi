@@ -42,3 +42,6 @@ crashlytics-build.properties
 # OS
 .DS_Store
 Thumbs.db
+
+# バランステストの出力
+/BalanceReports/

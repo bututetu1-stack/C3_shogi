@@ -7,7 +7,9 @@ public struct PieceLook
     public Color ink;
     public Sprite emblem;
     public Color emblemColor;
-    public bool aura;       // 足元にほのかな光（提督）
+    public bool aura;       // 足元にほのかな光（提督・なこ・ボス）
+    public Color auraColor;
+    public bool auraRing;   // 光ではなく脈打つ輪（小錦の挑発）
     public bool floating;   // 海に浮かぶようにゆらゆら揺れる（艦娘・深海）
 }
 
@@ -38,6 +40,7 @@ public static class PieceSkin
                     look.emblem = SpriteFactory.Anchor;
                     look.emblemColor = Palette.Gold;
                     look.aura = true;
+                    look.auraColor = Palette.Gold;
                 }
                 else
                 {
@@ -60,10 +63,43 @@ public static class PieceSkin
                 look.ink = AbyssInk;
                 look.floating = true;
                 break;
+
+
+            case PieceType.Konishiki:
+                // 挑発: 足元に赤い輪が脈打つ
+                SetAura(ref look, Palette.ATK, true);
+                break;
+
+            case PieceType.Nako:
+                // ドーパミンの桃色のきらめき
+                SetAura(ref look, new Color(1f, 0.45f, 0.75f), false);
+                break;
+
+            case PieceType.Maou: SetAura(ref look, new Color(0.62f, 0.3f, 0.95f), false); break;
+            case PieceType.Raitei: SetAura(ref look, new Color(1f, 0.88f, 0.35f), false); break;
+            case PieceType.Ryuujin: SetAura(ref look, new Color(0.4f, 0.85f, 1f), false); break;
+        }
+
+        // 紋章の画像（Resources/Effects/Emblem_駒の種類.png）があれば駒の頭に入れる
+        if (look.emblem == null)
+        {
+            Sprite emblemArt = EffectArt.Get("Emblem_" + data.pieceType);
+            if (emblemArt != null)
+            {
+                look.emblem = emblemArt;
+                look.emblemColor = Color.white;
+            }
         }
         // 錨を画像に差し替えたときは、画像の色をそのまま使う（濃さだけ残す）
         if (look.emblem != null && EffectArt.Has("Anchor"))
             look.emblemColor = new Color(1f, 1f, 1f, look.emblemColor.a);
         return look;
+    }
+
+    private static void SetAura(ref PieceLook look, Color color, bool ring)
+    {
+        look.aura = true;
+        look.auraColor = color;
+        look.auraRing = ring;
     }
 }

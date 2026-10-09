@@ -17,6 +17,7 @@ public class FloatingText : MonoBehaviour
 
     public static void Spawn(Vector3 worldPos, string message, Color color, float size = 3.2f, float delay = 0f)
     {
+        if (GameSim.Headless) return;
         var obj = new GameObject("FloatingText");
         if (BattleEffects.Instance != null) obj.transform.SetParent(BattleEffects.Instance.EffectsRoot, false);
         obj.transform.position = worldPos;
