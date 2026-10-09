@@ -277,7 +277,7 @@ public class StageManager : MonoBehaviour
     private void ApplyStageScaling(BoardManager bm, int stage)
     {
         int hpBonus = stage / 3;
-        int atkBonus = stage / 5;
+        int atkBonus = stage / 7;   // 第七局から+1、第十四局から+2
         int c3Bonus = (stage - 1) / 2;   // 後半ほど敵C3も打たれ強くなる
         foreach (var enemy in bm.GetTeamPieces(Team.Enemy))
         {

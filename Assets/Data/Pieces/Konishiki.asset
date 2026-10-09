@@ -17,8 +17,8 @@ MonoBehaviour:
   pieceName: "\u5C0F\u9326"
   description: "\u898B\u308B\u305F\u3073\u306B\u8AB0\u304B\u306B\u3044\u3058\u3081\u3089\u308C\u3066\u3044\u308B\u6C17\u304C\u3059\u308B\u3001\u53EF\u54C0\u60F3\u306A\u4EBA\u3002\u5C06\u68CB\u3067\u3082\u3044\u3058\u3081\u3089\u308C\u308B\u3002\u6311\u767A\uFF1A\u3053\u306E\u99D2\u3092\u653B\u6483\u3067\u304D\u308B\u6575\u99D2\u306F\u3001\u4ED6\u306E\u99D2\u3092\u653B\u6483\u3067\u304D\u306A\u3044\u3002\u6253\u305F\u308C\u5F37\u3044\u304C\u3001\u6210\u308B\u3068\u98A8\u90AA\u3092\u5F15\u3044\u3066\u6B7B\u306C\uFF08\u6483\u7834\u3055\u308C\u308B\uFF09\u3002"
   baseATK: 0
-  baseDEF: 1
-  baseHP: 8
+  baseDEF: 2
+  baseHP: 10
   rarity: 2
   moveDirections:
   - direction: {x: 0, y: 1}
@@ -50,8 +50,8 @@ MonoBehaviour:
   promotedName: "\u5C0F\u9326\uFF08\u6210\u308A\uFF09"
   promotedDescription: "\u98A8\u90AA\u3092\u3072\u3044\u3066\u529B\u5C3D\u304D\u305F..."
   promotedATK: 0
-  promotedDEF: 1
-  promotedHP: 8
+  promotedDEF: 2
+  promotedHP: 10
   promotedMoveDirections: []
   hasPromotedRarity: 0
   promotedRarity: 0
@@ -64,3 +64,5 @@ MonoBehaviour:
   diesOnPromotion: 1
   isImmovableWhenPromoted: 0
   isTauntPiece: 1
+  portrait: {fileID: 0}
+  promotedPortrait: {fileID: 0}

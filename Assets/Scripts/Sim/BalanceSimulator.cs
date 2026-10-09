@@ -14,6 +14,7 @@ public class SimStageRecord
     public string lossCause;        // 負けたとき: C3撃破 / 全滅 / 判定
     public int moves;               // 決着までの手数
     public string pick;             // 選んだ仲間・強化（候補がなければ空）
+    public string pick2;            // 2枚選べる局の2枚目
     public string[] offered;        // 候補
     public string[] roster;         // 対局開始時の自軍（C3・歩・召喚物を除く）
     public string[] survivors;      // 決着時に残っていた自軍（同上）
@@ -114,17 +115,21 @@ public static class BalanceSimulator
         {
             var rec = new SimStageRecord { stage = sm.currentStage, pick = "" };
 
-            // 仲間選択（候補からランダム）
-            List<DraftOption> options = gm.SimDrawOptions();
-            rec.offered = options.Select(OptionName).ToArray();
-            if (options.Count > 0)
+            // 仲間選択（候補からランダム。第三局・第五局は2枚）
+            int picks = GameManager.PicksForStage(sm.currentStage);
+            for (int k = 0; k < picks; k++)
             {
+                List<DraftOption> options = gm.SimDrawOptions();
+                if (k == 0) rec.offered = options.Select(OptionName).ToArray();
+                if (options.Count == 0) break;
                 DraftOption pick = options[UnityEngine.Random.Range(0, options.Count)];
-                if (simOptions != null && simOptions.forcePick.HasValue && sm.currentStage == 1)
+                if (k == 0 && simOptions != null && simOptions.forcePick.HasValue && sm.currentStage == 1)
                     pick = DraftOption.Piece(bm.GetPieceDataByType(simOptions.forcePick.Value));
-                rec.pick = OptionName(pick);
+                if (k == 0) rec.pick = OptionName(pick);
+                else rec.pick2 = OptionName(pick);
                 gm.SimApplyOption(pick);
             }
+            if (rec.offered == null) rec.offered = new string[0];
 
             GameSim.BeginStageStats();
             GameSim.RunSync(gm.SimStartBattle());

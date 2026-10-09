@@ -37,7 +37,9 @@ public class PieceSelectionUI : MonoBehaviour
     }
 
     /// <param name="onReroll">引き直しボタンを押したとき（null なら引き直し不可）</param>
-    public void ShowSelection(List<DraftOption> choices, System.Action<DraftOption> callback, System.Action onReroll = null, int rerollsLeft = 0)
+    /// <summary>pickCount が2以上なら「2枚のうち1枚目」のように見出しに出す</summary>
+    public void ShowSelection(List<DraftOption> choices, System.Action<DraftOption> callback, System.Action onReroll = null, int rerollsLeft = 0,
+        int pickIndex = 1, int pickCount = 1)
     {
         if (!EnsureRoot())
         {
@@ -72,7 +74,10 @@ public class PieceSelectionUI : MonoBehaviour
             stage.style.marginBottom = 4;
             scroll.Add(stage);
         }
-        var title = UIFactory.Label("仲間か強化をひとつ選んでください", 34, Palette.Text, "c3-mincho");
+        string titleText = pickCount > 1
+            ? "仲間か強化を選んでください（" + pickCount + "枚のうち" + pickIndex + "枚目）"
+            : "仲間か強化をひとつ選んでください";
+        var title = UIFactory.Label(titleText, 34, Palette.Text, "c3-mincho");
         title.style.letterSpacing = 4;
         title.style.marginBottom = 14;
         scroll.Add(title);
@@ -241,9 +246,9 @@ public class PieceSelectionUI : MonoBehaviour
 
         string fullName = promoted ? piece.promotedName : piece.pieceName;
         string desc = promoted ? piece.promotedDescription : piece.description;
-        int atk = promoted ? piece.promotedATK : piece.baseATK;
+        int atk = (promoted ? piece.promotedATK : piece.baseATK) + PiecePool.RecruitBonusATK(piece);
         int def = promoted ? piece.promotedDEF : piece.baseDEF;
-        int hp = promoted ? piece.promotedHP : piece.baseHP;
+        int hp = (promoted ? piece.promotedHP : piece.baseHP) + PiecePool.RecruitBonusHP(piece);
         Rarity rarity = (promoted && piece.hasPromotedRarity) ? piece.promotedRarity : piece.rarity;
 
         // 左: 名前・ステータス・説明

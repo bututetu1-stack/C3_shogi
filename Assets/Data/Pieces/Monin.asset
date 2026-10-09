@@ -45,30 +45,39 @@ MonoBehaviour:
   promotedHP: 1
   promotedMoveDirections:
   - direction: {x: 0, y: 1}
-    maxDistance: 9
+    maxDistance: 2
     canJump: 0
   - direction: {x: 0, y: -1}
-    maxDistance: 9
+    maxDistance: 2
     canJump: 0
   - direction: {x: 1, y: 0}
-    maxDistance: 9
+    maxDistance: 2
     canJump: 0
   - direction: {x: -1, y: 0}
-    maxDistance: 9
+    maxDistance: 2
     canJump: 0
   - direction: {x: 1, y: 1}
-    maxDistance: 9
+    maxDistance: 2
     canJump: 0
   - direction: {x: -1, y: 1}
-    maxDistance: 9
+    maxDistance: 2
     canJump: 0
   - direction: {x: 1, y: -1}
-    maxDistance: 9
+    maxDistance: 2
     canJump: 0
   - direction: {x: -1, y: -1}
-    maxDistance: 9
+    maxDistance: 2
     canJump: 0
+  hasPromotedRarity: 0
+  promotedRarity: 0
   isAutoMove: 1
   isManualControllable: 0
   excludeFromDraft: 0
   isImmovable: 0
+  immuneToFlip: 0
+  losesHPOnMove: 0
+  diesOnPromotion: 0
+  isImmovableWhenPromoted: 0
+  isTauntPiece: 0
+  portrait: {fileID: 0}
+  promotedPortrait: {fileID: 0}
