@@ -13,6 +13,8 @@ public class CutInUI : MonoBehaviour
 
     private static CutInUI instance;
     private UIDocument uiDocument;
+    // 前のカットインが終わるまで次を待たせる（李白が3枚まとめて裏返したときなど）
+    private static float busyUntil;
 
     /// <summary>錨（または立ち絵）を主役にしたカットイン（提督の艦隊）</summary>
     public static IEnumerator Play(string title, string subtitle, Sprite portrait, Color bandColor, float duration)
@@ -63,6 +65,8 @@ public class CutInUI : MonoBehaviour
 
     private IEnumerator Run(string title, string subtitle, VisualElement art, Color bandColor, Color accent, float duration)
     {
+        while (Time.time < busyUntil) yield return null;
+        busyUntil = Time.time + duration;
         VisualElement root = UIFactory.SetupRoot(uiDocument);
         root.style.justifyContent = Justify.Center;
 

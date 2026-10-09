@@ -449,10 +449,16 @@ public class GameManager : MonoBehaviour
         return piece.CanPromoteAt(from.y, size) || piece.CanPromoteAt(piece.boardPosition.y, size);
     }
 
-    /// <summary>能力による移動などで敵陣に入ったとき</summary>
+    /// <summary>能力による移動などで敵陣に入ったとき（カットインは待たずに出す）</summary>
     public void CheckPromotion(PieceInstance piece)
     {
         if (ShouldPromote(piece, piece.boardPosition)) PromotePiece(piece);
+    }
+
+    /// <summary>能力による移動のあとの成り（カットインが終わるのを待つ版。なこの突撃など）</summary>
+    public IEnumerator CheckPromotionRoutine(PieceInstance piece)
+    {
+        if (ShouldPromote(piece, piece.boardPosition)) yield return PromoteRoutine(piece);
     }
 
     /// <summary>成りの演出を待つ版（物鉄→提督は着任の演出が入る）</summary>
@@ -464,19 +470,29 @@ public class GameManager : MonoBehaviour
             yield break;
         }
         // 部員の成りはカットインで見せる
-        PieceLines.CutIn cut = piece.team == Team.Player ? PieceLines.PromotionCutIn(piece.data.pieceType) : null;
-        if (cut != null && !GameSim.Headless)
-        {
-            if (BattleEffects.Instance != null) BattleEffects.Instance.PlayCutInSound();
-            yield return CutInUI.PlayPiece(piece.data, true, cut.title, cut.subtitle, cut.band, cut.accent, 1.4f);
-        }
-        PromotePiece(piece);
+        yield return PromotionCutIn(piece);
+        PromotePiece(piece, false);
     }
 
-    /// <summary>駒を成らせ、成りに伴う特殊処理（過労死・提督化）を行う</summary>
-    public void PromotePiece(PieceInstance piece)
+    /// <summary>部員の成りのカットイン（ない駒・自動プレイ中は何もしない）</summary>
+    private IEnumerator PromotionCutIn(PieceInstance piece)
+    {
+        if (GameSim.Headless || piece.team != Team.Player) yield break;
+        PieceLines.CutIn cut = PieceLines.PromotionCutIn(piece.data.pieceType);
+        if (cut == null) yield break;
+        if (BattleEffects.Instance != null) BattleEffects.Instance.PlayCutInSound();
+        yield return CutInUI.PlayPiece(piece.data, true, cut.title, cut.subtitle, cut.band, cut.accent, 1.4f);
+    }
+
+    /// <summary>
+    /// 駒を成らせ、成りに伴う特殊処理（過労死・提督化）を行う。
+    /// cutIn=true なら部員のカットインを待たずに出す（李白の裏返しなど、手番の途中で成るとき）
+    /// </summary>
+    public void PromotePiece(PieceInstance piece, bool cutIn = true)
     {
         if (piece == null || !piece.isAlive || piece.isPromoted || !piece.data.canPromote) return;
+        if (cutIn && !GameSim.Headless && piece.data.pieceType != PieceType.Monotetsu)
+            StartCoroutine(PromotionCutIn(piece));
 
         piece.Promote();
         GameSim.RecordPromotion(piece);

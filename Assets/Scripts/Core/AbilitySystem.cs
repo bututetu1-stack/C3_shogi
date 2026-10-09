@@ -824,7 +824,7 @@ public class AbilitySystem : MonoBehaviour
             }
 
             // 成りチェック
-            GameManager.Instance.CheckPromotion(nako);
+            yield return GameManager.Instance.CheckPromotionRoutine(nako);
 
             yield return new WaitForSeconds(0.3f);
         }
