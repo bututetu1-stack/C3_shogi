@@ -234,6 +234,7 @@ public class AbilitySystem : MonoBehaviour
                             target.bonusATK += 1;
                             target.gundaishouStacks++;
                             CombatResolver.RefreshStats(target);
+                            FloatingText.Spawn(target.boardPosition, "攻+1", Palette.ATK);
                             buffed = true;
                         }
                     }
@@ -307,7 +308,7 @@ public class AbilitySystem : MonoBehaviour
             if (target.isPromoted)
             {
                 target.Demote();
-                CombatResolver.RefreshStats(target);
+                CombatResolver.PlayFlip(target);
             }
             else
             {
@@ -896,14 +897,7 @@ public class AbilitySystem : MonoBehaviour
 
                 PieceInstance target = bm.GetPieceAt(pos);
                 if (target != null && target.team == chuka.team && target != chuka)
-                {
-                    int maxHP = target.MaxHP;
-                    if (target.currentHP < maxHP)
-                    {
-                        target.currentHP++;
-                        CombatResolver.RefreshHP(target);
-                    }
-                }
+                    CombatResolver.Heal(target, 1);
             }
         }
     }
@@ -1021,6 +1015,7 @@ public class AbilitySystem : MonoBehaviour
                     }
                     ally.turnsNearBoku = 0;
                     CombatResolver.RefreshStats(ally);
+                    FloatingText.Spawn(ally.boardPosition, (buffATK ? "攻+" : "防+") + buffAmount, buffATK ? Palette.ATK : Palette.DEF);
 
                     if (BattleLogUI.Instance != null)
                         BattleLogUI.Instance.AddLog(BattleLogUI.ColorName(ally.DisplayName, ally.team) + " に" + statName + "+" + buffAmount + "バフ");
@@ -1049,6 +1044,8 @@ public class AbilitySystem : MonoBehaviour
 
         BoardManager bm = BoardManager.Instance;
 
+        if (BattleEffects.Instance != null)
+            BattleEffects.Instance.PlayExplosionEffect(deathPos);
         if (BattleLogUI.Instance != null)
             BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("髑髏", piece.team) + " が爆発！隣接駒に貫通1ダメージ");
 

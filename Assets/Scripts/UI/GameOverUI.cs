@@ -1,12 +1,11 @@
 using UnityEngine;
 using UnityEngine.UIElements;
 
+/// <summary>決着画面（勝利／敗北）</summary>
 public class GameOverUI : MonoBehaviour
 {
     private UIDocument uiDocument;
     private VisualElement root;
-    private Label resultLabel;
-    private Button retryButton;
     private bool isSubscribed;
 
     void OnEnable() { TrySubscribe(); }
@@ -28,12 +27,10 @@ public class GameOverUI : MonoBehaviour
     void Start()
     {
         TrySubscribe();
-
         uiDocument = GetComponent<UIDocument>();
-        if (uiDocument != null && uiDocument.rootVisualElement != null)
+        if (uiDocument != null)
         {
-            root = uiDocument.rootVisualElement;
-            root.Clear(); // UXML由来の子要素を除去
+            root = UIFactory.SetupRoot(uiDocument);
             root.style.display = DisplayStyle.None;
         }
     }
@@ -42,58 +39,50 @@ public class GameOverUI : MonoBehaviour
     {
         if (root == null) return;
 
+        bool won = winner == Team.Player;
         root.Clear();
         root.style.display = DisplayStyle.Flex;
+        root.pickingMode = PickingMode.Position;
         root.style.alignItems = Align.Center;
         root.style.justifyContent = Justify.Center;
+        root.style.backgroundColor = new Color(0f, 0f, 0f, 0.55f);
 
-        // 背景パネル
-        var panel = new VisualElement();
-        panel.style.backgroundColor = new Color(0, 0, 0, 0.8f);
-        panel.style.paddingTop = 40;
-        panel.style.paddingBottom = 40;
-        panel.style.paddingLeft = 60;
-        panel.style.paddingRight = 60;
+        var panel = UIFactory.Panel();
         panel.style.alignItems = Align.Center;
-        panel.style.borderTopLeftRadius = 16;
-        panel.style.borderTopRightRadius = 16;
-        panel.style.borderBottomLeftRadius = 16;
-        panel.style.borderBottomRightRadius = 16;
+        panel.style.paddingTop = 36;
+        panel.style.paddingBottom = 32;
+        panel.style.paddingLeft = 72;
+        panel.style.paddingRight = 72;
+        panel.style.borderTopWidth = panel.style.borderBottomWidth = panel.style.borderLeftWidth = panel.style.borderRightWidth = 2;
+        Color accent = won ? Palette.GoldLight : Palette.Enemy;
+        panel.style.borderTopColor = panel.style.borderBottomColor = panel.style.borderLeftColor = panel.style.borderRightColor = accent;
 
-        resultLabel = new Label();
-        resultLabel.style.fontSize = 48;
-        resultLabel.style.color = Color.white;
-        resultLabel.style.marginBottom = 30;
+        var result = UIFactory.Label(won ? "勝利" : "敗北", 84, accent, "c3-mincho");
+        result.style.letterSpacing = 24;
+        panel.Add(result);
 
-        if (winner == Team.Player)
-        {
-            resultLabel.text = "Victory!";
-            resultLabel.style.color = new Color(0.3f, 0.9f, 0.4f);
-        }
-        else
-        {
-            resultLabel.text = "Defeat...";
-            resultLabel.style.color = new Color(0.9f, 0.3f, 0.3f);
-        }
+        StageManager sm = StageManager.Instance;
+        string sub = won
+            ? "全" + UIFactory.Kanji(StageManager.MaxStages) + "局を制覇しました"
+            : (sm != null ? "第" + UIFactory.Kanji(sm.currentStage) + "局「" + sm.GetStageName(sm.currentStage) + "」にて敗退" : "");
+        var subLabel = UIFactory.Label(sub, 20, Palette.TextSub, "c3-mincho");
+        subLabel.style.marginTop = 4;
+        subLabel.style.marginBottom = 26;
+        panel.Add(subLabel);
 
-        retryButton = new Button();
-        retryButton.text = "Retry";
-        retryButton.style.fontSize = 24;
-        retryButton.style.paddingTop = 10;
-        retryButton.style.paddingBottom = 10;
-        retryButton.style.paddingLeft = 40;
-        retryButton.style.paddingRight = 40;
-        retryButton.style.backgroundColor = new Color(0.3f, 0.5f, 0.9f);
-        retryButton.style.color = Color.white;
-        retryButton.style.borderTopLeftRadius = 8;
-        retryButton.style.borderTopRightRadius = 8;
-        retryButton.style.borderBottomLeftRadius = 8;
-        retryButton.style.borderBottomRightRadius = 8;
-        retryButton.clicked += OnRetryClicked;
-
-        panel.Add(resultLabel);
-        panel.Add(retryButton);
+        panel.Add(UIFactory.Button("もう一度挑む", OnRetryClicked, "c3-button--primary", "c3-button--big"));
         root.Add(panel);
+
+        // ふわっと出す
+        panel.style.opacity = 0f;
+        panel.style.scale = new Scale(new Vector3(0.92f, 0.92f, 1f));
+        panel.schedule.Execute(() =>
+        {
+            panel.style.transitionProperty = new System.Collections.Generic.List<StylePropertyName> { new StylePropertyName("opacity"), new StylePropertyName("scale") };
+            panel.style.transitionDuration = new System.Collections.Generic.List<TimeValue> { new TimeValue(0.35f, TimeUnit.Second), new TimeValue(0.35f, TimeUnit.Second) };
+            panel.style.opacity = 1f;
+            panel.style.scale = new Scale(Vector3.one);
+        }).StartingIn(30);
     }
 
     private void OnRetryClicked()

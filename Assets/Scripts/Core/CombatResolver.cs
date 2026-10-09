@@ -20,6 +20,7 @@ public static class CombatResolver
         if (piece == null || !piece.isAlive) yield break;
 
         BoardManager bm = BoardManager.Instance;
+        Vector2Int from = piece.boardPosition;
         Vector2Int to = move.position;
 
         if (move.isAttack)
@@ -27,9 +28,21 @@ public static class CombatResolver
             PieceInstance target = bm.GetPieceAt(to);
             if (target != null && target.team != piece.team)
             {
+                // 踏み込んでから当たる
+                PieceController attackerPC = bm.GetPieceController(from);
+                if (attackerPC != null) attackerPC.Lunge(to);
+                yield return new WaitForSeconds(0.09f);
+
                 bool killed = Attack(piece, target);
+                ShowLastMove(from, to);
+
                 // 撃破できなければ攻撃側はその場に留まる
-                if (!killed) yield break;
+                if (!killed)
+                {
+                    yield return new WaitForSeconds(0.3f);
+                    yield break;
+                }
+                yield return new WaitForSeconds(0.12f);
             }
         }
 
@@ -37,8 +50,10 @@ public static class CombatResolver
         if (!piece.isAlive || !bm.IsEmpty(to)) yield break;
 
         MovePieceTo(piece, to);
+        ShowLastMove(from, to);
         if (BattleEffects.Instance != null)
             BattleEffects.Instance.PlayMoveEffect();
+        yield return new WaitForSeconds(PieceController.MoveDuration);
 
         // SN: 移動でHP-1
         if (piece.data.losesHPOnMove)
@@ -68,6 +83,7 @@ public static class CombatResolver
         if (target.data.isTauntPiece)
         {
             PlayHit(target);
+            FloatingText.Spawn(target.boardPosition, "無効", Palette.TextSub);
             Log(Name(attacker) + " → " + Name(target) + " ダメージ無効");
             return false;
         }
@@ -78,15 +94,21 @@ public static class CombatResolver
 
         if (target.currentHP <= 0)
         {
+            FloatingText.Spawn(target.boardPosition, "撃破", Palette.GoldLight, 3.6f);
             Log(Name(attacker) + " が " + Name(target) + " を撃破！");
             KillPiece(target);
             return true;
         }
 
         PlayHit(target);
+        FloatingText.Spawn(target.boardPosition, damage > 0 ? "-" + damage : "0", damage > 0 ? DamageColor : Palette.TextSub);
         Log(Name(attacker) + " → " + Name(target) + " " + damage + "ダメージ");
         return false;
     }
+
+    private static readonly Color DamageColor = new Color(1f, 0.5f, 0.4f);
+    private static readonly Color PiercingColor = new Color(0.85f, 0.6f, 1f);
+    public static readonly Color HealColor = new Color(0.5f, 0.95f, 0.55f);
 
     /// <summary>能力によるダメージ。piercing=trueでDEFを無視。撃破したらtrue</summary>
     public static bool ApplyDamage(PieceInstance target, int amount, bool piercing)
@@ -96,12 +118,14 @@ public static class CombatResolver
         if (target.data.isTauntPiece)
         {
             PlayHit(target);
+            FloatingText.Spawn(target.boardPosition, "無効", Palette.TextSub);
             return false;
         }
 
         int damage = piercing ? amount : Mathf.Max(0, amount - target.DEF);
         target.currentHP -= damage;
         RefreshHP(target);
+        FloatingText.Spawn(target.boardPosition, "-" + damage, piercing ? PiercingColor : DamageColor);
 
         if (target.currentHP <= 0)
         {
@@ -111,6 +135,33 @@ public static class CombatResolver
 
         PlayHit(target);
         return false;
+    }
+
+    /// <summary>回復（最大HPまで）。回復量を返す</summary>
+    public static int Heal(PieceInstance target, int amount)
+    {
+        if (target == null || !target.isAlive) return 0;
+        int healed = Mathf.Min(amount, target.MaxHP - target.currentHP);
+        if (healed <= 0) return 0;
+        target.currentHP += healed;
+        RefreshHP(target);
+        FloatingText.Spawn(target.boardPosition, "+" + healed, HealColor);
+        return healed;
+    }
+
+    /// <summary>成り・成り解除の見た目を更新する（裏返す演出つき）</summary>
+    public static void PlayFlip(PieceInstance piece)
+    {
+        PieceController pc = BoardManager.Instance.GetPieceController(piece.boardPosition);
+        if (pc != null) pc.PlayPromote();
+        if (BattleEffects.Instance != null)
+            BattleEffects.Instance.PlayPromoteEffect(piece.boardPosition);
+    }
+
+    private static void ShowLastMove(Vector2Int from, Vector2Int to)
+    {
+        if (HighlightManager.Instance != null)
+            HighlightManager.Instance.ShowLastMove(from, to);
     }
 
     /// <summary>

@@ -1,83 +1,81 @@
 using UnityEngine;
 using UnityEngine.UIElements;
 
+/// <summary>画面上部のHUD（第N局・局名・手番・手数・パス／投了）</summary>
 public class TurnIndicatorUI : MonoBehaviour
 {
-    private UIDocument uiDocument;
+    private Label stageNumberLabel;
+    private Label stageNameLabel;
+    private VisualElement turnBadge;
     private Label turnLabel;
+    private Label moveCountLabel;
     private VisualElement buttonContainer;
-    private Button passButton;
-    private Button resignButton;
-    private static UnityEngine.TextCore.Text.FontAsset sdfFont;
-
-    private static UnityEngine.TextCore.Text.FontAsset GetSDFFont()
-    {
-        if (sdfFont == null)
-            sdfFont = Resources.Load<UnityEngine.TextCore.Text.FontAsset>("NotoSansJP-SDF");
-        return sdfFont;
-    }
-
-    private void ApplyFont(VisualElement elem)
-    {
-        var font = GetSDFFont();
-        if (font != null)
-            elem.style.unityFontDefinition = FontDefinition.FromSDFFont(font);
-    }
+    private bool isSubscribed;
 
     void Start()
     {
-        uiDocument = GetComponent<UIDocument>();
+        UIDocument uiDocument = GetComponent<UIDocument>();
         if (uiDocument == null) return;
 
         // ボタンが確実にクリック可能になるよう、他UIより上に配置
         uiDocument.sortingOrder = 30;
+        VisualElement root = UIFactory.SetupRoot(uiDocument);
 
-        var root = uiDocument.rootVisualElement;
-        root.Clear(); // UXML由来の子要素を除去（PickingMode.Position干渉防止）
-        root.style.position = Position.Absolute;
-        root.style.left = 0;
-        root.style.top = 0;
-        root.style.right = 0;
-        root.style.bottom = 0;
-        root.style.width = Length.Percent(100);
-        root.style.height = Length.Percent(100);
-        root.pickingMode = PickingMode.Ignore;
+        var bar = new VisualElement();
+        bar.style.position = Position.Absolute;
+        bar.style.top = 14;
+        bar.style.left = 0;
+        bar.style.right = 0;
+        bar.style.flexDirection = FlexDirection.Row;
+        bar.style.justifyContent = Justify.Center;
+        bar.style.alignItems = Align.Center;
+        bar.pickingMode = PickingMode.Ignore;
+        root.Add(bar);
 
-        turnLabel = new Label("Your Turn");
-        turnLabel.style.position = Position.Absolute;
-        turnLabel.style.top = 10;
-        turnLabel.style.left = 0;
-        turnLabel.style.right = 0;
-        turnLabel.style.fontSize = 24;
-        turnLabel.style.color = Color.white;
-        turnLabel.style.unityTextAlign = TextAnchor.UpperCenter;
-        turnLabel.pickingMode = PickingMode.Ignore;
-        ApplyFont(turnLabel);
-        root.Add(turnLabel);
+        // 局の表示
+        var stagePlate = UIFactory.Panel();
+        stagePlate.style.flexDirection = FlexDirection.Row;
+        stagePlate.style.alignItems = Align.Center;
+        stagePlate.style.paddingTop = 6;
+        stagePlate.style.paddingBottom = 6;
+        stagePlate.style.paddingLeft = 18;
+        stagePlate.style.paddingRight = 18;
+        stagePlate.pickingMode = PickingMode.Ignore;
+        stageNumberLabel = UIFactory.Label("第一局", 16, Palette.Gold, "c3-mincho");
+        stageNumberLabel.style.marginRight = 12;
+        stageNameLabel = UIFactory.Label("", 22, Palette.Text, "c3-mincho");
+        stagePlate.Add(stageNumberLabel);
+        stagePlate.Add(stageNameLabel);
+        bar.Add(stagePlate);
 
-        // ボタンコンテナ
+        // 手番
+        turnBadge = new VisualElement();
+        turnBadge.style.marginLeft = 12;
+        turnBadge.style.paddingTop = 7;
+        turnBadge.style.paddingBottom = 7;
+        turnBadge.style.paddingLeft = 18;
+        turnBadge.style.paddingRight = 18;
+        turnBadge.style.borderTopLeftRadius = turnBadge.style.borderTopRightRadius =
+            turnBadge.style.borderBottomLeftRadius = turnBadge.style.borderBottomRightRadius = 20;
+        turnBadge.style.flexDirection = FlexDirection.Row;
+        turnBadge.style.alignItems = Align.Center;
+        turnBadge.pickingMode = PickingMode.Ignore;
+        turnLabel = UIFactory.Label("", 18, Color.white, "c3-bold");
+        moveCountLabel = UIFactory.Label("", 13, new Color(1f, 1f, 1f, 0.75f));
+        moveCountLabel.style.marginLeft = 10;
+        turnBadge.Add(turnLabel);
+        turnBadge.Add(moveCountLabel);
+        bar.Add(turnBadge);
+
+        // パス・投了
         buttonContainer = new VisualElement();
-        buttonContainer.style.position = Position.Absolute;
-        buttonContainer.style.top = 50;
-        buttonContainer.style.left = 0;
-        buttonContainer.style.right = 0;
-        buttonContainer.style.height = 50;
         buttonContainer.style.flexDirection = FlexDirection.Row;
-        buttonContainer.style.justifyContent = Justify.Center;
-        buttonContainer.style.alignItems = Align.Center;
+        buttonContainer.style.marginLeft = 12;
         buttonContainer.pickingMode = PickingMode.Ignore;
+        buttonContainer.Add(UIFactory.Button("パス", OnPassClicked));
+        buttonContainer.Add(UIFactory.Button("投了", OnResignClicked, "c3-button--danger"));
+        bar.Add(buttonContainer);
 
-        passButton = CreateButton("\u30D1\u30B9", new Color(0.3f, 0.45f, 0.55f));
-        passButton.clicked += OnPassClicked;
-        buttonContainer.Add(passButton);
-
-        resignButton = CreateButton("\u6295\u4E86", new Color(0.65f, 0.25f, 0.25f));
-        resignButton.clicked += OnResignClicked;
-        buttonContainer.Add(resignButton);
-
-        root.Add(buttonContainer);
-
-        // イベント登録（遅延対応）
         SubscribeEvents();
     }
 
@@ -87,16 +85,12 @@ public class TurnIndicatorUI : MonoBehaviour
         if (!isSubscribed) SubscribeEvents();
     }
 
-    private bool isSubscribed;
-
     private void SubscribeEvents()
     {
-        if (isSubscribed) return;
-        if (GameManager.Instance == null) return;
+        if (isSubscribed || GameManager.Instance == null || turnLabel == null) return;
         GameManager.Instance.OnTurnChanged += UpdateTurnDisplay;
         GameManager.Instance.OnPhaseChanged += OnPhaseChanged;
         isSubscribed = true;
-        // 初期表示更新（ステージ番号含む）
         UpdateTurnDisplay(GameManager.Instance.currentTurn);
     }
 
@@ -106,53 +100,8 @@ public class TurnIndicatorUI : MonoBehaviour
         {
             GameManager.Instance.OnTurnChanged -= UpdateTurnDisplay;
             GameManager.Instance.OnPhaseChanged -= OnPhaseChanged;
-            isSubscribed = false;
         }
-    }
-
-    private Button CreateButton(string text, Color bgColor)
-    {
-        var btn = new Button();
-        btn.text = text;
-        btn.style.fontSize = 18;
-        btn.style.paddingTop = 8;
-        btn.style.paddingBottom = 8;
-        btn.style.paddingLeft = 24;
-        btn.style.paddingRight = 24;
-        btn.style.marginLeft = 8;
-        btn.style.marginRight = 8;
-        btn.style.backgroundColor = bgColor;
-        btn.style.color = Color.white;
-        btn.style.borderTopLeftRadius = 8;
-        btn.style.borderTopRightRadius = 8;
-        btn.style.borderBottomLeftRadius = 8;
-        btn.style.borderBottomRightRadius = 8;
-        btn.style.unityFontStyleAndWeight = FontStyle.Bold;
-        btn.pickingMode = PickingMode.Position;
-        ApplyFont(btn);
-        return btn;
-    }
-
-    private void UpdateTurnDisplay(Team team)
-    {
-        if (turnLabel == null) return;
-
-        string stagePrefix = "";
-        if (StageManager.Instance != null)
-            stagePrefix = "Stage " + StageManager.Instance.currentStage + "/" + StageManager.Instance.maxStages + " - ";
-
-        if (team == Team.Player)
-        {
-            turnLabel.text = stagePrefix + "Your Turn";
-            turnLabel.style.color = new Color(0.3f, 0.7f, 1f);
-        }
-        else
-        {
-            turnLabel.text = stagePrefix + "Enemy Turn";
-            turnLabel.style.color = new Color(1f, 0.4f, 0.4f);
-        }
-
-        UpdateButtonVisibility(team);
+        isSubscribed = false;
     }
 
     private void OnPhaseChanged(GamePhase phase)
@@ -161,32 +110,55 @@ public class TurnIndicatorUI : MonoBehaviour
             UpdateTurnDisplay(GameManager.Instance.currentTurn);
     }
 
-    private void UpdateButtonVisibility(Team team)
+    private void UpdateTurnDisplay(Team team)
     {
-        if (buttonContainer == null) return;
-        bool show = (team == Team.Player) &&
-                    (GameManager.Instance != null && GameManager.Instance.currentPhase == GamePhase.Battle);
-        buttonContainer.style.display = show ? DisplayStyle.Flex : DisplayStyle.None;
+        if (turnLabel == null || GameManager.Instance == null) return;
+
+        StageManager sm = StageManager.Instance;
+        if (sm != null)
+        {
+            stageNumberLabel.text = "第" + UIFactory.Kanji(sm.currentStage) + "局";
+            stageNameLabel.text = sm.GetStageName(sm.currentStage);
+        }
+
+        GamePhase phase = GameManager.Instance.currentPhase;
+        bool battle = phase == GamePhase.Battle;
+        turnBadge.style.display = battle ? DisplayStyle.Flex : DisplayStyle.None;
+
+        if (team == Team.Player)
+        {
+            turnLabel.text = "あなたの番";
+            turnBadge.style.backgroundColor = new Color(Palette.Player.r, Palette.Player.g, Palette.Player.b, 0.9f);
+        }
+        else
+        {
+            turnLabel.text = "相手の番";
+            turnBadge.style.backgroundColor = new Color(Palette.Enemy.r, Palette.Enemy.g, Palette.Enemy.b, 0.9f);
+        }
+        moveCountLabel.text = GameManager.Instance.MoveCount + "手目";
+
+        buttonContainer.style.display = (battle && team == Team.Player) ? DisplayStyle.Flex : DisplayStyle.None;
     }
 
     private void OnPassClicked()
     {
-        if (GameManager.Instance == null) return;
-        if (GameManager.Instance.currentTurn != Team.Player) return;
-        if (GameManager.Instance.currentPhase != GamePhase.Battle) return;
-        if (GameManager.Instance.IsTurnProcessing) return;
-
+        GameManager gm = GameManager.Instance;
+        if (gm == null || gm.currentTurn != Team.Player || gm.currentPhase != GamePhase.Battle || gm.IsTurnProcessing) return;
         if (InputManager.Instance != null)
+        {
+            if (InputManager.Instance.IsBusy) return;
             InputManager.Instance.ClearSelection();
-        GameManager.Instance.EndTurn();
+        }
+        if (BattleLogUI.Instance != null)
+            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("あなた", Team.Player) + " はパスした");
+        gm.EndTurn();
     }
 
     private void OnResignClicked()
     {
-        if (GameManager.Instance == null) return;
-        if (GameManager.Instance.currentPhase != GamePhase.Battle) return;
-        if (GameManager.Instance.IsTurnProcessing) return;
-
-        GameManager.Instance.Resign();
+        GameManager gm = GameManager.Instance;
+        if (gm == null || gm.currentPhase != GamePhase.Battle || gm.IsTurnProcessing) return;
+        if (InputManager.Instance != null && InputManager.Instance.IsBusy) return;
+        gm.Resign();
     }
 }

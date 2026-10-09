@@ -43,4 +43,7 @@ public class PieceData : ScriptableObject
 
     [Header("Taunt")]
     public bool isTauntPiece;                      // 挑発：敵の攻撃を引き付ける（小錦）
+
+    [Header("Art")]
+    public Sprite portrait;                        // 立ち絵（選択画面・詳細画面に表示。未設定なら駒のアイコン）
 }

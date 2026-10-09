@@ -17,6 +17,13 @@ public class InputManager : MonoBehaviour
     // プレイヤーの手を実行中（アニメーション等）
     private bool isExecutingMove;
 
+    // UIの当たり判定用（毎フレーム検索しないようにキャッシュ）
+    private UIDocument[] uiDocuments;
+    private float uiDocumentsRefreshTime;
+
+    /// <summary>プレイヤーの手を実行中か（パス・投了を受け付けない）</summary>
+    public bool IsBusy { get { return isExecutingMove; } }
+
     void Awake()
     {
         if (Instance == null) Instance = this;
@@ -29,25 +36,48 @@ public class InputManager : MonoBehaviour
         if (selectedPiece != null && !selectedPiece.isAlive) ClearSelection();
         if (viewedPiece != null && !viewedPiece.isAlive) viewedPiece = null;
 
-        if (GameManager.Instance == null) return;
-        if (GameManager.Instance.currentPhase != GamePhase.Battle) return;
-        // 能力処理中（なこ移動等）・自分の手の実行中は入力をブロック
-        if (GameManager.Instance.IsTurnProcessing || isExecutingMove) return;
-
-        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+        GameManager gm = GameManager.Instance;
+        if (gm == null || Mouse.current == null || gm.currentPhase != GamePhase.Battle)
         {
-            Vector2 mousePos = Mouse.current.position.ReadValue();
-            // UIの上でのクリックは盤面に通さない
-            if (IsPointerOverUI(mousePos)) return;
-            // プレイヤーターンでなくてもクリックは受け付ける(敵駒閲覧のため)
-            HandleClick(mousePos);
+            SetHover(null);
+            return;
         }
+
+        Vector2 mousePos = Mouse.current.position.ReadValue();
+        bool overUI = IsPointerOverUI(mousePos);
+        Vector2Int? boardPos = overUI ? (Vector2Int?)null : ScreenToBoard(mousePos);
+        SetHover(boardPos);
+
+        // 能力処理中（なこ移動等）・自分の手の実行中は入力をブロック
+        if (gm.IsTurnProcessing || isExecutingMove) return;
+
+        // UIの上でのクリックは盤面に通さない。プレイヤーターン外でも敵駒の閲覧はできる
+        if (Mouse.current.leftButton.wasPressedThisFrame && !overUI)
+            HandleClick(mousePos);
+    }
+
+    private static Vector2Int? ScreenToBoard(Vector2 screenPos)
+    {
+        if (Camera.main == null || BoardManager.Instance == null) return null;
+        Vector3 world = Camera.main.ScreenToWorldPoint(new Vector3(screenPos.x, screenPos.y, 0));
+        var pos = new Vector2Int(Mathf.RoundToInt(world.x), Mathf.RoundToInt(world.y));
+        return BoardManager.Instance.IsInBounds(pos) ? pos : (Vector2Int?)null;
+    }
+
+    private static void SetHover(Vector2Int? pos)
+    {
+        if (HighlightManager.Instance != null) HighlightManager.Instance.SetHover(pos);
     }
 
     /// <summary>画面座標がUI Toolkitのクリック可能な要素の上にあるか</summary>
-    private static bool IsPointerOverUI(Vector2 screenPos)
+    private bool IsPointerOverUI(Vector2 screenPos)
     {
-        UIDocument[] docs = FindObjectsByType<UIDocument>(FindObjectsSortMode.None);
+        if (uiDocuments == null || Time.unscaledTime > uiDocumentsRefreshTime)
+        {
+            uiDocuments = FindObjectsByType<UIDocument>(FindObjectsSortMode.None);
+            uiDocumentsRefreshTime = Time.unscaledTime + 1f;
+        }
+        UIDocument[] docs = uiDocuments;
         for (int i = 0; i < docs.Length; i++)
         {
             VisualElement root = docs[i].rootVisualElement;
@@ -132,9 +162,17 @@ public class InputManager : MonoBehaviour
 
         if (HighlightManager.Instance != null)
         {
-            HighlightManager.Instance.ShowMoveHighlights(currentValidMoves);
+            HighlightManager.Instance.ShowMoveHighlights(piece, currentValidMoves);
             HighlightManager.Instance.ShowSelectedHighlight(piece.boardPosition);
         }
+        SetLifted(piece, true);
+    }
+
+    private static void SetLifted(PieceInstance piece, bool lifted)
+    {
+        if (piece == null || BoardManager.Instance == null) return;
+        PieceController pc = BoardManager.Instance.GetPieceController(piece.boardPosition);
+        if (pc != null) pc.SetLifted(lifted);
     }
 
     private void ViewPiece(PieceInstance piece)
@@ -146,6 +184,7 @@ public class InputManager : MonoBehaviour
 
     public void ClearSelection()
     {
+        SetLifted(selectedPiece, false);
         selectedPiece = null;
         viewedPiece = null;
         currentValidMoves = null;

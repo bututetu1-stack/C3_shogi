@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: dc00759a6d3c71a4b83950ff2128b896
+guid: a0166c1a45faa1946afc874b197556ff
 TrueTypeFontImporter:
   externalObjects: {}
   serializedVersion: 4
@@ -9,7 +9,7 @@ TrueTypeFontImporter:
   characterPadding: 1
   includeFontData: 1
   fontNames:
-  - Noto Sans JP
+  - Shippori Mincho B1
   fallbackFontReferences: []
   customCharacters: 
   fontRenderingMode: 0
