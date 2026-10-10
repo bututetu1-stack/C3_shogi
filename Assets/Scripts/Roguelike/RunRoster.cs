@@ -26,6 +26,13 @@ public class RunRoster
 
     public void Clear() { members.Clear(); }
 
+    /// <summary>中断データから戻す</summary>
+    public void Restore(RunMember[] saved)
+    {
+        members.Clear();
+        if (saved != null) members.AddRange(saved);
+    }
+
     /// <summary>部員を名簿に加える（もういれば何もしない）</summary>
     public RunMember Add(PieceData data)
     {

@@ -36,6 +36,11 @@ public class GameManager : MonoBehaviour
     private bool isGameOver;
     private int rerollsLeft;
     private int picksLeft;
+    private int stagePickTotal;
+    // 局の合間のできごとの効果（次の仲間選び・次の対局で使う）
+    private int pendingExtraPicks;
+    private int pendingExtraRerolls;
+    private int pendingEnemyHp;
     public bool IsTurnProcessing { get { return isTurnProcessing; } }
     private bool isTurnProcessing;
 
@@ -85,12 +90,13 @@ public class GameManager : MonoBehaviour
         else
         {
             SetPhase(GamePhase.Title);
-            TitleScreenUI.Show(StartNewGame);
+            TitleScreenUI.Show(StartNewGame, ContinueRun);
         }
     }
 
     private void StartNewGame()
     {
+        RunSave.Delete();
         ResetRun();
         if (BattleEffects.Instance != null) BattleEffects.Instance.PlayBGM("Battle");
         SetupStageBoard();
@@ -165,8 +171,11 @@ public class GameManager : MonoBehaviour
         int stage = stageManager != null ? stageManager.currentStage : 1;
         if (newStage)
         {
-            rerollsLeft = RerollsPerStage;
-            picksLeft = PicksForStage(stage);
+            rerollsLeft = RerollsPerStage + pendingExtraRerolls;
+            picksLeft = PicksForStage(stage) + pendingExtraPicks;
+            stagePickTotal = picksLeft;
+            pendingExtraRerolls = 0;
+            pendingExtraPicks = 0;
         }
         bool canDeploy = boardManager.FindPlayerDeploySlot().HasValue;
         List<DraftOption> options = DrawStageOptions(stage, canDeploy);
@@ -177,7 +186,7 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        int pickCount = PicksForStage(stage);
+        int pickCount = stagePickTotal;
         pieceSelectionUI.ShowSelection(options, OnOptionChosen, OnReroll, rerollsLeft, pickCount - picksLeft + 1, pickCount);
     }
 
@@ -312,7 +321,106 @@ public class GameManager : MonoBehaviour
 
     private void StartBattle()
     {
+        SaveRun("battle");
         StartCoroutine(BattleIntroSequence());
+    }
+
+    // ================================================================
+    // 局の合間のできごと
+    // ================================================================
+
+    /// <summary>局の合間のできごとを選んでから仲間選びへ（第二局に勝ったあとから）</summary>
+    private void ShowStageEventThenDraft()
+    {
+        int stage = stageManager != null ? stageManager.currentStage : 1;
+        if (stage < StageEvents.FromStage)
+        {
+            ShowPieceSelection(true);
+            return;
+        }
+        List<StageEventKind> events = StageEvents.Draw(2, Roster.Members.Count > 0);
+        StageEventUI.Show(stage, events, kind =>
+        {
+            ApplyStageEvent(kind);
+            ShowPieceSelection(true);
+        });
+    }
+
+    /// <summary>できごとの効果を付ける</summary>
+    private void ApplyStageEvent(StageEventKind kind)
+    {
+        switch (kind)
+        {
+            case StageEventKind.Rest: RunBonusC3HP += 2; break;
+            case StageEventKind.Snack: RunBonusHP += 1; break;
+            case StageEventKind.Camp:
+                foreach (var m in Roster.Members) Roster.AddXp(m, 1);
+                break;
+            case StageEventKind.Sparring:
+            {
+                RunMember low = null;
+                foreach (var m in Roster.Members) if (m.stars < 3 && (low == null || m.xp < low.xp)) low = m;
+                Roster.AddXp(low, 3);
+                break;
+            }
+            case StageEventKind.ClubFund: pendingExtraRerolls += 2; break;
+            case StageEventKind.Challenge: pendingExtraPicks += 1; pendingEnemyHp += 1; break;
+        }
+        if (BattleLogUI.Instance != null) BattleLogUI.Instance.AddLog("部の時間: " + StageEvents.Title(kind));
+    }
+
+    // ================================================================
+    // 中断と続きから
+    // ================================================================
+
+    private void SaveRun(string phase)
+    {
+        if (GameSim.Headless || stageManager == null) return;
+        var owned = new List<string>();
+        foreach (var d in playerOwnedPieces) owned.Add(d.pieceType.ToString());
+        RunSave.Save(new RunSaveData
+        {
+            phase = phase,
+            stage = stageManager.currentStage,
+            owned = owned.ToArray(),
+            members = new List<RunMember>(Roster.Members).ToArray(),
+            runATK = RunBonusATK, runDEF = RunBonusDEF, runHP = RunBonusHP, runC3HP = RunBonusC3HP,
+            damageControl = RunDamageControl,
+            bonusUpgradeStage = bonusUpgradeStage,
+            totalKills = TotalKills, totalMoves = TotalMoves, stagesCleared = StagesCleared
+        });
+    }
+
+    /// <summary>タイトルの「続きから」: 中断した局の初め（または次の局の前）から再開する</summary>
+    private void ContinueRun()
+    {
+        RunSaveData data = RunSave.Load();
+        if (data == null) { StartNewGame(); return; }
+        ResetRun();
+        foreach (string name in data.owned ?? new string[0])
+        {
+            PieceType type;
+            if (!System.Enum.TryParse(name, out type)) continue;
+            PieceData d = boardManager.GetPieceDataByType(type);
+            if (d != null) playerOwnedPieces.Add(d);
+        }
+        Roster.Restore(data.members);
+        RunBonusATK = data.runATK; RunBonusDEF = data.runDEF; RunBonusHP = data.runHP; RunBonusC3HP = data.runC3HP;
+        RunDamageControl = data.damageControl;
+        bonusUpgradeStage = data.bonusUpgradeStage;
+        TotalKills = data.totalKills; TotalMoves = data.totalMoves; StagesCleared = data.stagesCleared;
+        if (stageManager != null) stageManager.currentStage = Mathf.Max(1, data.stage);
+        if (BattleEffects.Instance != null) BattleEffects.Instance.PlayBGM("Battle");
+        SetupStageBoard();
+        if (data.phase == "battle") StartBattle();
+        else ShowStageEventThenDraft();
+    }
+
+    /// <summary>対局を中断してタイトルへ（対局の初めに保存してあるので、続きからはこの局の初めになる）</summary>
+    public void SuspendToTitle()
+    {
+        SkipTitleOnce = false;
+        UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
     }
 
     private IEnumerator BattleIntroSequence()
@@ -326,6 +434,13 @@ public class GameManager : MonoBehaviour
         {
             stageManager.SetupEnemyForStage(stageManager.currentStage);
             Roster.BeginStage();
+            // 強敵に挑む: この局の敵は体力+1
+            if (pendingEnemyHp > 0)
+            {
+                foreach (var e in boardManager.GetTeamPieces(Team.Enemy))
+                    if (e.data.pieceType != PieceType.C3) { e.AddMaxHP(pendingEnemyHp); CombatResolver.RefreshStats(e); }
+                pendingEnemyHp = 0;
+            }
 
             // プレイヤー駒にもステージに応じた強化（ステージ2以降）
             if (stageManager.currentStage > 1)
@@ -504,6 +619,7 @@ public class GameManager : MonoBehaviour
             return;
         }
         isGameOver = true;
+        RunSave.Delete();
         SetPhase(GamePhase.GameOver);
         if (OnGameOver != null) OnGameOver(Team.Player);
     }
@@ -512,6 +628,7 @@ public class GameManager : MonoBehaviour
     {
         TotalMoves += MoveCount;
         isGameOver = true;
+        if (!GameSim.Headless) RunSave.Delete();
         if (GameSim.Headless)
         {
             SimOutcome = MoveCount > MoveLimit ? SimBattleOutcome.JudgedLoss : SimBattleOutcome.Lost;
@@ -544,7 +661,8 @@ public class GameManager : MonoBehaviour
             BattleLogUI.Instance.ClearLog();
 
         SetupStageBoard();
-        ShowPieceSelection(true);
+        SaveRun("next");
+        ShowStageEventThenDraft();
     }
 
     // ================================================================
@@ -759,6 +877,25 @@ public class GameManager : MonoBehaviour
         isTurnProcessing = false;
         ResetRun();
         SetupStageBoard();
+    }
+
+    /// <summary>局の合間のできごとの候補（本番と同じ抽選。第三局の前から）</summary>
+    public List<StageEventKind> SimDrawEvents()
+    {
+        int stage = stageManager != null ? stageManager.currentStage : 1;
+        return stage >= StageEvents.FromStage ? StageEvents.Draw(2, Roster.Members.Count > 0) : new List<StageEventKind>();
+    }
+
+    public void SimApplyEvent(StageEventKind kind) { ApplyStageEvent(kind); }
+
+    /// <summary>この局で選べる枚数（できごとの「強敵に挑む」の分を含む。呼ぶと使ったことになる）</summary>
+    public int SimTakePicks()
+    {
+        int stage = stageManager != null ? stageManager.currentStage : 1;
+        int picks = PicksForStage(stage) + pendingExtraPicks;
+        pendingExtraPicks = 0;
+        pendingExtraRerolls = 0;
+        return picks;
     }
 
     /// <summary>今の局の仲間選択の候補（本番と同じ抽選）</summary>
