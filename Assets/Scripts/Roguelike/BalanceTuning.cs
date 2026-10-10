@@ -4,10 +4,10 @@
 /// </summary>
 public static class BalanceTuning
 {
-    /// <summary>敵の攻撃の上乗せ = (局 − EnemyAtkDelay) ÷ この値（4・1なら第五局から+1、第九局+2、第十三局+3）</summary>
+    /// <summary>敵の攻撃の上乗せ = (局 − EnemyAtkDelay) ÷ この値（4・0なら第四局から+1、第八局+2、第十二局+3）</summary>
     public static int EnemyAtkDivisor = 4;
     /// <summary>敵の攻撃の上乗せを何局遅らせるか（体力の上乗せと同じ局で一度に上がらないように）</summary>
-    public static int EnemyAtkDelay = 1;
+    public static int EnemyAtkDelay = 0;
     /// <summary>敵の体力の上乗せ = 局 ÷ この値（2なら第二局から+1、第十五局で+7）</summary>
     public static int EnemyHpDivisor = 2;
     /// <summary>敵C3の体力の上乗せ = (局−1) ÷ この値</summary>
@@ -41,7 +41,7 @@ public static class BalanceTuning
     /// <summary>中華が周りの味方を回復する量</summary>
     public static int ChukaHeal = 3;
     /// <summary>中華を食べた味方の「満腹」（攻撃+1）を1体が受けられる回数（その局のあいだ）</summary>
-    public static int ChukaFullMax = 2;
+    public static int ChukaFullMax = 1;
     /// <summary>小錦が攻撃されたときの「同情」（周りの味方の攻撃+1）を1体が受けられる回数（その局のあいだ）</summary>
     public static int KonishikiSympathyMax = 2;
 

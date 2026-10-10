@@ -522,48 +522,34 @@ public partial class AbilitySystem
         }
     }
 
+    /// <summary>
+    /// 深海の攻撃。艦隊どうしの戦いなので、届く範囲の艦娘を狙う（ノーマル・elite は隣、flagship は2マス、姫級は盤のどこでも。elite は2隻）。
+    /// 艦娘が届かなければ、隣の自軍の駒1体に2（ほかの駒を巻き込みすぎないよう、ランクにかかわらず弱い攻撃）
+    /// </summary>
     private IEnumerator ShinkaiAttack(PieceInstance shinkai)
     {
         BoardManager bm = BoardManager.Instance;
+        PieceType type = shinkai.data.pieceType;
+        int range = type == PieceType.ShinkaiHime ? 99 : type == PieceType.ShinkaiFlagship ? 2 : 1;
+        int count = type == PieceType.ShinkaiElite ? 2 : 1;
+        int baseDamage = type == PieceType.ShinkaiHime ? 5 : type == PieceType.ShinkaiFlagship ? 4 : 2;
+
         var victims = new List<PieceInstance>();
-        int baseDamage;
-        switch (shinkai.data.pieceType)
+        foreach (var p in bm.GetTeamPieces(Team.Player))
         {
-            case PieceType.ShinkaiElite:
-                // elite: 隣の自軍2体に2
-                victims = GetEnemiesInRange(shinkai.boardPosition, 1, Team.Player, shinkai);
-                ShuffleList(victims);
-                if (victims.Count > 2) victims.RemoveRange(2, victims.Count - 2);
-                baseDamage = 2;
-                break;
-            case PieceType.ShinkaiFlagship:
-            {
-                // flagship: 周り2マスの自軍1体に4
-                var near = GetEnemiesInRange(shinkai.boardPosition, 2, Team.Player, shinkai);
-                if (near.Count > 0) victims.Add(near[Random.Range(0, near.Count)]);
-                baseDamage = 4;
-                break;
-            }
-            case PieceType.ShinkaiHime:
-            {
-                // 姫級: 盤のどこかの艦娘1隻に5（艦娘がいなければ周り2マスの自軍1体）
-                var ships = new List<PieceInstance>();
-                foreach (var p in bm.GetTeamPieces(Team.Player))
-                    if (PieceTypes.IsKanmusu(p.data.pieceType) && p.isAlive) ships.Add(p);
-                if (ships.Count == 0) ships = GetEnemiesInRange(shinkai.boardPosition, 2, Team.Player, shinkai);
-                if (ships.Count > 0) victims.Add(ships[Random.Range(0, ships.Count)]);
-                baseDamage = 5;
-                break;
-            }
-            default:
-            {
-                // ノーマル: 隣の自軍1体に2
-                var near = GetEnemiesInRange(shinkai.boardPosition, 1, Team.Player, shinkai);
-                if (near.Count > 0) victims.Add(near[Random.Range(0, near.Count)]);
-                baseDamage = 2;
-                break;
-            }
+            if (!PieceTypes.IsKanmusu(p.data.pieceType) || !p.isAlive) continue;
+            if (Mathf.Max(Mathf.Abs(p.boardPosition.x - shinkai.boardPosition.x), Mathf.Abs(p.boardPosition.y - shinkai.boardPosition.y)) <= range)
+                victims.Add(p);
         }
+        if (victims.Count == 0)
+        {
+            var near = GetEnemiesInRange(shinkai.boardPosition, 1, Team.Player, shinkai);
+            if (near.Count > 0) victims.Add(near[Random.Range(0, near.Count)]);
+            baseDamage = 2;
+            count = 1;
+        }
+        ShuffleList(victims);
+        if (victims.Count > count) victims.RemoveRange(count, victims.Count - count);
         if (victims.Count == 0) yield break;
 
         int damage = CombatResolver.AbilityDamage(shinkai, baseDamage);
