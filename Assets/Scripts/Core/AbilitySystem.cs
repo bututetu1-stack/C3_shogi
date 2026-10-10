@@ -168,10 +168,13 @@ public partial class AbilitySystem : MonoBehaviour
                     if (pp.isAlive && pp.data.pieceType != PieceType.C3)
                         targets.Add(pp);
                 }
-                if (targets.Count > 0)
+                // 覚醒（真・魔王）は2体に落とす
+                int strikes = maou.awakened ? BalanceTuning.MaouAwakenedStrikes : 1;
+                for (int strike = 0; strike < strikes && targets.Count > 0; strike++)
                 {
                     var source = GameSim.BeginSource(maou);
                     PieceInstance victim = targets[Random.Range(0, targets.Count)];
+                    targets.Remove(victim);
                     int lightning = CombatResolver.AbilityDamage(maou, 1, false);   // 局による強化は足さない
                     if (BattleLogUI.Instance != null)
                         BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("魔王", Team.Enemy) + " の雷撃！" + BattleLogUI.ColorName(victim.DisplayName, victim.team) + " に貫通" + lightning + "ダメージ");
@@ -285,6 +288,7 @@ public partial class AbilitySystem : MonoBehaviour
         if (team == Team.Enemy)
         {
             yield return ExecuteShinkaiAbilities();
+            yield return ExecuteRaiteiThunder();
         }
 
         // 艦娘の攻撃 (プレイヤーターン終了時)
@@ -301,6 +305,35 @@ public partial class AbilitySystem : MonoBehaviour
 
         // 僕バフ処理
         yield return ProcessBokuBuffs(team);
+    }
+
+    /// <summary>雷帝「天雷」（覚醒）: 縦横の線上にいる自軍の駒のうち、いちばん近い1体に落雷</summary>
+    private IEnumerator ExecuteRaiteiThunder()
+    {
+        BoardManager bm = BoardManager.Instance;
+        foreach (var raitei in AlivePieces(Team.Enemy, PieceType.Raitei))
+        {
+            if (!raitei.isAlive || !raitei.awakened || raitei.isSealed) continue;
+            PieceInstance victim = null;
+            int best = int.MaxValue;
+            foreach (var p in bm.GetTeamPieces(Team.Player))
+            {
+                if (!p.isAlive || p.data.pieceType == PieceType.C3) continue;
+                if (p.boardPosition.x != raitei.boardPosition.x && p.boardPosition.y != raitei.boardPosition.y) continue;
+                int d = Mathf.Abs(p.boardPosition.x - raitei.boardPosition.x) + Mathf.Abs(p.boardPosition.y - raitei.boardPosition.y);
+                if (d < best) { best = d; victim = p; }
+            }
+            if (victim == null) continue;
+            int damage = CombatResolver.AbilityDamage(raitei, BalanceTuning.RaiteiThunderDamage, false);
+            if (BattleLogUI.Instance != null)
+                BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("雷帝", Team.Enemy) + " の天雷！" + BattleLogUI.ColorName(victim.DisplayName, victim.team) + " に貫通" + damage + "ダメージ");
+            if (BattleEffects.Instance != null) BattleEffects.Instance.PlayLightningEffect(victim.boardPosition);
+            yield return new WaitForSeconds(0.2f);
+            var source = GameSim.BeginSource(raitei);
+            CombatResolver.ApplyDamage(victim, damage, true);
+            GameSim.EndSource(source);
+            yield return new WaitForSeconds(0.3f);
+        }
     }
 
     /// <summary>team の生きている type の駒</summary>
@@ -351,8 +384,8 @@ public partial class AbilitySystem : MonoBehaviour
         // 覚醒（デバッグ完了）: 周りの敵の能力を封印する（その局のあいだ）
         if (kei.awakened) yield return SealAdjacent(kei);
 
-        // 下げられる数値が残っている敵だけ（攻撃・防御は0未満にせず、体力は0にしない）
-        var targets = AdjacentEnemies(kei);
+        // 下げられる数値が残っている敵だけ（攻撃・防御は0未満にせず、体力は0にしない）。覚醒は2マス先まで
+        var targets = kei.awakened ? GetEnemiesInRange(kei.boardPosition, BalanceTuning.KeiAwakenedRange, kei.team == Team.Player ? Team.Enemy : Team.Player, null) : AdjacentEnemies(kei);
         targets.RemoveAll(target => LowerableStats(target).Count == 0);
         if (targets.Count == 0) yield break;
         ShuffleList(targets);
@@ -392,7 +425,7 @@ public partial class AbilitySystem : MonoBehaviour
     private IEnumerator SealAdjacent(PieceInstance kei)
     {
         bool any = false;
-        foreach (var target in AdjacentEnemies(kei))
+        foreach (var target in GetEnemiesInRange(kei.boardPosition, BalanceTuning.KeiAwakenedRange, kei.team == Team.Player ? Team.Enemy : Team.Player, null))
         {
             if (target.isSealed) continue;
             target.isSealed = true;
@@ -598,10 +631,21 @@ public partial class AbilitySystem : MonoBehaviour
         return target.isPromoted;
     }
 
-    /// <summary>覚醒した瞬間の能力（ヲツの満漢全席: 味方全員を1回復）</summary>
+    /// <summary>覚醒した瞬間の能力（ヲツの満漢全席: 味方全員を1回復、龍神の昇龍: 体力を半分回復、魔王: 曲が変わる）</summary>
     public void OnAwakened(PieceInstance p)
     {
-        if (p == null || p.data.pieceType != PieceType.Wotsu) return;
+        if (p == null) return;
+        if (p.data.pieceType == PieceType.Ryuujin)
+        {
+            CombatResolver.Heal(p, p.MaxHP / 2);
+            return;
+        }
+        if (p.data.pieceType == PieceType.Maou)
+        {
+            if (BattleEffects.Instance != null) BattleEffects.Instance.PlayBGM("Boss");
+            return;
+        }
+        if (p.data.pieceType != PieceType.Wotsu) return;
         if (BattleEffects.Instance != null) BattleEffects.Instance.PlayAwakenBurst("FeastFlame", p.boardPosition, p.data.awakenColor);
         foreach (var ally in BoardManager.Instance.GetTeamPieces(p.team))
             if (ally.isAlive && ally != p && ally.data.pieceType != PieceType.Chuka) CombatResolver.Heal(ally, 1);

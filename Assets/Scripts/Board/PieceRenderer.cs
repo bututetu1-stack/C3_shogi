@@ -285,7 +285,7 @@ public class PieceRenderer : MonoBehaviour
         auraRenderer.sprite = look.auraRing ? SpriteFactory.Ring : SpriteFactory.SoftCircle;
         auraColor = look.auraColor;
         auraRing = look.auraRing;
-        auraArt = pieceInstance.data.pieceType == PieceType.ShinkaiHime ? EffectArt.Get("HimeAura") : null;
+        auraArt = AuraArtFor(pieceInstance);
         if (auraArt != null)
         {
             auraRenderer.enabled = true;
@@ -369,6 +369,19 @@ public class PieceRenderer : MonoBehaviour
             sr.sprite = SpriteFactory.Star;
             sr.color = Palette.GoldLight;
             sr.sortingOrder = OrderBadgeText;
+        }
+    }
+
+    /// <summary>足元に回す気の画像（深海棲姫と、覚醒した雷帝・龍神・魔王。画像がなければ null）</summary>
+    private static Sprite AuraArtFor(PieceInstance p)
+    {
+        switch (p.data.pieceType)
+        {
+            case PieceType.ShinkaiHime: return EffectArt.Get("HimeAura");
+            case PieceType.Raitei: return p.awakened ? EffectArt.Get("RaiteiAura") : null;
+            case PieceType.Ryuujin: return p.awakened ? EffectArt.Get("RyuujinAura") : null;
+            case PieceType.Maou: return p.awakened ? EffectArt.Get("MaouAura") : null;
+            default: return null;
         }
     }
 

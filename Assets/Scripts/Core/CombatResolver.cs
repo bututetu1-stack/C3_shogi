@@ -172,6 +172,7 @@ public static class CombatResolver
             return true;
         }
 
+        CheckBossAwakening(target);
         PlayHit(target);
         FloatingText.Spawn(target.boardPosition, damage > 0 ? "-" + damage : "0", damage > 0 ? DamageColor : Palette.TextSub);
         Log(Name(attacker) + " → " + Name(target) + " " + damage + "ダメージ");
@@ -214,8 +215,18 @@ public static class CombatResolver
             return true;
         }
 
+        CheckBossAwakening(target);
         PlayHit(target);
         return false;
+    }
+
+    /// <summary>敵ボス（雷帝・龍神・魔王）は、体力が半分を切った最初のときに覚醒する（第二形態）</summary>
+    private static void CheckBossAwakening(PieceInstance p)
+    {
+        if (p == null || !p.isAlive || p.team != Team.Enemy || p.awakened || !p.data.canAwaken) return;
+        if (p.currentHP * 2 > p.MaxHP) return;
+        if (GameManager.Instance != null) GameManager.Instance.Awaken(p);
+        else Awakening.Apply(p);
     }
 
     /// <summary>

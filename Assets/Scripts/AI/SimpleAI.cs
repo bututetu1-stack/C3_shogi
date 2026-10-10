@@ -511,7 +511,59 @@ public class SimpleAI : MonoBehaviour
         int hp = Mathf.Min(p.currentHP, 20);
         int v = p.ATK * 30 + p.DEF * 22 + hp * 18 + 20;
         if (p.isPromoted) v += 30;
+        if (BalanceTuning.AiAbilityAware) v += AbilityValue(p);
         return v;
+    }
+
+    /// <summary>能力の値打ち（数値に表れない分）。支援役・提督・覚醒した駒は高く、倒すと爆発する髑髏は低く見る</summary>
+    private static int AbilityValue(PieceInstance p)
+    {
+        int v = p.awakened ? 60 : 0;
+        switch (p.data.pieceType)
+        {
+            case PieceType.Wotsu: return v + 70;
+            case PieceType.Boku: return v + 60;
+            case PieceType.Kei:
+            case PieceType.Kipu:
+            case PieceType.Rihaku: return v + 45;
+            case PieceType.Nako: return v + 30;
+            case PieceType.Monotetsu: return v + (p.isPromoted ? 160 : 0);   // 提督が倒れると艦娘も沈む
+            case PieceType.Chuka: return v + 35;
+            case PieceType.Enmashi:
+            case PieceType.Gundaishou: return v + 55;
+            case PieceType.Yomigaeru: return v + 40;
+            case PieceType.Dokuro: return v - 20;
+            default: return v;
+        }
+    }
+
+    /// <summary>
+    /// 能力の噛み合い（team から見て良いほど大きい）: 僕のそばの味方、中華のそばの味方、
+    /// 小錦が組み止めている敵、けい・きぷの隣にいる敵
+    /// </summary>
+    private static int AbilitySynergy(List<PieceInstance> own, Team team)
+    {
+        BoardManager bm = BoardManager.Instance;
+        int s = 0;
+        foreach (var p in own)
+        {
+            PieceType t = p.data.pieceType;
+            if (t != PieceType.Boku && t != PieceType.Chuka && t != PieceType.Konishiki && t != PieceType.Kei && t != PieceType.Kipu) continue;
+            int range = t == PieceType.Boku && (p.isPromoted || p.awakened) ? 2 : 1;
+            for (int dx = -range; dx <= range; dx++)
+                for (int dy = -range; dy <= range; dy++)
+                {
+                    if (dx == 0 && dy == 0) continue;
+                    PieceInstance n = bm.GetPieceAt(new Vector2Int(p.boardPosition.x + dx, p.boardPosition.y + dy));
+                    if (n == null || !n.isAlive || n.data.pieceType == PieceType.C3) continue;
+                    if (t == PieceType.Boku || t == PieceType.Chuka)
+                    {
+                        if (n.team == team && n.data.pieceType != PieceType.Chuka) s += t == PieceType.Boku ? 10 : 12;
+                    }
+                    else if (n.team != team) s += t == PieceType.Konishiki ? 25 : 15;
+                }
+        }
+        return s;
     }
 
     private int Evaluate(Team toMove)
@@ -584,7 +636,11 @@ public class SimpleAI : MonoBehaviour
         else
             score -= bestPlayerCapture * 8 / 10 - playerHanging * 3 / 10;
 
-        // 6. 前進と敵C3への接近（動かせる駒のみ）
+        // 6. 能力の噛み合い（僕・中華のそばに寄る、小錦・けい・きぷの隣の敵）
+        if (BalanceTuning.AiAbilityAware)
+            score += AbilitySynergy(evalEnemy, Team.Enemy) - AbilitySynergy(evalPlayer, Team.Player);
+
+        // 7. 前進と敵C3への接近（動かせる駒のみ）
         foreach (var p in evalEnemy)
         {
             if (!IsControllable(p)) continue;

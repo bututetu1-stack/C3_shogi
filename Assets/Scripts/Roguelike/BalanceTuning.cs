@@ -89,6 +89,8 @@ public static class BalanceTuning
     public static int YokozunaWallDamage = 4;
     /// <summary>押し出しで相手を動かす（false なら動かさずに張り手で YokozunaPushDamage+1。組み止めは外れない）</summary>
     public static bool YokozunaPushMoves = true;
+    /// <summary>覚醒したけい（デバッグ完了）が届く距離</summary>
+    public static int KeiAwakenedRange = 2;
     /// <summary>覚醒したなこ: 突撃で倒したときの追加の突撃の回数</summary>
     public static int NakoChainMax = 2;
     /// <summary>覚醒したヲツが作る中華の数と、その中華の満腹の上限（1体あたり）</summary>
@@ -99,8 +101,14 @@ public static class BalanceTuning
     public static int KipuAwakenedTargets = 3;
     /// <summary>覚醒した李白: 裏返すたびの攻撃の上乗せの上限</summary>
     public static int RihakuPoetMax = 3;
+    /// <summary>雷帝「天雷」の落雷の元のダメージ（貫通。局による上乗せは足さない）</summary>
+    public static int RaiteiThunderDamage = 2;
+    /// <summary>魔王「真・魔王」の雷撃の数</summary>
+    public static int MaouAwakenedStrikes = 2;
+    /// <summary>AI が能力を意識する（支援役を狙う・僕や中華のそばに寄る・けい／きぷ／小錦の隣を避ける）</summary>
+    public static bool AiAbilityAware = true;
     /// <summary>覚醒した僕が1体を強化できる量の上限</summary>
-    public static int BokuAwakenedCap = 2;
+    public static int BokuAwakenedCap = 1;
 
     // ---- 提督の艦隊 ----
 
