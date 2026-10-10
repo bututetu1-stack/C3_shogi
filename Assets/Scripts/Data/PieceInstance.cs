@@ -15,6 +15,8 @@ public class PieceInstance
     public int bonusMaxHP;          // ステージ強化による最大HP増加
     public int turnsNearBoku;       // 僕の近くにいたターン数
     public int gundaishouStacks;    // 軍将バフを受けた回数（上限管理用）
+    public int stageBonusATK;       // bonusATK のうち局による強化の分（魔王の雷撃には足さない）
+    public bool stunned;            // きぷ・へるに冷笑され、次の自分の手番は動けない
 
     public int ATK { get { return (isPromoted ? data.promotedATK : data.baseATK) + bonusATK; } }
     public int DEF { get { return (isPromoted ? data.promotedDEF : data.baseDEF) + bonusDEF; } }

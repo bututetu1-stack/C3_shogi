@@ -165,7 +165,7 @@ public class AbilitySystem : MonoBehaviour
                 {
                     var source = GameSim.BeginSource(maou);
                     PieceInstance victim = targets[Random.Range(0, targets.Count)];
-                    int lightning = CombatResolver.AbilityDamage(maou, 1);
+                    int lightning = CombatResolver.AbilityDamage(maou, 1, false);   // 局による強化は足さない
                     if (BattleLogUI.Instance != null)
                         BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("魔王", Team.Enemy) + " の雷撃！" + BattleLogUI.ColorName(victim.DisplayName, victim.team) + " に貫通" + lightning + "ダメージ");
                     if (BattleEffects.Instance != null) BattleEffects.Instance.PlayLightningEffect(victim.boardPosition);
@@ -184,6 +184,14 @@ public class AbilitySystem : MonoBehaviour
     public IEnumerator ExecuteTurnEndAbilities(Team team)
     {
         BoardManager bm = BoardManager.Instance;
+
+        // 冷笑されていた駒は、この手番を動けずに過ごしたので元に戻る
+        foreach (var p in bm.GetTeamPieces(team))
+        {
+            if (!p.stunned) continue;
+            p.stunned = false;
+            CombatResolver.RefreshStats(p);
+        }
 
         // 中華の回復と消滅
         List<PieceInstance> pieces = bm.GetTeamPieces(team);
@@ -273,27 +281,51 @@ public class AbilitySystem : MonoBehaviour
             yield return ExecuteKanmusuAbilities();
         }
 
-        // けい・異端のバグ修正
+        // けい・異端のバグ修正、きぷ・へるの冷笑
         yield return ExecuteKeiAbilities(team);
+        yield return ExecuteKipuAbilities(team);
 
         // 僕バフ処理
         yield return ProcessBokuBuffs(team);
     }
 
+    /// <summary>team の生きている type の駒</summary>
+    private static List<PieceInstance> AlivePieces(Team team, PieceType type)
+    {
+        var list = new List<PieceInstance>();
+        foreach (var p in BoardManager.Instance.GetTeamPieces(team))
+            if (p.data.pieceType == type && p.isAlive) list.Add(p);
+        return list;
+    }
+
+    /// <summary>周囲1マスにいる敵（C3は能力の影響を受けないので除く）</summary>
+    private static List<PieceInstance> AdjacentEnemies(PieceInstance center)
+    {
+        BoardManager bm = BoardManager.Instance;
+        var list = new List<PieceInstance>();
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                if (dx == 0 && dy == 0) continue;
+                PieceInstance target = bm.GetPieceAt(new Vector2Int(center.boardPosition.x + dx, center.boardPosition.y + dy));
+                if (target != null && target.team != center.team && target.isAlive && target.data.pieceType != PieceType.C3)
+                    list.Add(target);
+            }
+        }
+        return list;
+    }
+
     // ============================================================
-    // けい／異端のバグ修正（自分の手番の終わりに、周囲1マスの敵の数値を1下げる。成ると2つ）
+    // けい／異端のバグ修正（自分の手番の終わりに、周囲1マスの敵を2体まで選び、それぞれの数値を1つ1下げる。
+    // 異端は3体まで、それぞれの数値を2つ1ずつ下げる）
     // ============================================================
     private static readonly StatKind[] AllStats = { StatKind.ATK, StatKind.DEF, StatKind.HP };
+    private static readonly Color BugGreen = new Color(0.36f, 1f, 0.6f);
 
     private IEnumerator ExecuteKeiAbilities(Team team)
     {
-        var keiList = new List<PieceInstance>();
-        foreach (var p in BoardManager.Instance.GetTeamPieces(team))
-        {
-            if (p.data.pieceType == PieceType.Kei && p.isAlive)
-                keiList.Add(p);
-        }
-        foreach (var kei in keiList)
+        foreach (var kei in AlivePieces(team, PieceType.Kei))
         {
             if (!kei.isAlive) continue;
             yield return ExecuteKeiAbility(kei);
@@ -302,44 +334,93 @@ public class AbilitySystem : MonoBehaviour
 
     private IEnumerator ExecuteKeiAbility(PieceInstance kei)
     {
-        BoardManager bm = BoardManager.Instance;
-        Vector2Int center = kei.boardPosition;
-
-        // 下げられる「敵の駒と数値」の組を集める（攻撃・防御は0未満にせず、体力は0にしない。C3は能力の影響を受けない）
-        var choices = new List<KeyValuePair<PieceInstance, StatKind>>();
-        for (int dx = -1; dx <= 1; dx++)
-        {
-            for (int dy = -1; dy <= 1; dy++)
-            {
-                if (dx == 0 && dy == 0) continue;
-                PieceInstance target = bm.GetPieceAt(new Vector2Int(center.x + dx, center.y + dy));
-                if (target == null || target.team == kei.team || !target.isAlive || target.data.pieceType == PieceType.C3) continue;
-                foreach (StatKind stat in AllStats)
-                    if (target.CanLower(stat)) choices.Add(new KeyValuePair<PieceInstance, StatKind>(target, stat));
-            }
-        }
-        if (choices.Count == 0) yield break;
+        // 下げられる数値が残っている敵だけ（攻撃・防御は0未満にせず、体力は0にしない）
+        var targets = AdjacentEnemies(kei);
+        targets.RemoveAll(target => LowerableStats(target).Count == 0);
+        if (targets.Count == 0) yield break;
+        ShuffleList(targets);
 
         SpeechBubble.Say(kei, kei.isPromoted ? PieceLines.ItanBug : PieceLines.KeiBug);
-        int count = kei.isPromoted ? 2 : 1;
-        for (int i = 0; i < count && choices.Count > 0; i++)
+        int targetCount = Mathf.Min(kei.isPromoted ? 3 : 2, targets.Count);
+        int statCount = kei.isPromoted ? 2 : 1;
+        for (int i = 0; i < targetCount; i++)
         {
-            int idx = Random.Range(0, choices.Count);
-            PieceInstance target = choices[idx].Key;
-            StatKind stat = choices[idx].Value;
-            choices.RemoveAt(idx);
+            PieceInstance target = targets[i];
+            if (!target.isAlive) continue;
+            if (BattleEffects.Instance != null) BattleEffects.Instance.PlayStream(kei.boardPosition, target.boardPosition, BugGreen);
 
-            if (BattleEffects.Instance != null) BattleEffects.Instance.PlayBugFix(kei.boardPosition, target.boardPosition);
-            target.Lower(stat);
+            List<StatKind> stats = LowerableStats(target);
+            for (int k = 0; k < statCount && stats.Count > 0; k++)
+            {
+                int idx = Random.Range(0, stats.Count);
+                StatKind stat = stats[idx];
+                stats.RemoveAt(idx);
+                target.Lower(stat);
+
+                string label = stat == StatKind.ATK ? "攻撃" : stat == StatKind.DEF ? "防御" : "体力";
+                Color color = stat == StatKind.ATK ? Palette.ATK : stat == StatKind.DEF ? Palette.DEF : Palette.HP;
+                FloatingText.Spawn(target.boardPosition, label.Substring(0, 1) + "-1", color, 3.2f, k * 0.25f);
+                if (BattleLogUI.Instance != null)
+                    BattleLogUI.Instance.AddLog(BattleLogUI.ColorName(kei.DisplayName, kei.team) + " が " + BattleLogUI.ColorName(target.DisplayName, target.team) + " の" + label + "を1下げた");
+            }
             CombatResolver.RefreshStats(target);
-
-            string label = stat == StatKind.ATK ? "攻撃" : stat == StatKind.DEF ? "防御" : "体力";
-            Color color = stat == StatKind.ATK ? Palette.ATK : stat == StatKind.DEF ? Palette.DEF : Palette.HP;
-            FloatingText.Spawn(target.boardPosition, label.Substring(0, 1) + "-1", color);
-            if (BattleLogUI.Instance != null)
-                BattleLogUI.Instance.AddLog(BattleLogUI.ColorName(kei.DisplayName, kei.team) + " が " + BattleLogUI.ColorName(target.DisplayName, target.team) + " の" + label + "を1下げた");
             yield return new WaitForSeconds(0.3f);
         }
+    }
+
+    private static List<StatKind> LowerableStats(PieceInstance piece)
+    {
+        var list = new List<StatKind>();
+        foreach (StatKind stat in AllStats)
+            if (piece.CanLower(stat)) list.Add(stat);
+        return list;
+    }
+
+    // ============================================================
+    // きぷ／へるの冷笑（自分の手番の終わりに、周囲1マスの敵を1体冷笑し、次の手番は動けなくする。へるは周りの敵すべて）
+    // ============================================================
+    private static readonly Color SneerBlue = new Color(0.62f, 0.85f, 1f);
+
+    private IEnumerator ExecuteKipuAbilities(Team team)
+    {
+        foreach (var kipu in AlivePieces(team, PieceType.Kipu))
+        {
+            if (!kipu.isAlive) continue;
+            yield return ExecuteKipuAbility(kipu);
+        }
+    }
+
+    private IEnumerator ExecuteKipuAbility(PieceInstance kipu)
+    {
+        // もともと動けない駒（深海・中華など）や、もう冷笑された駒は相手にしない
+        var targets = AdjacentEnemies(kipu);
+        targets.RemoveAll(target => target.stunned || !CanEverMove(target));
+        if (targets.Count == 0) yield break;
+        if (!kipu.isPromoted)
+        {
+            PieceInstance one = targets[Random.Range(0, targets.Count)];
+            targets.Clear();
+            targets.Add(one);
+        }
+
+        SpeechBubble.Say(kipu, PieceLines.KipuLaugh);
+        foreach (var target in targets)
+        {
+            target.stunned = true;
+            if (BattleEffects.Instance != null) BattleEffects.Instance.PlayStream(kipu.boardPosition, target.boardPosition, SneerBlue);
+            CombatResolver.RefreshStats(target);
+            FloatingText.Spawn(target.boardPosition, "冷笑", SneerBlue);
+            if (BattleLogUI.Instance != null)
+                BattleLogUI.Instance.AddLog(BattleLogUI.ColorName(kipu.DisplayName, kipu.team) + " が " + BattleLogUI.ColorName(target.DisplayName, target.team) + " を冷笑した（次の手番は動けない）");
+        }
+        yield return new WaitForSeconds(0.3f);
+    }
+
+    private static bool CanEverMove(PieceInstance piece)
+    {
+        if (piece.data.isImmovable) return false;
+        if (piece.isPromoted && piece.data.isImmovableWhenPromoted) return false;
+        return piece.GetMoveDirections().Length > 0;
     }
 
     // ============================================================

@@ -32,7 +32,9 @@ public enum PieceType
     Dokuro,     // 髑髏 (敵専用)
     Ryuujin,    // 龍神 (敵専用)
     Maou,       // 魔王 (敵専用)
-    Kei         // けい（成ると異端）
+    Kei,        // けい（成ると異端）
+    Yuu,        // ユウ
+    Kipu        // きぷ（成るとへる）
 }
 
 /// <summary>駒の数値の種類（攻撃・防御・体力）</summary>

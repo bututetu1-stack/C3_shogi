@@ -8,7 +8,6 @@
 //   node docs/balance/run_parallel.js --full            本番: 通常300周 + 駒ごとに「第一局で必ず仲間にする」100周
 //   node docs/balance/run_parallel.js --jobs base,force_Monin --base 100 --piece-runs 60
 //   node docs/balance/run_parallel.js --out BalanceReports/candA --set EnemyAtkDivisor=6 --set TwoPickStages=5
-//   node docs/balance/run_parallel.js --out BalanceReports/pre --preset pre   第1版より前の設定（第十四局の配置だけは今のまま）
 // オプション:
 //   --workers N   同時に動かす数（既定 8）  --chunk N   1本が回す周（既定 20）
 //   --set 名前=値 BalanceTuning を変える    --piece 駒=JSON   PieceData の一部を上書き（例: C3={"baseHP":10}）
@@ -23,7 +22,7 @@ const exe = path.join(root, 'Builds', 'Sim', 'C3Sim.exe');
 
 // ---- 引数 ----
 const argv = process.argv.slice(2);
-const opt = { workers: 8, chunk: 20, base: 40, pieceRuns: 100, out: 'BalanceReports/exp', jobs: null, set: [], piece: [], preset: null, full: false };
+const opt = { workers: 8, chunk: 20, base: 40, pieceRuns: 100, out: 'BalanceReports/exp', jobs: null, set: [], piece: [], full: false };
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i], v = argv[i + 1];
   if (a === '--workers') { opt.workers = +v; i++; }
@@ -34,36 +33,13 @@ for (let i = 0; i < argv.length; i++) {
   else if (a === '--jobs') { opt.jobs = v.split(','); i++; }
   else if (a === '--set') { opt.set.push(v); i++; }
   else if (a === '--piece') { opt.piece.push(v); i++; }
-  else if (a === '--preset') { opt.preset = v; i++; }
   else if (a === '--full') { opt.full = true; }
   else { console.error('知らないオプション: ' + a); process.exit(2); }
 }
 if (opt.full && !argv.includes('--base')) opt.base = 300;
 
-// 第1版より前（2026-10-10 の基準と同じ設定）。第十四局の雷帝→鬼将はコードなので戻らない
-const dir = (x, y, d) => ({ direction: { x, y }, maxDistance: d, canJump: false });
-const PRESETS = {
-  pre: {
-    set: ['EnemyAtkDivisor=5', 'TwoPickStages=', 'RecruitBonusHP=0', 'RecruitBonusATK=0', 'WotsuChukaCount=1', 'ChukaNearAllies=false',
-      'ChukaHeal=1', 'AirRaidSplashTargets=3', 'BombardmentSplashDamage=2'],
-    piece: [
-      'C3=' + JSON.stringify({ baseHP: 10 }),
-      'Kanmusu=' + JSON.stringify({ baseATK: 5 }),
-      'Konishiki=' + JSON.stringify({ baseDEF: 1, baseHP: 8, promotedDEF: 1, promotedHP: 8 }),
-      'Monin=' + JSON.stringify({ promotedMoveDirections: [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [-1, 1], [1, -1], [-1, -1]].map(([x, y]) => dir(x, y, 9)) }),
-      'Monotetsu=' + JSON.stringify({ baseHP: 1, moveDirections: [dir(0, 1, 1), dir(1, 0, 1), dir(-1, 0, 1)] }),
-    ],
-  },
-};
-if (opt.preset) {
-  const p = PRESETS[opt.preset];
-  if (!p) { console.error('知らないプリセット: ' + opt.preset); process.exit(2); }
-  opt.set = p.set.concat(opt.set);
-  opt.piece = p.piece.concat(opt.piece);
-}
-
-// ---- 実験の一覧（run_experiments.ps1 と同じ名前） ----
-const PIECES = ['Monin', 'Boku', 'Wotsu', 'Nako', 'Rihaku', 'SN', 'Konishiki', 'Kei', 'Monotetsu', 'Lance', 'Knight', 'Silver', 'Gold', 'Bishop', 'Rook'];
+// ---- 実験の一覧（run_experiments.ps1 と同じ名前。仲間の候補に出る部員だけ） ----
+const PIECES = ['Monin', 'Boku', 'Wotsu', 'Nako', 'Rihaku', 'SN', 'Konishiki', 'Kei', 'Yuu', 'Kipu', 'Monotetsu'];
 let jobs = [{ name: 'base', runs: opt.base, args: [] }];
 for (const p of PIECES) jobs.push({ name: 'force_' + p, runs: opt.pieceRuns, args: ['-force', p] });
 jobs.push({ name: 'force_Teitoku', runs: opt.pieceRuns, args: ['-force', 'Monotetsu', '-teitoku'] });

@@ -21,7 +21,10 @@ public static class BalanceTuning
     /// <summary>仲間を2枚選べる局（盤が9×9になり、駒の数が一気に増える第五局）</summary>
     public static int[] TwoPickStages = { 5 };
 
-    /// <summary>仲間にした素の将棋駒の体力の上乗せ</summary>
+    /// <summary>仲間の候補に素の将棋駒（香・桂・銀・金・角・飛）も出すか（いまは部員と強化だけ）</summary>
+    public static bool DraftStandardPieces = false;
+
+    /// <summary>仲間にした素の将棋駒の体力の上乗せ（DraftStandardPieces のときだけ使う）</summary>
     public static int RecruitBonusHP = 1;
     /// <summary>仲間にした飛車・角の攻撃の上乗せ</summary>
     public static int RecruitBonusATK = 1;

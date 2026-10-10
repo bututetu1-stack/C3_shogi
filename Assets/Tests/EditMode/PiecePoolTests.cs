@@ -44,12 +44,15 @@ public class PiecePoolTests
     }
 
     [Test]
-    public void StandardPiece_CanBeOfferedAgain()
+    public void StandardPiece_IsNotOffered()
     {
         var gold = Make(PieceType.Gold, Rarity.Normal);
-        var owned = new List<PieceData> { gold };
-        var options = PiecePool.DrawOptions(new[] { gold }, 3, owned, 1, true);
-        Assert.IsTrue(options.Exists(o => o.piece == gold), "素の将棋駒は何枚でも仲間にできる");
+        var boku = Make(PieceType.Boku, Rarity.Rare);
+        for (int i = 0; i < 30; i++)
+        {
+            foreach (var option in PiecePool.DrawOptions(new[] { gold, boku }, 3, new List<PieceData>(), 1, true))
+                Assert.AreNotEqual(gold, option.piece, "素の将棋駒は仲間の候補に出ない");
+        }
     }
 
     [Test]

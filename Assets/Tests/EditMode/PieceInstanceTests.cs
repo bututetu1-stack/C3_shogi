@@ -104,6 +104,16 @@ public class PieceInstanceTests
     }
 
     [Test]
+    public void AbilityDamage_CanLeaveOutStageBonus()
+    {
+        var piece = new PieceInstance(data, Team.Enemy, Vector2Int.zero);
+        piece.stageBonusATK = 3;
+        piece.bonusATK = 4;   // 局による強化3 + 軍将1
+        Assert.AreEqual(5, CombatResolver.AbilityDamage(piece, 1));
+        Assert.AreEqual(2, CombatResolver.AbilityDamage(piece, 1, false));
+    }
+
+    [Test]
     public void Lower_AttackAndDefenseStopAtZero()
     {
         var piece = new PieceInstance(data, Team.Enemy, Vector2Int.zero);

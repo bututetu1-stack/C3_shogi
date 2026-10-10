@@ -22,28 +22,28 @@ MonoBehaviour:
   rarity: 2
   moveDirections:
   - direction: {x: -1, y: -1}
-    maxDistance: 3
+    maxDistance: 2
     canJump: 0
   - direction: {x: -1, y: 0}
-    maxDistance: 3
+    maxDistance: 2
     canJump: 0
   - direction: {x: -1, y: 1}
-    maxDistance: 3
+    maxDistance: 2
     canJump: 0
   - direction: {x: 0, y: -1}
-    maxDistance: 3
+    maxDistance: 2
     canJump: 0
   - direction: {x: 0, y: 1}
-    maxDistance: 3
+    maxDistance: 2
     canJump: 0
   - direction: {x: 1, y: -1}
-    maxDistance: 3
+    maxDistance: 2
     canJump: 0
   - direction: {x: 1, y: 0}
-    maxDistance: 3
+    maxDistance: 2
     canJump: 0
   - direction: {x: 1, y: 1}
-    maxDistance: 3
+    maxDistance: 2
     canJump: 0
   canPromote: 0
   promotedDisplayName: 

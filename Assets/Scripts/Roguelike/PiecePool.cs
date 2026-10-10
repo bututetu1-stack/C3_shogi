@@ -93,10 +93,9 @@ public static class PiecePool
         int s = Mathf.Max(0, stage - 1);
         switch (rarity)
         {
-            // 序盤はノーマル・ブロンズ中心、局が進むほどレア・激レアが出やすくなる。
-            // （第一局の1枠あたり: ノーマル約35% / ブロンズ約35% / レア約21% / 激レア約8%
-            //   第十五局: ノーマル約12% / ブロンズ約14% / レア約43% / 激レア約31%）
-            // 素の将棋駒（ノーマル）は種類が多いので1枚あたりの重みは低め
+            // 序盤はブロンズ中心、局が進むほどレア・激レアが出やすくなる。
+            // （部員だけのとき、第一局の1枠あたり: ブロンズ約43% / レア約43% / 激レア約13%。部員の数で変わる）
+            // ノーマルは素の将棋駒で、いまは仲間の候補に出ない（BalanceTuning.DraftStandardPieces）
             case Rarity.Normal: return Mathf.Max(4f, 10f * (1f - 0.04f * s));
             case Rarity.Bronze: return Mathf.Max(12f, 30f * (1f - 0.035f * s));
             case Rarity.Rare: return 12f * (1f + 0.12f * s);
@@ -106,7 +105,7 @@ public static class PiecePool
         }
     }
 
-    /// <summary>素の将棋駒（香・桂・銀・金・角・飛）は何枚でも仲間にできる</summary>
+    /// <summary>素の将棋駒（香・桂・銀・金・角・飛）。仲間の候補に出すときは何枚でも仲間にできる</summary>
     public static bool IsStandardPiece(PieceData data)
     {
         return data.pieceType >= PieceType.Lance && data.pieceType <= PieceType.Rook;
@@ -148,6 +147,8 @@ public static class PiecePool
                 if (piece == null) continue;
                 if (piece.pieceType == PieceType.C3 || piece.pieceType == PieceType.Pawn) continue;
                 if (piece.excludeFromDraft) continue;
+                // 仲間の候補は部員だけ（素の将棋駒は BalanceTuning.DraftStandardPieces のときだけ）
+                if (IsStandardPiece(piece) && !BalanceTuning.DraftStandardPieces) continue;
                 if (!IsStandardPiece(piece) && owned != null && owned.Contains(piece)) continue;
                 available.Add(piece);
             }

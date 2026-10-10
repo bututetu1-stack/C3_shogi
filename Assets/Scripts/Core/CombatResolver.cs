@@ -14,12 +14,14 @@ public static class CombatResolver
 
     /// <summary>
     /// 能力による攻撃（なこの突撃・深海・艦娘・魔王の雷撃・髑髏の爆発）のダメージ。
-    /// 能力ごとの基本の値に、出どころの駒の攻撃の上乗せ（局による強化・僕・軍将・全軍強化、けいに下げられた分）を足す。最低1
+    /// 能力ごとの基本の値に、出どころの駒の攻撃の上乗せ（局による強化・僕・軍将・全軍強化、けいに下げられた分）を足す。最低1。
+    /// withStageBonus=false なら局による強化の分は足さない（魔王の雷撃）
     /// </summary>
-    public static int AbilityDamage(PieceInstance source, int baseDamage)
+    public static int AbilityDamage(PieceInstance source, int baseDamage, bool withStageBonus = true)
     {
         if (source == null) return baseDamage;
-        return Mathf.Max(1, baseDamage + source.bonusATK);
+        int bonus = source.bonusATK - (withStageBonus ? 0 : source.stageBonusATK);
+        return Mathf.Max(1, baseDamage + bonus);
     }
 
     // ================================================================
@@ -110,11 +112,14 @@ public static class CombatResolver
         int damage = CalcDamage(attacker, target);
         target.currentHP -= damage;
         RefreshHP(target);
+        if (attacker.data.pieceType == PieceType.Yuu) SpeechBubble.SayMaybe(attacker, PieceLines.YuuAttack, 0.5f);
 
         if (target.currentHP <= 0)
         {
             FloatingText.Spawn(target.boardPosition, "撃破", Palette.GoldLight, 3.6f);
             Log(Name(attacker) + " が " + Name(target) + " を撃破！");
+            // きぷは弱い武器で倒して煽る
+            if (attacker.data.pieceType == PieceType.Kipu && !attacker.isPromoted) SpeechBubble.Say(attacker, PieceLines.KipuTaunt);
             GameSim.SetAttacker(attacker);
             KillPiece(target);
             GameSim.SetAttacker(null);

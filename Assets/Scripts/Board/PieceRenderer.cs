@@ -17,6 +17,7 @@ public class PieceRenderer : MonoBehaviour
     public const int OrderBadgeText = 13;
 
     private static readonly Vector3 ShadowOffset = new Vector3(0.035f, -0.055f, 0f);
+    private static readonly Color StunnedTint = new Color(0.6f, 0.72f, 0.9f);
 
     private PieceInstance pieceInstance;
     private bool isEnemyPiece;
@@ -52,6 +53,8 @@ public class PieceRenderer : MonoBehaviour
     public Transform ShadowHolder { get { return shadowHolder; } }
     public Transform Stats { get { return stats; } }
     public SpriteRenderer Body { get { return bodyRenderer; } }
+    /// <summary>ふだんの本体の色（冷笑されて動けない駒は青白く沈ませる）</summary>
+    public Color BodyRestColor { get { return pieceInstance != null && pieceInstance.stunned ? StunnedTint : Color.white; } }
     public float BaseScale { get; private set; }
     /// <summary>海に浮かぶ駒（艦娘・深海）はゆらゆら揺らす</summary>
     public bool IsFloating { get; private set; }
@@ -193,6 +196,7 @@ public class PieceRenderer : MonoBehaviour
     {
         if (pieceInstance == null) return;
         RefreshBody(false);
+        bodyRenderer.color = BodyRestColor;
 
         SetBadge(atkBadge, pieceInstance.ATK);
         SetBadge(defBadge, pieceInstance.DEF);
