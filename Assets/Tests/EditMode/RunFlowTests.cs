@@ -39,7 +39,7 @@ public class RunFlowTests
                 new RunMember { type = PieceType.Konishiki, rarity = Rarity.Rare, xp = 9, stars = 2, kills = 3 },
                 new RunMember { type = PieceType.Boku, rarity = Rarity.Rare, xp = 15, stars = 3, kills = 0 }
             },
-            runATK = 1, runC3HP = 4, damageControl = 1, bonusUpgradeStage = 8, totalKills = 20, stagesCleared = 6
+            runATK = 1, runC3HP = 4, damageControl = 1, bonusUpgradeStage = 8, enemyHp = 1, totalKills = 20, stagesCleared = 6
         };
         RunSaveData back = JsonUtility.FromJson<RunSaveData>(JsonUtility.ToJson(data));
         Assert.AreEqual("battle", back.phase);
@@ -50,6 +50,7 @@ public class RunFlowTests
         Assert.AreEqual(3, back.members[1].stars);
         Assert.AreEqual(4, back.runC3HP);
         Assert.AreEqual(8, back.bonusUpgradeStage);
+        Assert.AreEqual(1, back.enemyHp, "強敵に挑んだ分も残る");
 
         var roster = new RunRoster();
         roster.Restore(back.members);

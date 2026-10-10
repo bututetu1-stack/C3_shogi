@@ -387,6 +387,7 @@ public class GameManager : MonoBehaviour
             runATK = RunBonusATK, runDEF = RunBonusDEF, runHP = RunBonusHP, runC3HP = RunBonusC3HP,
             damageControl = RunDamageControl,
             bonusUpgradeStage = bonusUpgradeStage,
+            enemyHp = phase == "battle" ? pendingEnemyHp : 0,
             totalKills = TotalKills, totalMoves = TotalMoves, stagesCleared = StagesCleared
         });
     }
@@ -408,6 +409,7 @@ public class GameManager : MonoBehaviour
         RunBonusATK = data.runATK; RunBonusDEF = data.runDEF; RunBonusHP = data.runHP; RunBonusC3HP = data.runC3HP;
         RunDamageControl = data.damageControl;
         bonusUpgradeStage = data.bonusUpgradeStage;
+        pendingEnemyHp = data.phase == "battle" ? data.enemyHp : 0;
         TotalKills = data.totalKills; TotalMoves = data.totalMoves; StagesCleared = data.stagesCleared;
         if (stageManager != null) stageManager.currentStage = Mathf.Max(1, data.stage);
         if (BattleEffects.Instance != null) BattleEffects.Instance.PlayBGM("Battle");
