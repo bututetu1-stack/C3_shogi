@@ -28,19 +28,25 @@ function DoneSeeds($name) {
   return Get-Content $f | ForEach-Object { if ($_ -match '"seed":(\d+)') { [int]$Matches[1] } }
 }
 
+# Windows PowerShell 5.1 では、Unity の「応答がない」警告が stderr に出るだけで Stop のもとでは止まってしまう。
+# isuzu-unity-cli を呼ぶ間はエラーで止めず、終了コードで判断する
+function Invoke-UnityCli { $ErrorActionPreference = 'Continue'; isuzu-unity-cli @args 2>$null | Out-String }
+
 function CallWait($file) {
-  $o = isuzu-unity-cli call execute_code --file $file 2>$null | Out-String
+  $ErrorActionPreference = 'Continue'
+  # 長引いたときの「jobs <id> --wait で続きを待てる」という知らせは stderr に出るので、stderr も受け取る
+  $o = isuzu-unity-cli call execute_code --file $file --wait-timeout 600 2>&1 | Out-String
   if ($LASTEXITCODE -eq 4) {
     $m = [regex]::Match($o, 'jobs (\S+) --wait')
-    $o = isuzu-unity-cli jobs $m.Groups[1].Value --wait --timeout 3600 2>$null | Out-String   # 1回分が長くても終わるまで待つ
+    $o = isuzu-unity-cli jobs $m.Groups[1].Value --wait --timeout 3600 2>&1 | Out-String   # 1回分が長くても終わるまで待つ
     if ($LASTEXITCODE) { throw "待ちきれませんでした: $file`n$o" }
   } elseif ($LASTEXITCODE) { throw "失敗: $file`n$o" }
   $o.Trim()
 }
 
 try {
-  isuzu-unity-cli call play_mode_play 2>$null | Out-Null
-  isuzu-unity-cli call play_mode_step --count 5 2>$null | Out-Null
+  Invoke-UnityCli call play_mode_play | Out-Null
+  Invoke-UnityCli call play_mode_step --count 5 | Out-Null
   foreach ($j in $jobs) {
     $have = DoneSeeds $j.name
     for ($first = 1; $first -le $j.runs; $first += $Batch) {
@@ -55,5 +61,5 @@ try {
   }
   "ALL DONE"
 } finally {
-  isuzu-unity-cli call play_mode_stop 2>$null | Out-Null
+  Invoke-UnityCli call play_mode_stop | Out-Null
 }
