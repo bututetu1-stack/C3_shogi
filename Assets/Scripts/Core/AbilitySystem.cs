@@ -649,6 +649,7 @@ public partial class AbilitySystem : MonoBehaviour
     public void OnAwakened(PieceInstance p)
     {
         if (p == null) return;
+        OnNewMemberAwakened(p);
         if (p.data.pieceType == PieceType.Ryuujin)
         {
             CombatResolver.Heal(p, p.MaxHP / 2);

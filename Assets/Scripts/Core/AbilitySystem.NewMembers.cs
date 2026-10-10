@@ -67,7 +67,7 @@ public partial class AbilitySystem
             }
             case PieceType.Kawasemi:
                 return "パーツ " + Instance.PartsOf(p) + "/" + BalanceTuning.KawasemiPartsMax
-                    + (p.isPromoted ? "（当たり " + Mathf.RoundToInt(KawasemiGoodChance(Instance.PartsOf(p)) * 100f) + "%）" : "");
+                    + (p.awakened ? "（最強PC: 当たりしか出ない）" : p.isPromoted ? "（当たり " + Mathf.RoundToInt(KawasemiGoodChance(Instance.PartsOf(p)) * 100f) + "%）" : "");
             default:
                 return null;
         }
@@ -172,17 +172,23 @@ public partial class AbilitySystem
                 members.Add(p);
                 if (p.currentHP < p.MaxHP) hurt.Add(p);
             }
-            if (hurt.Count >= BalanceTuning.MitsuharuSouvenirTargets) allies = hurt;
+            if (hurt.Count >= (m.awakened ? BalanceTuning.MitsuharuAwakenedTargets : BalanceTuning.MitsuharuSouvenirTargets)) allies = hurt;
             else if (members.Count > 0)
             {
                 foreach (var h in hurt) members.Remove(h);
                 ShuffleList(members);
+                var others = new List<PieceInstance>();
+                foreach (var a in allies) if (!IsMemberType(a.data.pieceType)) others.Add(a);
+                ShuffleList(others);
                 hurt.AddRange(members);
+                hurt.AddRange(others);   // 部員が足りなければ、ほかの駒にも配る
                 allies = hurt;
             }
             if (allies.Count == 0) yield break;
             GameManager.Instance.SecretFund--;
-            for (int g = 0; g < BalanceTuning.MitsuharuSouvenirTargets && allies.Count > 0; g++)
+            int gifts = m.awakened ? BalanceTuning.MitsuharuAwakenedTargets : BalanceTuning.MitsuharuSouvenirTargets;
+            if (m.awakened && BattleEffects.Instance != null) BattleEffects.Instance.PlayAwakenBurst("WorldTrip", allies[0].boardPosition, m.data.awakenColor, true);
+            for (int g = 0; g < gifts && allies.Count > 0; g++)
             {
                 int pick = allies == hurt ? 0 : Random.Range(0, allies.Count);
                 PieceInstance to = allies[pick];
@@ -251,7 +257,9 @@ public partial class AbilitySystem
     // ニコ: タスクを投げる × デッキ構築
     // ============================================================
     private static int NikoCapacity(PieceInstance niko) { return niko.isPromoted ? BalanceTuning.NikoPromotedCapacity : BalanceTuning.NikoCapacity; }
-    private static int NikoPerTurn(PieceInstance niko) { return niko.isPromoted ? 2 : 1; }
+    private static int NikoPerTurn(PieceInstance niko) { return (niko.isPromoted ? 2 : 1) + (niko.awakened ? BalanceTuning.NikoAwakenedExtraTasks : 0); }
+    /// <summary>覚醒したニコの札は、ダメージ・回復・裏金・強化の量が増える</summary>
+    private static int CardBonus(PieceInstance niko) { return niko.awakened ? BalanceTuning.NikoAwakenedCardBonus : 0; }
 
     /// <summary>ニコの札になる部員か（能力のない駒・召喚物・艦娘は札にならない）</summary>
     private static bool HasCard(PieceType t)
@@ -327,6 +335,7 @@ public partial class AbilitySystem
         bool done = DoCard(niko, task);
         GameSim.AbilitySource = null;
         FloatingText.Spawn(niko.boardPosition, (task.thrower != null ? "処理: " : "ドロー: ") + name, TaskOrange, 3.2f, 0.15f);
+        if (done && niko.awakened && BattleEffects.Instance != null) BattleEffects.Instance.PlayAwakenBurst("CardFan", niko.boardPosition, niko.data.awakenColor, true);
         if (BattleLogUI.Instance != null)
             BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("ニコ", niko.team) + (task.thrower != null ? " が" + name + "のタスクを処理" : " が" + name + "の札を引いて使った") + (done ? "" : "（何も起きなかった）"));
         if (done)
@@ -362,6 +371,17 @@ public partial class AbilitySystem
                 PieceInstance chuka = bm.GetPieceAt(spot.Value);
                 if (chuka != null) chuka.summoner = task.thrower != null ? task.thrower : niko;
                 if (BattleEffects.Instance != null) BattleEffects.Instance.PlaySteam(spot.Value, 0.3f);
+                // 覚醒: もう1皿
+                if (CardBonus(niko) > 0)
+                {
+                    Vector2Int? more = PickChukaSpot(niko.team);
+                    if (more.HasValue)
+                    {
+                        bm.SpawnPiece(chukaData, niko.team, more.Value);
+                        PieceInstance extra = bm.GetPieceAt(more.Value);
+                        if (extra != null) extra.summoner = chuka != null ? chuka.summoner : niko;
+                    }
+                }
                 return true;
             }
             case PieceType.Kei:
@@ -373,6 +393,13 @@ public partial class AbilitySystem
                 List<StatKind> stats = LowerableStats(target);
                 StatKind stat = stats[Random.Range(0, stats.Count)];
                 target.Lower(stat);
+                // 覚醒: もう1つ下げる
+                for (int extra = 0; extra < CardBonus(niko); extra++)
+                {
+                    List<StatKind> rest = LowerableStats(target);
+                    rest.Remove(stat);
+                    if (rest.Count > 0) target.Lower(rest[Random.Range(0, rest.Count)]);
+                }
                 CombatResolver.RefreshStats(target);
                 if (BattleEffects.Instance != null) BattleEffects.Instance.PlayStream(niko.boardPosition, target.boardPosition, BugGreen);
                 FloatingText.Spawn(target.boardPosition, (stat == StatKind.ATK ? "攻" : stat == StatKind.DEF ? "防" : "体") + "-1",
@@ -395,7 +422,7 @@ public partial class AbilitySystem
             {
                 // 周りの味方1体の、攻撃と防御の低いほう+1（1体に上限あり）
                 var allies = AdjacentAllies(niko);
-                allies.RemoveAll(a => SmallBuffOf(a) >= BalanceTuning.NikoBuffCap);
+                allies.RemoveAll(a => SmallBuffOf(a) >= BalanceTuning.NikoBuffCap + CardBonus(niko));
                 if (allies.Count == 0) return false;
                 PieceInstance ally = allies[Random.Range(0, allies.Count)];
                 bool atk = ally.ATK <= ally.DEF;
@@ -437,7 +464,7 @@ public partial class AbilitySystem
                     if (task.type == PieceType.Nako) BattleEffects.Instance.PlayDashStreak(niko.boardPosition, target.boardPosition, NakoPink, 0.3f);
                     else BattleEffects.Instance.PlayStream(niko.boardPosition, target.boardPosition, new Color(1f, 0.35f, 0.3f));
                 }
-                CombatResolver.ApplyDamage(target, CombatResolver.AbilityDamage(niko, BalanceTuning.NikoStrikeDamage), false);
+                CombatResolver.ApplyDamage(target, CombatResolver.AbilityDamage(niko, BalanceTuning.NikoStrikeDamage + CardBonus(niko)), false);
                 return true;
             }
             case PieceType.Shimesaba:
@@ -447,7 +474,7 @@ public partial class AbilitySystem
                 if (targets.Count == 0) return false;
                 PieceInstance target = targets[Random.Range(0, targets.Count)];
                 if (BattleEffects.Instance != null) BattleEffects.Instance.PlayStream(niko.boardPosition, target.boardPosition, ArgueWhite);
-                CombatResolver.ApplyDamage(target, CombatResolver.AbilityDamage(niko, BalanceTuning.NikoStrikeDamage), true);
+                CombatResolver.ApplyDamage(target, CombatResolver.AbilityDamage(niko, BalanceTuning.NikoStrikeDamage + CardBonus(niko)), true);
                 return true;
             }
             case PieceType.Monotetsu:
@@ -459,14 +486,14 @@ public partial class AbilitySystem
                 if (targets.Count == 0) return false;
                 PieceInstance target = targets[Random.Range(0, targets.Count)];
                 if (BattleEffects.Instance != null) BattleEffects.Instance.PlayBombardmentEffect(niko.boardPosition, target.boardPosition);
-                CombatResolver.ApplyDamage(target, CombatResolver.AbilityDamage(niko, 1), true);
+                CombatResolver.ApplyDamage(target, CombatResolver.AbilityDamage(niko, 1 + CardBonus(niko)), true);
                 return true;
             }
             case PieceType.Konishiki:
             case PieceType.Yuu:
             {
                 // 小錦は防御、ユウは攻撃（ニコ自身。上限あり）
-                if (SmallBuffOf(niko) >= BalanceTuning.NikoBuffCap) return false;
+                if (SmallBuffOf(niko) >= BalanceTuning.NikoBuffCap + CardBonus(niko)) return false;
                 bool atk = task.type == PieceType.Yuu;
                 if (atk) niko.bonusATK += 1; else niko.bonusDEF += 1;
                 smallBuffs[niko] = SmallBuffOf(niko) + 1;
@@ -480,14 +507,15 @@ public partial class AbilitySystem
             {
                 // 先代部長の教え・ジャンク修理: 周りの味方を1回復
                 bool any = false;
-                foreach (var a in AdjacentAllies(niko)) if (CombatResolver.Heal(a, 1) > 0) any = true;
+                foreach (var a in AdjacentAllies(niko)) if (CombatResolver.Heal(a, 1 + CardBonus(niko)) > 0) any = true;
                 return any;
             }
             case PieceType.Mitsuharu:
             {
                 if (GameManager.Instance == null || GameManager.Instance.SecretFund >= BalanceTuning.MitsuharuFundMax) return false;
-                GameManager.Instance.SecretFund++;
-                FloatingText.Spawn(niko.boardPosition, "裏金+1", FundGold, 3f, 0.3f);
+                int fund = 1 + CardBonus(niko);
+                GameManager.Instance.SecretFund = Mathf.Min(BalanceTuning.MitsuharuFundMax, GameManager.Instance.SecretFund + fund);
+                FloatingText.Spawn(niko.boardPosition, "裏金+" + fund, FundGold, 3f, 0.3f);
                 return true;
             }
             default:
@@ -528,8 +556,9 @@ public partial class AbilitySystem
     {
         if (target == null || attacker == null || !target.isAlive || !attacker.isAlive) return;
         if (target.data.pieceType != PieceType.Shimesaba || target.isSealed) return;
-        int damage = CombatResolver.AbilityDamage(target, BalanceTuning.ShimesabaRetort);
-        FloatingText.Spawn(target.boardPosition, "レスバ", ArgueWhite, 3.2f);
+        int damage = CombatResolver.AbilityDamage(target, BalanceTuning.ShimesabaRetort + (target.awakened ? BalanceTuning.ShimesabaAwakenedRetortBonus : 0));
+        FloatingText.Spawn(target.boardPosition, target.awakened ? "論破" : "レスバ", ArgueWhite, 3.2f);
+        if (target.awakened && BattleEffects.Instance != null) BattleEffects.Instance.PlayAwakenBurst("LogicShatter", attacker.boardPosition, target.data.awakenColor);
         if (BattleEffects.Instance != null) BattleEffects.Instance.PlayStream(target.boardPosition, attacker.boardPosition, ArgueWhite);
         if (BattleLogUI.Instance != null)
             BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("〆鯖", target.team) + " が " + BattleLogUI.ColorName(attacker.DisplayName, attacker.team) + " に言い返した（" + damage + "ダメージ）");
@@ -542,8 +571,14 @@ public partial class AbilitySystem
     /// <summary>〆鯖が成った: 世界が終わるまでの数え始め</summary>
     public void StartDoomsday(PieceInstance s)
     {
-        doomCountdown[s] = BalanceTuning.ShimesabaCountdown;
-        FloatingText.Spawn(s.boardPosition, "あと" + BalanceTuning.ShimesabaCountdown, ArgueWhite, 3.4f, 0.5f);
+        doomCountdown[s] = DoomCountdown(s);
+        FloatingText.Spawn(s.boardPosition, "あと" + DoomCountdown(s), ArgueWhite, 3.4f, 0.5f);
+    }
+
+    /// <summary>世界が終わるまでの手番（覚醒して成っていれば短い）</summary>
+    private static int DoomCountdown(PieceInstance s)
+    {
+        return s.awakened && s.isPromoted ? BalanceTuning.ShimesabaAwakenedCountdown : BalanceTuning.ShimesabaCountdown;
     }
 
     private IEnumerator ExecuteDoomsday(Team team)
@@ -552,7 +587,7 @@ public partial class AbilitySystem
         {
             if (!s.isAlive || !s.isPromoted || s.isSealed) continue;
             int left;
-            if (!doomCountdown.TryGetValue(s, out left)) left = BalanceTuning.ShimesabaCountdown;
+            if (!doomCountdown.TryGetValue(s, out left)) left = DoomCountdown(s);
             left--;
             if (left > 0)
             {
@@ -560,7 +595,7 @@ public partial class AbilitySystem
                 FloatingText.Spawn(s.boardPosition, "あと" + left, ArgueWhite, 3.4f);
                 continue;
             }
-            doomCountdown[s] = BalanceTuning.ShimesabaCountdown;
+            doomCountdown[s] = DoomCountdown(s);
 
             // 世界が終わる: 盤上の敵すべてに（防御無視）
             if (!GameSim.Headless)
@@ -568,6 +603,7 @@ public partial class AbilitySystem
                 if (BattleEffects.Instance != null) BattleEffects.Instance.PlayCutInSound();
                 yield return CutInUI.PlayPiece(s.data, true, "世界が終わる", "Hack分野の最終兵器", Palette.Hex(0x101014), Palette.Hex(0xE0E8F0), 1.1f);
                 if (BattleEffects.Instance != null) BattleEffects.Instance.PlayWorldEnd(s.boardPosition);
+                if (s.awakened && BattleEffects.Instance != null) BattleEffects.Instance.PlayAwakenBurst("LogicShatter", s.boardPosition, s.data.awakenColor);
             }
             if (BattleLogUI.Instance != null) BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("〆鯖", s.team) + " の最終兵器……世界が終わる");
             RunRoster.Feat(s);
@@ -599,8 +635,8 @@ public partial class AbilitySystem
     {
         foreach (var k in AlivePieces(team, PieceType.Kawasemi))
         {
-            if (!k.isAlive || !k.isPromoted || k.isSealed) continue;
-            bool good = Random.value < KawasemiGoodChance(PartsOf(k));
+            if (!k.isAlive || !(k.isPromoted || k.awakened) || k.isSealed) continue;
+            bool good = k.awakened || Random.value < KawasemiGoodChance(PartsOf(k));
             Team foe = team == Team.Player ? Team.Enemy : Team.Player;
             string what;
             if (good)
@@ -651,6 +687,7 @@ public partial class AbilitySystem
 
             FloatingText.Spawn(k.boardPosition, what, good ? JadeGreen : new Color(1f, 0.55f, 0.4f), 3.4f);
             if (BattleEffects.Instance != null) BattleEffects.Instance.PlayPcEvent(k.boardPosition, good);
+            if (k.awakened && BattleEffects.Instance != null) BattleEffects.Instance.PlayAwakenBurst("RgbFan", k.boardPosition, k.data.awakenColor);
             if (BattleLogUI.Instance != null)
                 BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("翡翠", team) + " の最強PC: " + what);
             yield return new WaitForSeconds(0.4f);
@@ -699,6 +736,28 @@ public partial class AbilitySystem
         invitesUsed.TryGetValue(k, out used);
         invitesUsed[k] = used + 1;
         FloatingText.Spawn(k.boardPosition, "呼ばれて来た", JadeGreen, 3f);
+    }
+
+    /// <summary>新しい部員が覚醒した瞬間（光晴は世界一周へ出発、成っている〆鯖は世界が終わるまでが縮む）</summary>
+    private void OnNewMemberAwakened(PieceInstance p)
+    {
+        switch (p.data.pieceType)
+        {
+            case PieceType.Mitsuharu:
+                if (p.isAlive && !abroad.Contains(p))
+                {
+                    if (BattleEffects.Instance != null) BattleEffects.Instance.PlayAwakenBurst("WorldTrip", p.boardPosition, p.data.awakenColor, true);
+                    SendAbroad(p);
+                }
+                break;
+            case PieceType.Shimesaba:
+            {
+                // 成っていれば、世界が終わるまでの手番が縮む（成っていなければレスバが強くなるだけ）
+                int left;
+                if (p.isPromoted && (!doomCountdown.TryGetValue(p, out left) || left > DoomCountdown(p))) doomCountdown[p] = DoomCountdown(p);
+                break;
+            }
+        }
     }
 
     /// <summary>部員（将棋の駒・C3・召喚物・艦娘・深海・敵専用の駒ではない）</summary>

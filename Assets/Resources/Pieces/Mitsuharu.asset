@@ -70,14 +70,14 @@ MonoBehaviour:
   - direction: {x: -1, y: -1}
     maxDistance: 1
     canJump: 0
-  canAwaken: 0
-  awakenedName: 
-  awakenedDescription: 
-  awakenCaption: 
-  awakenColor: {r: 1, g: 0.8, b: 0.35, a: 1}
+  canAwaken: 1
+  awakenedName: "\u4E16\u754C\u4E00\u5468"
+  awakenedDescription: "\u899A\u9192\u3057\u305F\u5149\u6674\u3002\u88CF\u5E33\u7C3F\u306E\u91D1\u3067\u3001\u3068\u3046\u3068\u3046\u4E16\u754C\u4E00\u5468\u306B\u51FA\u767A\u3057\u305F\u3002\u899A\u9192\u3059\u308B\u3068\u3059\u3050\u306B\u76E4\u5916\u3078\u65C5\u7ACB\u3061\uFF08\u88CF\u91D1\u304C\u8DB3\u308A\u306A\u304F\u3066\u3082\uFF09\u3001\u304A\u571F\u7523\u304C\u5473\u65B94\u4F53\u306B\u5C4A\u304F\u3002\u4F53\u529B+1\u3002"
+  awakenCaption: "\u88CF\u5E33\u7C3F\u306E\u91D1\u3067\u3001\u3044\u3056\u4E16\u754C\u3078"
+  awakenColor: {r: 1, g: 0.78, b: 0.4, a: 1}
   awakenedATK: 0
   awakenedDEF: 0
-  awakenedHP: 0
+  awakenedHP: 1
   awakenedMoveDirections: []
   veteranName: 
   veteranDescription: 

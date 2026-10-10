@@ -504,10 +504,11 @@ public class BattleEffects : MonoBehaviour
     }
 
     /// <summary>覚醒した部員の能力の決め所（画像 name があればそれ、なければ色の光と火の粉）</summary>
-    public void PlayAwakenBurst(string name, Vector2Int pos, Color color)
+    /// <summary>覚醒した部員の能力の瞬間（画像があればそれ、なければ光）。upright は向きのある画像（扇・地球など）を回さない</summary>
+    public void PlayAwakenBurst(string name, Vector2Int pos, Color color, bool upright = false)
     {
         Vector3 p = World(pos);
-        if (!ArtFx(name, p, 0.6f, 1.6f, 0.55f))
+        if (!ArtFx(name, p, 0.6f, 1.6f, 0.55f, upright ? 0f : float.NaN))
             StartCoroutine(Glow(p, new Color(color.r, color.g, color.b, 0.85f), 0.4f, 1.6f, 0.45f));
         StartCoroutine(RingWave(p, color, 0.3f, 1.5f, 0.4f));
         StartCoroutine(Burst(p, 12, color, Color.white, 1.2f, 3f, 0.08f, 0.55f, 1f, SpriteFactory.Pixel));
@@ -560,6 +561,7 @@ public class BattleEffects : MonoBehaviour
     {
         Vector3 p = World(to);
         PlayStream(to + new Vector2Int(0, 4), to, new Color(1f, 0.82f, 0.35f));
+        ArtFx("Souvenir", p + new Vector3(0f, 0.15f, 0f), 0.35f, 0.75f, 0.7f, 0f);
         StartCoroutine(Glow(p, new Color(1f, 0.85f, 0.45f, 0.85f), 0.3f, 1.3f, 0.5f));
         StartCoroutine(Burst(p, 8, new Color(1f, 0.82f, 0.35f), Color.white, 0.8f, 2f, 0.06f, 0.45f, 0f, SpriteFactory.Pixel));
     }

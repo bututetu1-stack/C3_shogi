@@ -68,12 +68,12 @@ MonoBehaviour:
   - direction: {x: -1, y: -1}
     maxDistance: 1
     canJump: 0
-  canAwaken: 0
-  awakenedName: 
-  awakenedDescription: 
-  awakenCaption: 
-  awakenColor: {r: 1, g: 0.8, b: 0.35, a: 1}
-  awakenedATK: 0
+  canAwaken: 1
+  awakenedName: "\u5B8C\u5168\u8AD6\u7834"
+  awakenedDescription: "\u899A\u9192\u3057\u305F\u3006\u9BD6\u3002\u6B63\u8AD6\u3067\u4E16\u754C\u3092\u7D42\u308F\u3089\u305B\u308B\u3002\u30EC\u30B9\u30D0\u304C2\u30C0\u30E1\u30FC\u30B8\uFF08\u9632\u5FA1\u7121\u8996\uFF09\u306B\u306A\u308B\u3002\u6210\u3063\u3066\u3044\u308C\u3070\u3001\u4E16\u754C\u304C\u7D42\u308F\u308B\u306E\u304C2\u624B\u756A\u3054\u3068\u306B\u306A\u308B\u3002\u653B\u6483+1\u3002"
+  awakenCaption: "\u6B63\u8AD6\u3067\u4E16\u754C\u304C\u7D42\u308F\u308B"
+  awakenColor: {r: 0.85, g: 0.92, b: 1, a: 1}
+  awakenedATK: 1
   awakenedDEF: 0
   awakenedHP: 0
   awakenedMoveDirections: []
