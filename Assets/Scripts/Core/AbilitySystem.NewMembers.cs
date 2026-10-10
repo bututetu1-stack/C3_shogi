@@ -159,17 +159,32 @@ public partial class AbilitySystem
         foreach (var m in abroad)
         {
             if (GameManager.Instance.SecretFund <= 0) break;
+            // お土産は部員を優先（傷ついた部員 → 部員 → ほかの駒）
             var allies = new List<PieceInstance>();
+            var members = new List<PieceInstance>();
+            var hurt = new List<PieceInstance>();
             foreach (var p in BoardManager.Instance.GetTeamPieces(team))
             {
                 PieceType t = p.data.pieceType;
-                if (p.isAlive && t != PieceType.C3 && t != PieceType.Chuka && t != PieceType.Dopa) allies.Add(p);
+                if (!p.isAlive || t == PieceType.C3 || t == PieceType.Chuka || t == PieceType.Dopa) continue;
+                allies.Add(p);
+                if (!IsMemberType(t)) continue;
+                members.Add(p);
+                if (p.currentHP < p.MaxHP) hurt.Add(p);
+            }
+            if (hurt.Count >= BalanceTuning.MitsuharuSouvenirTargets) allies = hurt;
+            else if (members.Count > 0)
+            {
+                foreach (var h in hurt) members.Remove(h);
+                ShuffleList(members);
+                hurt.AddRange(members);
+                allies = hurt;
             }
             if (allies.Count == 0) yield break;
             GameManager.Instance.SecretFund--;
             for (int g = 0; g < BalanceTuning.MitsuharuSouvenirTargets && allies.Count > 0; g++)
             {
-                int pick = Random.Range(0, allies.Count);
+                int pick = allies == hurt ? 0 : Random.Range(0, allies.Count);
                 PieceInstance to = allies[pick];
                 allies.RemoveAt(pick);
                 if (BattleEffects.Instance != null) BattleEffects.Instance.PlaySouvenir(to.boardPosition);
