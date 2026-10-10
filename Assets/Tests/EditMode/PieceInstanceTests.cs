@@ -104,7 +104,7 @@ public class PieceInstanceTests
     }
 
     [Test]
-    public void YuuRunUp_AddsAttackOnlyFromTwoSquaresAway()
+    public void YuuRunUp_AddsOnePerSquareFromTheSecond()
     {
         var yuuData = ScriptableObject.CreateInstance<PieceData>();
         yuuData.pieceType = PieceType.Yuu;
@@ -117,11 +117,13 @@ public class PieceInstanceTests
         {
             var yuu = new PieceInstance(yuuData, Team.Player, new Vector2Int(0, 0));
             var near = new PieceInstance(data, Team.Enemy, new Vector2Int(1, 1));   // 防御1
-            var far = new PieceInstance(data, Team.Enemy, new Vector2Int(0, 3));
+            var two = new PieceInstance(data, Team.Enemy, new Vector2Int(0, 2));
+            var five = new PieceInstance(data, Team.Enemy, new Vector2Int(5, 0));
             Assert.AreEqual(1, CombatResolver.CalcDamage(yuu, near), "隣は助走なし");
-            Assert.AreEqual(2, CombatResolver.CalcDamage(yuu, far), "2マス以上走ると攻撃+1");
+            Assert.AreEqual(2, CombatResolver.CalcDamage(yuu, two), "2マス先は攻撃+1");
+            Assert.AreEqual(5, CombatResolver.CalcDamage(yuu, five), "5マス先は攻撃+4");
             yuu.Promote();
-            Assert.AreEqual(3, CombatResolver.CalcDamage(yuu, far), "成ると攻撃+2");
+            Assert.AreEqual(5, CombatResolver.CalcDamage(yuu, five), "成っても1マスごと+1");
         }
         finally
         {

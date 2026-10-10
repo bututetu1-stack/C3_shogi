@@ -39,9 +39,8 @@ public static class BalanceTuning
     /// <summary>中華が周りの味方を回復する量</summary>
     public static int ChukaHeal = 2;
 
-    /// <summary>ユウの助走: 2マス以上離れた敵へ走って攻撃したときの攻撃の上乗せ（成る前／成った後）</summary>
-    public static int YuuRunUpBonus = 1;
-    public static int YuuPromotedRunUpBonus = 2;
+    /// <summary>ユウの助走: 敵まで走ったマスのうち、2マス目から1マスごとの攻撃の上乗せ（3マス先なら+2）</summary>
+    public static int YuuRunUpPerSquare = 1;
 
     /// <summary>きぷが冷笑する敵の数（へるは周りの敵すべて）</summary>
     public static int KipuSneerTargets = 2;

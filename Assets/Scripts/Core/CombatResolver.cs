@@ -13,13 +13,13 @@ public static class CombatResolver
         return Mathf.Max(0, attacker.ATK + RunUpBonus(attacker, target) - target.DEF);
     }
 
-    /// <summary>ユウの助走: 2マス以上離れた敵へ走って攻撃すると攻撃が上がる（攻撃の前の位置で測る）</summary>
+    /// <summary>ユウの助走: 敵まで走ったマスのうち、2マス目から1マスごとに攻撃が上がる（攻撃の前の位置で測る）</summary>
     public static int RunUpBonus(PieceInstance attacker, PieceInstance target)
     {
         if (attacker.data.pieceType != PieceType.Yuu) return 0;
         Vector2Int d = target.boardPosition - attacker.boardPosition;
-        if (Mathf.Max(Mathf.Abs(d.x), Mathf.Abs(d.y)) < 2) return 0;
-        return attacker.isPromoted ? BalanceTuning.YuuPromotedRunUpBonus : BalanceTuning.YuuRunUpBonus;
+        int distance = Mathf.Max(Mathf.Abs(d.x), Mathf.Abs(d.y));
+        return Mathf.Max(0, distance - 1) * BalanceTuning.YuuRunUpPerSquare;
     }
 
     /// <summary>
