@@ -663,14 +663,16 @@ public class GameManager : MonoBehaviour
         PieceController pc = BoardManager.Instance.GetPieceController(p.boardPosition);
         if (pc != null) pc.PlayPromote();
         Color color = p.data.awakenColor;
-        if (BattleEffects.Instance != null) BattleEffects.Instance.PlayAwakenEffect(p.boardPosition, color);
+        bool boss = p.team == Team.Enemy;
+        if (BattleEffects.Instance != null) BattleEffects.Instance.PlayAwakenEffect(p.boardPosition, color, boss);
         if (AbilitySystem.Instance != null) AbilitySystem.Instance.OnAwakened(p);
         FloatingText.Spawn(p.boardPosition, "覚醒", color, 4.2f, 0.25f);
         if (BattleLogUI.Instance != null)
-            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName(p.data.displayName, p.team) + " が覚醒した！「" + p.data.awakenedName + "」");
+            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName(p.data.displayName, p.team) + (boss ? " が第二形態に！「" : " が覚醒した！「") + p.data.awakenedName + "」");
         if (cutIn)
         {
-            Color band = Color.Lerp(color, new Color(0.04f, 0.03f, 0.06f), 0.78f);
+            // 敵ボスは血の色の帯、部員は部員ごとの色の帯
+            Color band = boss ? new Color(0.32f, 0.04f, 0.06f) : Color.Lerp(color, new Color(0.04f, 0.03f, 0.06f), 0.78f);
             StartCoroutine(CutInUI.PlayPiece(p.data, p.isPromoted, p.data.awakenedName, p.data.awakenCaption, band, color, 1.4f));
         }
     }

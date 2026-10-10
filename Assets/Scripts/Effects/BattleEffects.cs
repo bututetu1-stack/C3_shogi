@@ -486,9 +486,9 @@ public class BattleEffects : MonoBehaviour
     }
 
     /// <summary>覚醒: 光の柱が立ち、部員の色の光と火の粉が弾ける</summary>
-    public void PlayAwakenEffect(Vector2Int pos, Color color)
+    public void PlayAwakenEffect(Vector2Int pos, Color color, bool boss = false)
     {
-        Play(Clip("Awaken"), promoteClip);
+        Play(Clip(boss ? "BossAwaken" : "Awaken"), boss ? defeatClip : promoteClip);
         Vector3 p = World(pos);
         Sprite pillar = EffectArt.Get("AwakenPillar");
         if (pillar != null) StartCoroutine(SplashFx(pillar, p, 2.4f, 1.3f, 1.1f));

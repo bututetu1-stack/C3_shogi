@@ -77,6 +77,18 @@ MonoBehaviour:
   promotedDEF: 0
   promotedHP: 0
   promotedMoveDirections: []
+  canAwaken: 1
+  awakenedName: "\u771F\u30FB\u9B54\u738B"
+  awakenedDescription: "\u9B54\u738B\u306E\u7B2C\u4E8C\u5F62\u614B\u3002\u4F53\u529B\u304C\u534A\u5206\u3092\u5207\u308B\u3068\u899A\u9192\u3059\u308B\u3002\u653B\u6483+2\u3002\u624B\u756A\u306E\u521D\u3081\u306E\u96F7\u6483\u304C2\u4F53\u306B\u843D\u3061\u308B\u3002"
+  awakenCaption: "\u95C7\u304C\u3059\u3079\u3066\u3092\u8986\u3046"
+  awakenColor: {r: 0.8, g: 0.3, b: 1, a: 1}
+  awakenedATK: 2
+  awakenedDEF: 0
+  awakenedHP: 0
+  awakenedMoveDirections: []
+  veteranName: 
+  veteranDescription: 
+  veteranMoveDirections: []
   hasPromotedRarity: 0
   promotedRarity: 0
   isAutoMove: 0

@@ -34,13 +34,25 @@ MonoBehaviour:
     maxDistance: 9
     canJump: 0
   canPromote: 0
-  promotedDisplayName:
-  promotedName:
-  promotedDescription:
+  promotedDisplayName: 
+  promotedName: 
+  promotedDescription: 
   promotedATK: 0
   promotedDEF: 0
   promotedHP: 0
   promotedMoveDirections: []
+  canAwaken: 1
+  awakenedName: "\u5929\u96F7"
+  awakenedDescription: "\u96F7\u5E1D\u306E\u7B2C\u4E8C\u5F62\u614B\u3002\u4F53\u529B\u304C\u534A\u5206\u3092\u5207\u308B\u3068\u899A\u9192\u3059\u308B\u3002\u653B\u6483+1\u3002\u6575\u306E\u624B\u756A\u306E\u7D42\u308F\u308A\u306B\u3001\u7E26\u6A2A\u306E\u7DDA\u4E0A\u306B\u3044\u308B\u81EA\u8ECD\u306E\u99D2\u306E\u3046\u3061\u3044\u3061\u3070\u3093\u8FD1\u30441\u4F53\u306B\u843D\u96F7\u3059\u308B\uFF08\u8CAB\u901A2\u3001\u653B\u6483\u306E\u4E0A\u4E57\u305B\u3076\u3093\u5897\u3048\u308B\uFF09\u3002"
+  awakenCaption: "\u5929\u304C\u88C2\u3051\u308B"
+  awakenColor: {r: 1, g: 0.9, b: 0.35, a: 1}
+  awakenedATK: 1
+  awakenedDEF: 0
+  awakenedHP: 0
+  awakenedMoveDirections: []
+  veteranName: 
+  veteranDescription: 
+  veteranMoveDirections: []
   hasPromotedRarity: 0
   promotedRarity: 0
   isAutoMove: 0
@@ -52,3 +64,5 @@ MonoBehaviour:
   diesOnPromotion: 0
   isImmovableWhenPromoted: 0
   isTauntPiece: 0
+  portrait: {fileID: 0}
+  promotedPortrait: {fileID: 0}
