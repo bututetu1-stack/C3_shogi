@@ -41,6 +41,7 @@ public class GameManager : MonoBehaviour
     private int pendingExtraPicks;
     private int pendingExtraRerolls;
     private int pendingEnemyHp;
+    private int pendingEnemyAtk;
     public bool IsTurnProcessing { get { return isTurnProcessing; } }
     private bool isTurnProcessing;
 
@@ -113,6 +114,7 @@ public class GameManager : MonoBehaviour
         RunBonusATK = RunBonusDEF = RunBonusHP = RunBonusC3HP = 0;
         RunDamageControl = 0;
         bonusUpgradeStage = 0;
+        pendingExtraPicks = pendingExtraRerolls = pendingEnemyHp = pendingEnemyAtk = 0;
         TotalKills = TotalMoves = StagesCleared = 0;
         if (stageManager != null) stageManager.currentStage = 1;
     }
@@ -333,7 +335,7 @@ public class GameManager : MonoBehaviour
     private void ShowStageEventThenDraft()
     {
         int stage = stageManager != null ? stageManager.currentStage : 1;
-        if (stage < StageEvents.FromStage)
+        if (!StageEvents.HappensBefore(stage))
         {
             ShowPieceSelection(true);
             return;
@@ -351,20 +353,24 @@ public class GameManager : MonoBehaviour
     {
         switch (kind)
         {
-            case StageEventKind.Rest: RunBonusC3HP += 2; break;
-            case StageEventKind.Snack: RunBonusHP += 1; break;
+            case StageEventKind.Rest: RunBonusC3HP += BalanceTuning.EventRestC3HP; break;
+            case StageEventKind.Snack: RunBonusHP += BalanceTuning.EventSnackHP; break;
             case StageEventKind.Camp:
-                foreach (var m in Roster.Members) Roster.AddXp(m, 1);
+                foreach (var m in Roster.Members) Roster.AddXp(m, BalanceTuning.EventCampXp);
                 break;
             case StageEventKind.Sparring:
             {
                 RunMember low = null;
                 foreach (var m in Roster.Members) if (m.stars < 3 && (low == null || m.xp < low.xp)) low = m;
-                Roster.AddXp(low, 3);
+                Roster.AddXp(low, BalanceTuning.EventSparringXp);
                 break;
             }
-            case StageEventKind.ClubFund: pendingExtraRerolls += 2; break;
-            case StageEventKind.Challenge: pendingExtraPicks += 1; pendingEnemyHp += 1; break;
+            case StageEventKind.ClubFund: pendingExtraRerolls += BalanceTuning.EventFundRerolls; break;
+            case StageEventKind.Challenge:
+                pendingExtraPicks += BalanceTuning.EventChallengePicks;
+                pendingEnemyHp += BalanceTuning.EventChallengeEnemyHp;
+                pendingEnemyAtk += BalanceTuning.EventChallengeEnemyAtk;
+                break;
         }
         if (BattleLogUI.Instance != null) BattleLogUI.Instance.AddLog("部の時間: " + StageEvents.Title(kind));
     }
@@ -388,6 +394,7 @@ public class GameManager : MonoBehaviour
             damageControl = RunDamageControl,
             bonusUpgradeStage = bonusUpgradeStage,
             enemyHp = phase == "battle" ? pendingEnemyHp : 0,
+            enemyAtk = phase == "battle" ? pendingEnemyAtk : 0,
             totalKills = TotalKills, totalMoves = TotalMoves, stagesCleared = StagesCleared
         });
     }
@@ -410,6 +417,7 @@ public class GameManager : MonoBehaviour
         RunDamageControl = data.damageControl;
         bonusUpgradeStage = data.bonusUpgradeStage;
         pendingEnemyHp = data.phase == "battle" ? data.enemyHp : 0;
+        pendingEnemyAtk = data.phase == "battle" ? data.enemyAtk : 0;
         TotalKills = data.totalKills; TotalMoves = data.totalMoves; StagesCleared = data.stagesCleared;
         if (stageManager != null) stageManager.currentStage = Mathf.Max(1, data.stage);
         if (BattleEffects.Instance != null) BattleEffects.Instance.PlayBGM("Battle");
@@ -436,12 +444,18 @@ public class GameManager : MonoBehaviour
         {
             stageManager.SetupEnemyForStage(stageManager.currentStage);
             Roster.BeginStage();
-            // 強敵に挑む: この局の敵は体力+1
-            if (pendingEnemyHp > 0)
+            // 強敵に挑む: この局の敵は体力（と攻撃）が上がる
+            if (pendingEnemyHp > 0 || pendingEnemyAtk > 0)
             {
                 foreach (var e in boardManager.GetTeamPieces(Team.Enemy))
-                    if (e.data.pieceType != PieceType.C3) { e.AddMaxHP(pendingEnemyHp); CombatResolver.RefreshStats(e); }
+                {
+                    if (e.data.pieceType == PieceType.C3) continue;
+                    if (pendingEnemyHp > 0) e.AddMaxHP(pendingEnemyHp);
+                    e.bonusATK += pendingEnemyAtk;
+                    CombatResolver.RefreshStats(e);
+                }
                 pendingEnemyHp = 0;
+                pendingEnemyAtk = 0;
             }
 
             // プレイヤー駒にもステージに応じた強化（ステージ2以降）
@@ -532,6 +546,14 @@ public class GameManager : MonoBehaviour
         if (isGameOver || CheckGameOver()) yield break;
 
         if (OnTurnChanged != null && !GameSim.Headless) OnTurnChanged(currentTurn);
+    }
+
+    /// <summary>決着がついているか（CheckGameOver と同じ条件。勝敗の処理はしない）</summary>
+    private bool IsDecided()
+    {
+        if (isGameOver || currentPhase != GamePhase.Battle) return true;
+        return boardManager.FindC3(Team.Enemy) == null || boardManager.FindC3(Team.Player) == null
+            || !HasFightingPieces(Team.Enemy) || !HasFightingPieces(Team.Player);
     }
 
     /// <summary>勝敗判定。決着（ステージクリア含む）したらtrue</summary>
@@ -816,12 +838,12 @@ public class GameManager : MonoBehaviour
             BattleLogUI.Instance.AddLog(BattleLogUI.ColorName(p.DisplayName, p.team) + " はゾーンに入った（もう一度動ける）");
     }
 
-    /// <summary>再行動の権利を受け取る（動ける駒なら返し、以後その駒だけ動かせる）</summary>
+    /// <summary>再行動の権利を受け取る（動ける駒なら返し、以後その駒だけ動かせる）。決着がついていたら null（手番を終えて勝敗を判定させる）</summary>
     public PieceInstance TakeBonusMove()
     {
         PieceInstance p = pendingBonusMove;
         pendingBonusMove = null;
-        if (p == null || !p.isAlive || MoveValidator.GetValidMoves(p).Count == 0) return null;
+        if (p == null || !p.isAlive || IsDecided() || MoveValidator.GetValidMoves(p).Count == 0) return null;
         ActiveBonusPiece = p;
         return p;
     }
@@ -885,7 +907,7 @@ public class GameManager : MonoBehaviour
     public List<StageEventKind> SimDrawEvents()
     {
         int stage = stageManager != null ? stageManager.currentStage : 1;
-        return stage >= StageEvents.FromStage ? StageEvents.Draw(2, Roster.Members.Count > 0) : new List<StageEventKind>();
+        return StageEvents.HappensBefore(stage) ? StageEvents.Draw(2, Roster.Members.Count > 0) : new List<StageEventKind>();
     }
 
     public void SimApplyEvent(StageEventKind kind) { ApplyStageEvent(kind); }

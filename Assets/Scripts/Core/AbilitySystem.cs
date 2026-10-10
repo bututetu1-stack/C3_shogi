@@ -554,7 +554,7 @@ public partial class AbilitySystem : MonoBehaviour
     {
         if (rihaku == null || !rihaku.isAlive || rihaku.data.pieceType != PieceType.Rihaku) return;
 
-        int radius = rihaku.isPromoted ? 2 : 1;
+        int radius = (rihaku.isPromoted ? 2 : 1) + (rihaku.awakened ? BalanceTuning.RihakuAwakenedRadius : 0);
         int flipCount = (rihaku.isPromoted ? 3 : 1) + (rihaku.awakened ? 1 : 0);
 
         BoardManager bm = BoardManager.Instance;

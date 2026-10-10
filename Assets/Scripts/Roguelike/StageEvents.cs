@@ -14,8 +14,12 @@ public enum StageEventKind
 
 public static class StageEvents
 {
-    /// <summary>できごとが起きる局（この局の前。第二局に勝ったあとから）</summary>
-    public const int FromStage = 3;
+    /// <summary>この局の前にできごとがあるか（BalanceTuning.EventFromStage から EventEvery 局ごと）</summary>
+    public static bool HappensBefore(int stage)
+    {
+        if (!BalanceTuning.StageEventsOn || stage < BalanceTuning.EventFromStage) return false;
+        return (stage - BalanceTuning.EventFromStage) % Mathf.Max(1, BalanceTuning.EventEvery) == 0;
+    }
 
     public static string Title(StageEventKind kind)
     {
@@ -35,14 +39,22 @@ public static class StageEvents
     {
         switch (kind)
         {
-            case StageEventKind.Rest: return "部室でひと休み。C3の体力が +2 される（最後まで続く）。";
-            case StageEventKind.Snack: return "誰かが差し入れを持ってきた。C3以外の味方全員の体力が +1 される（最後まで続く）。";
-            case StageEventKind.Camp: return "みんなで合宿。仲間の部員全員の練度が +1 される。";
-            case StageEventKind.Sparring: return "いちばん練度の低い部員が練習試合で鍛えられる。その部員の練度が +3 される。";
-            case StageEventKind.ClubFund: return "部費で仲間探しがはかどる。この局の仲間選びで、引き直しが2回増える。";
-            case StageEventKind.Challenge: return "あえて強い相手に挑む。この局の敵は体力が +1 されるが、そのかわり仲間を2枚選べる。";
+            case StageEventKind.Rest: return "部室でひと休み。C3の体力が +" + BalanceTuning.EventRestC3HP + " される（最後まで続く）。";
+            case StageEventKind.Snack: return "誰かが差し入れを持ってきた。C3以外の味方全員の体力が +" + BalanceTuning.EventSnackHP + " される（最後まで続く）。";
+            case StageEventKind.Camp: return "みんなで合宿。仲間の部員全員の練度が +" + BalanceTuning.EventCampXp + " される。";
+            case StageEventKind.Sparring: return "いちばん練度の低い部員が練習試合で鍛えられる。その部員の練度が +" + BalanceTuning.EventSparringXp + " される。";
+            case StageEventKind.ClubFund: return "部費で仲間探しがはかどる。この局の仲間選びで、引き直しが" + BalanceTuning.EventFundRerolls + "回増える。";
+            case StageEventKind.Challenge: return "あえて強い相手に挑む。この局の敵は" + ChallengePenalty() + "、そのかわり仲間を" + (1 + BalanceTuning.EventChallengePicks) + "枚選べる。";
             default: return "";
         }
+    }
+
+    private static string ChallengePenalty()
+    {
+        int hp = BalanceTuning.EventChallengeEnemyHp, atk = BalanceTuning.EventChallengeEnemyAtk;
+        if (hp > 0 && atk > 0) return "攻撃 +" + atk + "・体力 +" + hp + " されるが";
+        if (atk > 0) return "攻撃が +" + atk + " されるが";
+        return "体力が +" + hp + " されるが";
     }
 
     /// <summary>カードの印の文字と色</summary>

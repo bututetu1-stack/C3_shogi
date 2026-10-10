@@ -15,8 +15,8 @@ public static class BalanceTuning
     /// <summary>敵C3の体力にさらに足す値（自軍のC3とは別に調整するため）</summary>
     public static int EnemyC3ExtraHP = 0;
 
-    /// <summary>自軍の体力の上乗せ = (局−1) ÷ この値（C3も含む）</summary>
-    public static int PlayerHpDivisor = 4;
+    /// <summary>自軍の体力の上乗せ = (局−1) ÷ この値（C3も含む。部の時間を入れたとき4→5）</summary>
+    public static int PlayerHpDivisor = 5;
     /// <summary>自軍の防御の上乗せ = (局−1) ÷ この値（C3は除く）</summary>
     public static int PlayerDefDivisor = 5;
     /// <summary>自軍の攻撃の上乗せ = (局−1) ÷ この値（C3は除く。0なら上乗せしない）</summary>
@@ -101,6 +101,8 @@ public static class BalanceTuning
     public static int KipuAwakenedTargets = 3;
     /// <summary>覚醒した李白: 裏返すたびの攻撃の上乗せの上限</summary>
     public static int RihakuPoetMax = 3;
+    /// <summary>覚醒した李白: 裏返す範囲の広がり（成る前1・成ると2に足す）</summary>
+    public static int RihakuAwakenedRadius = 0;
     /// <summary>雷帝「天雷」の落雷の元のダメージ（貫通。局による上乗せは足さない）</summary>
     public static int RaiteiThunderDamage = 2;
     /// <summary>魔王「真・魔王」の雷撃の数</summary>
@@ -109,6 +111,27 @@ public static class BalanceTuning
     public static bool AiAbilityAware = true;
     /// <summary>覚醒した僕が1体を強化できる量の上限</summary>
     public static int BokuAwakenedCap = 1;
+
+    // ---- 局の合間のできごと（部の時間） ----
+
+    /// <summary>できごとがあるか（false なら勝ったらすぐ仲間選び）</summary>
+    public static bool StageEventsOn = true;
+    /// <summary>できごとが最初に起きる局（この局の前）と、何局ごとに起きるか</summary>
+    public static int EventFromStage = 3;
+    public static int EventEvery = 2;
+    /// <summary>部室で休む: C3 の体力の上乗せ（最後まで）</summary>
+    public static int EventRestC3HP = 1;
+    /// <summary>差し入れ: C3 以外の全員の体力の上乗せ（最後まで）</summary>
+    public static int EventSnackHP = 1;
+    /// <summary>合宿: 部員全員の練度／練習試合: いちばん練度の低い部員の練度</summary>
+    public static int EventCampXp = 1;
+    public static int EventSparringXp = 3;
+    /// <summary>部費が下りた: 引き直しの回数</summary>
+    public static int EventFundRerolls = 2;
+    /// <summary>強敵に挑む: 仲間を選べる枚数の追加と、その局の敵の体力・攻撃の上乗せ</summary>
+    public static int EventChallengePicks = 1;
+    public static int EventChallengeEnemyHp = 1;
+    public static int EventChallengeEnemyAtk = 1;
 
     // ---- 提督の艦隊 ----
 

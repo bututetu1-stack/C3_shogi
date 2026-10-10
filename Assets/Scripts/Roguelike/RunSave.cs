@@ -14,7 +14,7 @@ public class RunSaveData
     public int runATK, runDEF, runHP, runC3HP;
     public int damageControl;
     public int bonusUpgradeStage;
-    public int enemyHp;             // 強敵に挑む: この局の敵の体力の上乗せ（"battle" のときだけ）
+    public int enemyHp, enemyAtk;   // 強敵に挑む: この局の敵の体力・攻撃の上乗せ（"battle" のときだけ）
     public int totalKills, totalMoves, stagesCleared;
 }
 
