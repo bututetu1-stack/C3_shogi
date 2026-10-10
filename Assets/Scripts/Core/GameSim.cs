@@ -43,6 +43,9 @@ public static class GameSim
 
     public static void SetAttacker(PieceInstance piece) { attacker = piece; }
 
+    /// <summary>いま倒された駒を倒した駒（通常攻撃の攻撃側、なければ能力の出どころ）。わからなければ null</summary>
+    public static PieceInstance CurrentKiller { get { return attacker != null ? attacker : AbilitySource; } }
+
     /// <summary>能力によるダメージの出どころを一時的に切り替える。戻すときは返り値を EndSource に渡す</summary>
     public static PieceInstance[] BeginSource(PieceInstance source)
     {

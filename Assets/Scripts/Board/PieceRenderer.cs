@@ -43,6 +43,8 @@ public class PieceRenderer : MonoBehaviour
     private bool fireIsMuzzle;
     private float smokeTimer;
     private float emberTimer;
+    private Transform starRoot;            // 部員の練度の★（駒から見て左下）
+    private int shownStars = -1;
     private TextMeshPro labelTop;
     private TextMeshPro labelBottom;
 
@@ -118,6 +120,10 @@ public class PieceRenderer : MonoBehaviour
         flagRenderer = flagObj.gameObject.AddComponent<SpriteRenderer>();
         flagRenderer.sortingOrder = OrderBadge;
         flagRenderer.enabled = false;
+
+        // 練度の★（自軍の部員だけ。駒から見て左下の空いた角に並べる）
+        starRoot = CreateChild("Stars", transform);
+        starRoot.localPosition = new Vector3(-0.38f, -0.4f, 0f) * flip;
 
         // 大破の炎（艦娘は自軍なので、駒から見て左下の角から燃え上がる）
         var fireObj = CreateChild("DamageFire", visual);
@@ -324,6 +330,34 @@ public class PieceRenderer : MonoBehaviour
             }
         }
         UpdateFleetMarks();
+        UpdateStars();
+    }
+
+    /// <summary>部員の練度が上がったら★を並べ直す</summary>
+    private void UpdateStars()
+    {
+        if (starRoot == null || pieceInstance == null || pieceInstance.team != Team.Player || GameManager.Instance == null) return;
+        int stars = pieceInstance.isAlive ? GameManager.Instance.Roster.StarsOf(pieceInstance.data.pieceType) : 0;
+        if (stars == shownStars) return;
+        shownStars = stars;
+        for (int i = starRoot.childCount - 1; i >= 0; i--) Destroy(starRoot.GetChild(i).gameObject);
+        for (int i = 0; i < stars; i++)
+        {
+            var shadow = CreateChild("StarShadow", starRoot);
+            shadow.localPosition = new Vector3(i * 0.19f, -0.008f, 0f);
+            shadow.localScale = new Vector3(0.25f, 0.25f, 1f);
+            var sr0 = shadow.gameObject.AddComponent<SpriteRenderer>();
+            sr0.sprite = SpriteFactory.Star;
+            sr0.color = new Color(0.12f, 0.08f, 0.02f, 0.85f);
+            sr0.sortingOrder = OrderBadge;
+            var star = CreateChild("Star", starRoot);
+            star.localPosition = new Vector3(i * 0.19f, 0f, 0f);
+            star.localScale = new Vector3(0.19f, 0.19f, 1f);
+            var sr = star.gameObject.AddComponent<SpriteRenderer>();
+            sr.sprite = SpriteFactory.Star;
+            sr.color = Palette.GoldLight;
+            sr.sortingOrder = OrderBadgeText;
+        }
     }
 
     /// <summary>旗艦の旗と、艦娘の損傷（中破は黒煙、大破は炎と濃い黒煙）</summary>

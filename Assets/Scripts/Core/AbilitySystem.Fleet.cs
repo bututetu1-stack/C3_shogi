@@ -172,6 +172,12 @@ public partial class AbilitySystem
             GameManager.Instance.ApplySummonBonuses(ship);
             ship.linkedGroupId = groupId;
             ships.Add(ship);
+            // 練度★3の提督の艦娘は、最初から改で出撃する
+            if (GameManager.Instance.Roster.StarsOf(teitoku.data.pieceType) >= 3 && !ship.isPromoted)
+            {
+                ship.Promote();
+                CombatResolver.PlayFlip(ship);
+            }
             FloatingText.Spawn(spawnPos.Value, ClassName(classes[i]), CutInUI.SeaLight, 3.6f);
             SpeechBubble.Say(ship, PieceLines.FleetSortie);
             if (BattleLogUI.Instance != null)
@@ -245,6 +251,7 @@ public partial class AbilitySystem
                 BattleLogUI.Instance.AddLog("旗艦撃沈！ 作戦完了（" + rank + "）。" + BattleLogUI.ColorName("提督", Team.Player) + "の艦隊は帰投する"
                     + (sRank ? "。次の局は強化の選択肢が1枚増える" : ""));
             if (sRank && GameManager.Instance != null) GameManager.Instance.GrantFleetBonus();
+            RunRoster.Feat(teitoku);
             if (BattleEffects.Instance != null)
             {
                 BattleEffects.Instance.PlayRetreatHorn();

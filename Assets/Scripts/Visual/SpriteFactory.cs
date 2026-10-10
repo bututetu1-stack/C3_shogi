@@ -366,6 +366,29 @@ public static class SpriteFactory
         }
     }
 
+    /// <summary>五芒星（部員の練度の★）</summary>
+    public static Sprite Star
+    {
+        get
+        {
+            return Cached("star", () => Shape(64, (x, y) =>
+            {
+                // 五芒星の符号付き距離（外の半径 0.95、くびれ 0.45）
+                const float r = 0.95f, rf = 0.45f;
+                Vector2 k1 = new Vector2(0.809016994f, -0.587785252f);
+                Vector2 k2 = new Vector2(-k1.x, k1.y);
+                Vector2 p = new Vector2(Mathf.Abs(x), y + 0.06f);
+                p -= 2f * Mathf.Max(Vector2.Dot(k1, p), 0f) * k1;
+                p -= 2f * Mathf.Max(Vector2.Dot(k2, p), 0f) * k2;
+                p.x = Mathf.Abs(p.x);
+                p.y -= r;
+                Vector2 ba = rf * new Vector2(-k1.y, k1.x) - new Vector2(0f, 1f);
+                float h = Mathf.Clamp(Vector2.Dot(p, ba) / Vector2.Dot(ba, ba), 0f, r);
+                return (p - ba * h).magnitude * Mathf.Sign(p.y * ba.x - p.x * ba.y);
+            }));
+        }
+    }
+
     /// <summary>旗竿と燕尾の旗（深海の旗艦の印）。Resources/Effects/FlagshipMark.png があればそちらを使う</summary>
     public static Sprite FlagshipMark
     {

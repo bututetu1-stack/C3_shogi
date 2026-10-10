@@ -45,6 +45,8 @@ public class GameManager : MonoBehaviour
     // プレイヤーが持っている駒データのリスト(ステージ間で引き継ぎ)
     private readonly List<PieceData> playerOwnedPieces = new List<PieceData>();
     public IList<PieceData> OwnedPieces { get { return playerOwnedPieces.AsReadOnly(); } }
+    /// <summary>部員の練度と★（周のあいだ残る）</summary>
+    public RunRoster Roster { get; } = new RunRoster();
 
     // 全軍強化（最後まで続く）
     public int RunBonusATK { get; private set; }
@@ -101,6 +103,7 @@ public class GameManager : MonoBehaviour
         isGameOver = false;
         currentTurn = Team.Player;
         playerOwnedPieces.Clear();
+        Roster.Clear();
         RunBonusATK = RunBonusDEF = RunBonusHP = RunBonusC3HP = 0;
         RunDamageControl = 0;
         bonusUpgradeStage = 0;
@@ -200,7 +203,15 @@ public class GameManager : MonoBehaviour
         {
             Vector2Int? slot = boardManager.FindPlayerDeploySlot();
             if (slot.HasValue && DeployRecruit(option.piece, slot.Value) != null)
+            {
                 playerOwnedPieces.Add(option.piece);
+                if (!PiecePool.IsStandardPiece(option.piece)) Roster.Add(option.piece);
+            }
+        }
+        else if (option != null && option.train != null)
+        {
+            // 鍛える札: 盤の駒には局の初めに★の効果が付く
+            Roster.AddXp(Roster.Get(option.train.pieceType), BalanceTuning.TrainXp);
         }
         else if (option != null)
         {
@@ -233,6 +244,9 @@ public class GameManager : MonoBehaviour
             p.bonusATK += RunBonusATK;
             p.bonusDEF += RunBonusDEF;
             p.AddMaxHP(RunBonusHP);
+            // 部員の練度（★）
+            RunMember m = p.team == Team.Player ? Roster.Get(p.data.pieceType) : null;
+            if (m != null) RunRoster.ApplyStars(p, 0, m.stars);
         }
         CombatResolver.RefreshStats(p);
     }
@@ -273,7 +287,7 @@ public class GameManager : MonoBehaviour
     /// <summary>その局の仲間選択の候補。艦隊がS勝利した次の局は、強化が1枚増える</summary>
     private List<DraftOption> DrawStageOptions(int stage, bool canDeploy)
     {
-        List<DraftOption> options = PiecePool.DrawOptions(boardManager.allPieceData, 3, playerOwnedPieces, stage, canDeploy);
+        List<DraftOption> options = PiecePool.DrawOptions(boardManager.allPieceData, 3, playerOwnedPieces, stage, canDeploy, Roster);
         if (stage == bonusUpgradeStage) PiecePool.AddExtraUpgrade(options, playerOwnedPieces);
         return options;
     }
@@ -311,6 +325,7 @@ public class GameManager : MonoBehaviour
         if (stageManager != null)
         {
             stageManager.SetupEnemyForStage(stageManager.currentStage);
+            Roster.BeginStage();
 
             // プレイヤー駒にもステージに応じた強化（ステージ2以降）
             if (stageManager.currentStage > 1)
@@ -472,6 +487,7 @@ public class GameManager : MonoBehaviour
     {
         TotalMoves += MoveCount;
         StagesCleared++;
+        Roster.OnStageWon(boardManager.GetTeamPieces(Team.Player));
 
         if (GameSim.Headless)
         {

@@ -348,6 +348,7 @@ public partial class AbilitySystem : MonoBehaviour
         ShuffleList(targets);
 
         SpeechBubble.Say(kei, kei.isPromoted ? PieceLines.ItanBug : PieceLines.KeiBug);
+        RunRoster.Feat(kei);
         int targetCount = Mathf.Min(kei.isPromoted ? 3 : 2, targets.Count);
         int statCount = kei.isPromoted ? 2 : 1;
         for (int i = 0; i < targetCount; i++)
@@ -411,6 +412,7 @@ public partial class AbilitySystem : MonoBehaviour
         }
 
         SpeechBubble.Say(kipu, PieceLines.KipuLaugh);
+        RunRoster.Feat(kipu);
         foreach (var target in targets)
         {
             target.stunned = true;
@@ -496,6 +498,7 @@ public partial class AbilitySystem : MonoBehaviour
                 BattleEffects.Instance.PlayFanSwirl(center, radius);
             }
             SpeechBubble.Say(rihaku, PieceLines.RihakuFlip);
+            RunRoster.Feat(rihaku);
         }
     }
 
@@ -598,18 +601,22 @@ public partial class AbilitySystem : MonoBehaviour
 
             // パス上の敵駒に2ダメージ（スライド到着後。攻撃の上乗せぶん増える）。C3は能力の影響を受けない
             int dash = CombatResolver.AbilityDamage(nako, 2);
+            bool hitAny = false;
             foreach (var pos in path)
             {
                 PieceInstance target = bm.GetPieceAt(pos);
                 if (target != null && target.team != nako.team && target.isAlive
                     && target.data.pieceType != PieceType.C3)
                 {
+                    hitAny = true;
                     if (BattleLogUI.Instance != null)
                         BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("なこ", nako.team) + "の突撃！" + BattleLogUI.ColorName(target.DisplayName, target.team) + " に" + dash + "ダメージ");
                     CombatResolver.ApplyDamage(target, dash, false);
                     yield return new WaitForSeconds(0.15f);
                 }
             }
+
+            if (hitAny) RunRoster.Feat(nako);
 
             // 成りチェック
             yield return GameManager.Instance.CheckPromotionRoutine(nako);
@@ -755,6 +762,8 @@ public partial class AbilitySystem : MonoBehaviour
             // ヲツのところから放り投げられて、湯気を立てて着地する
             PieceController pc = bm.SpawnPiece(chukaData, team, spawnPos);
             if (pc != null) pc.FlyFrom(cookPos, 0.35f);
+            PieceInstance chuka = bm.GetPieceAt(spawnPos);
+            if (chuka != null) chuka.summoner = cook;
             if (BattleEffects.Instance != null) BattleEffects.Instance.PlaySteam(spawnPos, 0.3f);
 
             yield return new WaitForSeconds(0.25f);
@@ -832,6 +841,7 @@ public partial class AbilitySystem : MonoBehaviour
     {
         BoardManager bm = BoardManager.Instance;
         Vector2Int center = chuka.boardPosition;
+        bool helped = false;
 
         for (int dx = -1; dx <= 1; dx++)
         {
@@ -843,17 +853,20 @@ public partial class AbilitySystem : MonoBehaviour
 
                 PieceInstance target = bm.GetPieceAt(pos);
                 if (target == null || target.team != chuka.team || target == chuka) continue;
-                CombatResolver.Heal(target, amount);
+                if (CombatResolver.Heal(target, amount) > 0) helped = true;
                 if (feed && target.data.pieceType != PieceType.C3 && target.data.pieceType != PieceType.Chuka
                     && target.fullCount < BalanceTuning.ChukaFullMax)
                 {
                     target.fullCount++;
                     target.bonusATK += 1;
+                    helped = true;
                     CombatResolver.RefreshStats(target);
                     FloatingText.Spawn(target.boardPosition, "満腹 攻+1", Palette.ATK, 2.8f, 0.3f);
                 }
             }
         }
+        // 中華が役に立ったら、作ったヲツの活躍
+        if (feed && helped && chuka.summoner != null) RunRoster.Feat(chuka.summoner);
     }
 
     /// <summary>小錦が攻撃されたとき、周りの味方が「同情」して攻撃+1（C3・小錦を除く、1体に上限あり）</summary>
@@ -936,6 +949,7 @@ public partial class AbilitySystem : MonoBehaviour
             chosen = normalMoves[Random.Range(0, normalMoves.Count)];
         }
 
+        if (chosen.isAttack) RunRoster.Feat(piece);
         yield return CombatResolver.ExecuteMove(piece, chosen);
         yield return new WaitForSeconds(0.3f);
     }
@@ -1023,6 +1037,7 @@ public partial class AbilitySystem : MonoBehaviour
         // 後方で腕組みをして頷く
         foreach (var boku in cheering)
         {
+            RunRoster.Feat(boku);
             SpeechBubble.Say(boku, boku.isPromoted ? PieceLines.BokuCheerPromoted : PieceLines.BokuCheer);
             PieceController pc = bm.GetPieceController(boku.boardPosition);
             if (pc != null) pc.Nod();

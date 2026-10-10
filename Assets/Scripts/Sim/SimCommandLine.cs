@@ -9,7 +9,7 @@ using UnityEngine;
 /// 起動は docs/balance/run_parallel.js から。
 ///
 ///   -c3sim -runs 10 -seed 1 -out 出力.jsonl [-think 150] [-force Monin] [-teitoku]
-///          [-set 名前=値]...        BalanceTuning の値を変える（int / bool / int[] はカンマ区切り、空なら空配列）
+///          [-set 名前=値]...        BalanceTuning の値を変える（int / float / bool / int[] はカンマ区切り、空なら空配列）
 ///          [-piece 駒=JSON]...      PieceData の一部を JsonUtility の形で上書き（例: C3={"baseHP":10}）
 /// 終了コード: 0 = 回し終えた、1 = 失敗（理由は標準エラーとログ）
 /// </summary>
@@ -75,6 +75,7 @@ public class SimCommandLine : MonoBehaviour
         FieldInfo field = typeof(BalanceTuning).GetField(name, BindingFlags.Public | BindingFlags.Static);
         if (field == null) throw new ArgumentException("BalanceTuning に " + name + " がありません");
         if (field.FieldType == typeof(int)) field.SetValue(null, int.Parse(value));
+        else if (field.FieldType == typeof(float)) field.SetValue(null, float.Parse(value, System.Globalization.CultureInfo.InvariantCulture));
         else if (field.FieldType == typeof(bool)) field.SetValue(null, bool.Parse(value));
         else if (field.FieldType == typeof(int[]))
             field.SetValue(null, value.Length == 0 ? new int[0] : Array.ConvertAll(value.Split(','), int.Parse));

@@ -25,6 +25,7 @@ public class PieceInstance
     public int fleetDamageAll;      // 艦娘が与えたダメージの合計（深海以外も。自動プレイの集計用）
     public bool damageAnnounced;    // 艦娘の中破を知らせた
     public bool promotionSpent;     // この局ではもう成らない（作戦完了で生還した物鉄）
+    public PieceInstance summoner;  // この駒を作った駒（中華を作ったヲツ。練度の活躍に数える）
 
     public int ATK { get { return (isPromoted ? data.promotedATK : data.baseATK) + bonusATK; } }
     public int DEF { get { return (isPromoted ? data.promotedDEF : data.baseDEF) + bonusDEF; } }

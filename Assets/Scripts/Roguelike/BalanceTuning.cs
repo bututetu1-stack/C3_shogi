@@ -58,6 +58,28 @@ public static class BalanceTuning
     /// <summary>きぷが冷笑する敵の数（へるは周りの敵すべて）</summary>
     public static int KipuSneerTargets = 2;
 
+    // ---- 練度（部員の成長。RunRoster） ----
+
+    /// <summary>敵を1体倒したときの練度</summary>
+    public static int XpPerKill = 1;
+    /// <summary>局に勝ったとき盤に残っていた部員の練度</summary>
+    public static int XpPerStageSurvived = 1;
+    /// <summary>能力が決まったとき（活躍）の練度と、1局でたまる上限</summary>
+    public static int XpPerFeat = 1;
+    public static int FeatXpMaxPerStage = 2;
+    /// <summary>鍛える札の練度、出てくる局、1枠混ざる確率</summary>
+    public static int TrainXp = 3;
+    public static int TrainFromStage = 3;
+    public static float TrainSlotChance = 0.5f;
+    /// <summary>★1・★2・★3 に必要な練度（ブロンズは早く、激レアは遅く育つ）</summary>
+    public static int[] StarXpBronze = { 3, 6, 10 };
+    public static int[] StarXpRare = { 4, 8, 13 };
+    public static int[] StarXpSuperRare = { 5, 10, 16 };
+    /// <summary>★の効果: ★1で攻撃、★2で体力、★3で防御</summary>
+    public static int StarATK = 1;
+    public static int StarHP = 2;
+    public static int StarDEF = 1;
+
     // ---- 提督の艦隊 ----
 
     /// <summary>空母の開幕航空戦（着任時に深海すべてへ）のダメージの元の値</summary>

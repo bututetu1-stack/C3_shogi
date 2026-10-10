@@ -68,7 +68,9 @@ public class PieceDetailUI : MonoBehaviour
 
     private static string GetStateKey(PieceInstance piece)
     {
-        return piece.currentHP + "|" + piece.ATK + "|" + piece.DEF + "|" + piece.MaxHP + "|" + (piece.isPromoted ? "1" : "0") + (piece.IsVeteran ? "v" : "");
+        RunMember m = piece.team == Team.Player && GameManager.Instance != null ? GameManager.Instance.Roster.Get(piece.data.pieceType) : null;
+        return piece.currentHP + "|" + piece.ATK + "|" + piece.DEF + "|" + piece.MaxHP + "|" + (piece.isPromoted ? "1" : "0") + (piece.IsVeteran ? "v" : "")
+            + (m != null ? "|" + m.xp : "");
     }
 
     // ------------------------------------------------------------
@@ -125,6 +127,18 @@ public class PieceDetailUI : MonoBehaviour
             ? UIFactory.FormatHP(piece.currentHP) + (piece.currentHP >= 999 ? "" : "/" + UIFactory.FormatHP(hpMax))
             : UIFactory.FormatHP(hpMax);
         content.Add(UIFactory.StatRow(atk, def, hpText));
+
+        // 部員の練度（周のあいだ残る）
+        RunMember member = piece.team == Team.Player && GameManager.Instance != null ? GameManager.Instance.Roster.Get(d.pieceType) : null;
+        if (member != null)
+        {
+            var growth = UIFactory.Label("練度 " + PieceSelectionUI.StarText(member.stars) + "　" + RunRoster.XpText(member), 19, Palette.GoldLight, "c3-bold");
+            growth.style.marginTop = 10;
+            content.Add(growth);
+            var effects = UIFactory.Paragraph("★1 " + RunRoster.StarEffectText(1) + "　★2 " + RunRoster.StarEffectText(2) + "　★3 " + RunRoster.StarEffectText(3)
+                + "。敵を倒す・局を生き残る・能力が決まると練度がたまる。", 15, Palette.TextSub);
+            content.Add(effects);
+        }
 
         // 説明文
         var descLabel = UIFactory.Paragraph(desc, 18, Palette.Text);

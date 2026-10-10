@@ -96,10 +96,19 @@ public class GameOverUI : MonoBehaviour
                 team.style.marginBottom = 18;
                 foreach (var data in gm.OwnedPieces)
                 {
-                    var icon = UIFactory.PieceIcon(data, false, 56);
-                    icon.style.marginLeft = 3;
-                    icon.style.marginRight = 3;
-                    team.Add(icon);
+                    // 駒の下に練度の★と、この周で倒した数
+                    var col = new VisualElement();
+                    col.style.alignItems = Align.Center;
+                    col.style.marginLeft = 4;
+                    col.style.marginRight = 4;
+                    col.Add(UIFactory.PieceIcon(data, false, 56));
+                    RunMember m = gm.Roster.Get(data.pieceType);
+                    if (m != null)
+                    {
+                        col.Add(UIFactory.Label(PieceSelectionUI.StarText(m.stars), 13, Palette.GoldLight, "c3-bold"));
+                        col.Add(UIFactory.Label(m.kills + "体", 12, Palette.TextSub));
+                    }
+                    team.Add(col);
                 }
                 panel.Add(team);
             }

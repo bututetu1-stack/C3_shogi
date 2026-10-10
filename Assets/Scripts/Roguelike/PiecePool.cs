@@ -1,7 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-/// <summary>ステージ前の選択肢の種類（仲間の駒、または全軍の強化）</summary>
+/// <summary>ステージ前の選択肢の種類（仲間の駒、全軍の強化、部員を鍛える）</summary>
 public enum UpgradeKind
 {
     None,
@@ -17,19 +17,24 @@ public class DraftOption
 {
     public PieceData piece;
     public UpgradeKind upgrade;
+    /// <summary>鍛える札: この部員の練度を上げる</summary>
+    public PieceData train;
     /// <summary>提督の艦隊のS勝利で増えた1枚</summary>
     public bool fleetReward;
 
-    public bool IsUpgrade { get { return piece == null; } }
+    public bool IsUpgrade { get { return piece == null && train == null; } }
+    public bool IsTrain { get { return train != null; } }
 
     public static DraftOption Piece(PieceData data) { return new DraftOption { piece = data }; }
     public static DraftOption Upgrade(UpgradeKind kind) { return new DraftOption { upgrade = kind }; }
+    public static DraftOption Train(PieceData member) { return new DraftOption { train = member }; }
 
     public string Title
     {
         get
         {
             if (piece != null) return piece.pieceName;
+            if (train != null) return train.pieceName + "を鍛える";
             switch (upgrade)
             {
                 case UpgradeKind.AllATK: return "士気高揚";
@@ -47,6 +52,8 @@ public class DraftOption
         get
         {
             if (piece != null) return piece.description;
+            if (train != null) return train.pieceName + "の練度が +" + BalanceTuning.TrainXp + " される。練度がたまると★が上がり、★1で攻撃+" + BalanceTuning.StarATK
+                + "、★2で体力+" + BalanceTuning.StarHP + "、★3で防御+" + BalanceTuning.StarDEF + "と覚醒の解禁。練度は最後まで続く。";
             switch (upgrade)
             {
                 case UpgradeKind.AllATK: return "C3以外の味方全員の攻撃力が +1 される。この効果は最後まで続く。";
@@ -137,7 +144,7 @@ public static class PiecePool
     /// 仲間選択のカードを引く。
     /// owned: すでに仲間にしている駒（固有の部員は重複しない）。canDeploy: 駒を置ける空きがあるか
     /// </summary>
-    public static List<DraftOption> DrawOptions(PieceData[] allPieces, int count, List<PieceData> owned, int stage, bool canDeploy)
+    public static List<DraftOption> DrawOptions(PieceData[] allPieces, int count, List<PieceData> owned, int stage, bool canDeploy, RunRoster roster = null)
     {
         var result = new List<DraftOption>();
 
@@ -145,6 +152,12 @@ public static class PiecePool
         int upgradeSlots = 0;
         if (stage >= 3 && Random.value < 0.45f) upgradeSlots = 1;
         if (!canDeploy) upgradeSlots = count;
+
+        // 鍛える札: ★3に届いていない部員がいれば、第三局からときどき1枚混ざる
+        List<PieceData> trainable = TrainableMembers(owned, roster);
+        int trainSlots = 0;
+        if (stage >= BalanceTuning.TrainFromStage && trainable.Count > 0 && upgradeSlots < count && Random.value < BalanceTuning.TrainSlotChance)
+            trainSlots = 1;
 
         var available = new List<PieceData>();
         if (canDeploy)
@@ -161,7 +174,7 @@ public static class PiecePool
             }
         }
 
-        int pieceSlots = Mathf.Min(count - upgradeSlots, available.Count);
+        int pieceSlots = Mathf.Min(count - upgradeSlots - trainSlots, available.Count);
         for (int i = 0; i < pieceSlots; i++)
         {
             float total = 0f;
@@ -178,6 +191,16 @@ public static class PiecePool
             available.Remove(selected);
         }
 
+        // 新しい部員が足りないぶんは、まず鍛える札で埋める（部員がそろってきた後半でも選ぶ意味が残る）
+        int trainWanted = trainSlots + Mathf.Max(0, count - upgradeSlots - trainSlots - pieceSlots);
+        while (result.Count < count - upgradeSlots && trainWanted > 0 && trainable.Count > 0)
+        {
+            PieceData member = PickTrainTarget(trainable);
+            result.Add(DraftOption.Train(member));
+            trainable.Remove(member);
+            trainWanted--;
+        }
+
         // 足りない分は強化カードで埋める（同じ強化は並ばない）
         var upgrades = UpgradeKinds(owned);
         while (result.Count < count && upgrades.Count > 0)
@@ -187,6 +210,45 @@ public static class PiecePool
             upgrades.RemoveAt(idx);
         }
         return result;
+    }
+
+    /// <summary>鍛える札の候補（仲間にした部員のうち、まだ★3でない者）</summary>
+    private static List<PieceData> TrainableMembers(List<PieceData> owned, RunRoster roster)
+    {
+        var list = new List<PieceData>();
+        if (owned == null || roster == null) return list;
+        foreach (var d in owned)
+        {
+            if (d == null || IsStandardPiece(d) || list.Contains(d)) continue;
+            RunMember m = roster.Get(d.pieceType);
+            if (m != null && m.stars < 3) list.Add(d);
+        }
+        return list;
+    }
+
+    /// <summary>鍛える部員を選ぶ（激レアほど出にくい）</summary>
+    private static PieceData PickTrainTarget(List<PieceData> candidates)
+    {
+        float total = 0f;
+        foreach (var d in candidates) total += TrainWeight(d.rarity);
+        float roll = Random.Range(0f, total);
+        foreach (var d in candidates)
+        {
+            roll -= TrainWeight(d.rarity);
+            if (roll <= 0f) return d;
+        }
+        return candidates[candidates.Count - 1];
+    }
+
+    private static float TrainWeight(Rarity rarity)
+    {
+        switch (rarity)
+        {
+            case Rarity.Bronze: return 3f;
+            case Rarity.SuperRare:
+            case Rarity.Legend: return 1f;
+            default: return 2f;
+        }
     }
 
     /// <summary>出せる強化カード（応急修理要員は物鉄を仲間にしているときだけ）</summary>
