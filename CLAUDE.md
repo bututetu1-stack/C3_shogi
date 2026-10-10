@@ -6,14 +6,14 @@
 - 現状と次の作業は `docs/HANDOFF.md` にまとめてある。最初に読む。
 
 ## git
-- 作業ごとにブランチを切って PR を出す（#1〜#6 は main にマージ済み。feat/balance-v1・feat/kei は 2026-10-10 にノート PC からローカルで main にマージして push した。これからの PR は main 向け。第8版は `feat/balance-v7` → `feat/growth` → `feat/awakening` → `feat/awakening-2` → `feat/bosses-ai` → `feat/run-flow` と積んであり、PR もそれぞれ1つ前のブランチ向け）。マージはユーザーの指示があればこちらで行う。GitHub CLI（`gh`）がない PC では PR を作れないので、ユーザーに確かめてからローカルでマージする。
+- 作業ごとにブランチを切って PR を出す。#1〜#6 は main にマージ済み（feat/balance-v1・feat/kei は 2026-10-10 にノート PC からローカルで main にマージ）。そのあとは PR #7〜#13 が積み上がっていて未マージ（`feat/balance-v7` → `feat/growth` → `feat/awakening` → `feat/awakening-2` → `feat/bosses-ai` → `feat/run-flow` → `feat/new-members`、それぞれ1つ前のブランチ向け）。続きはいちばん新しい `feat/new-members` から。マージはユーザーの指示があればこちらで行う（#7 から順に）。GitHub CLI（`gh`）がない PC では PR を作れないので、ユーザーに確かめてからローカルでマージする。
 - スクリプトの改行は LF（`core.autocrlf=false`、`core.eol=lf`）。PowerShell やエディタで書くと CRLF になることがあるので、コミット前に `sed -i 's/\r$//' <file>` でそろえる。
 - `BalanceReports/` は自動プレイの出力なので git に入れない。
 
 ## Unity の操作
 - シェルから `isuzu-unity-cli` で操作する（`verify`、`verify --test --filter '.'`、`call execute_code --file`、`call play_mode_play` / `play_mode_step --seconds` / `play_mode_stop`、`call console_read_logs`）。
 - エディタが背面にあると時間が進まないので、プレイ中は `play_mode_step` で進める。
-- 画面の確認は、PanelSettings とカメラの両方に RenderTexture を設定して数フレーム進め、ReadPixels で保存する。
+- 画面の確認は、PanelSettings とカメラの両方に RenderTexture を設定して数フレーム進め、ReadPixels で保存する。使うスクリプトは `docs/snippets/`（タイトルを閉じる・対局の準備・撮影・駒のデータの書き出し）。
 
 ## デザインの方針（ユーザーと決めたこと）
 - 「オリジナルの駒を使った将棋ライク」。迷ったら将棋のルール・動きに寄せる。将棋を名乗る局（第五局「将棋の陣」など）は本将棋の配置にする。
@@ -25,6 +25,11 @@
 - 「物鉄（→提督）」はユーザー自身がモチーフ。提督・艦隊まわりは艦これ色を出して、遊びも演出もどんどん凝ってよい（2026-10-10「自分の好きなものはガンガン凝っていこう」）。強さは別に、自動プレイで目安に収める。演出は豪華な方向を好む（セリフは `PieceLines.cs`、カットインは `CutInUI`）。ただしセリフはこれ以上増やさない（画面がうるさくなるため、2026-10-10）。
 - 画像はユーザーが ChatGPT で作る。頼むときは ChatGPT 用の文言を用意する（素材依頼帳: https://claude.ai/artifact/QBqCRYvrW3jkU7kxMk5h18）。素材は `Assets/Resources` に直接置かれるので、作業前に `git status` で新しいファイルを確かめる（zip のまま置かれることもある）。
 - バランスは、駒ごとの数値と能力の強弱を一覧にして、相談しながら決める。変えたら自動プレイで前後を比べる。
+- 難しさの目安は「強い AI（自動プレイ）の全クリアが 20〜35%」（2026-10-11 ユーザー決定）。
+- 部員の格差は小さく。物鉄（提督）だけ演出が豪華すぎると嫌がるので、ほかの部員にも演出（カットイン・覚醒・エフェクト）を足して釣り合いをとる。
+- 第8版で決めたこと（2026-10-11）: 部員は周のあいだ練度で育ち、★3で対局中に覚醒する。レアリティは激レアほど育つのが遅い（大器晩成）。レア・激レアは序盤は出にくく後半で出やすい。SN は先代部長なので強いままでよい。李白で物鉄は成れない（見送り）。艦隊は作戦完了で帰投する（盤に残す案は不採用）。
+- 新しい部員（光晴・ニコ・〆鯖・翡翠）の説明文はユーザーが書いたもの。能力と覚醒は相談して決め、レアリティは自動プレイで決めた。成っても名前は変えない。
+- 駒一覧はゲーム内の別ページ（敵の駒も正位置で表示）。
 
 ## バランステスト（自動プレイ）
 - `GameSim.Headless` の間は、本番のロジックを演出・待ち時間なしで回す。`BalanceSimulator.RunBatch(周回数, 最初の種, 思考ms, 出力jsonl, null, SimOptions)`。
