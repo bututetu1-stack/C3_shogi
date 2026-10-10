@@ -102,6 +102,11 @@ public class TitleScreenUI : MonoBehaviour
         start.style.marginBottom = 14;
         column.Add(start);
 
+        var catalog = UIFactory.Button("駒一覧", PieceCatalogUI.Open);
+        catalog.style.width = 320;
+        catalog.style.marginBottom = 14;
+        column.Add(catalog);
+
         var help = UIFactory.Button("遊び方", ShowHelp);
         help.style.width = 320;
         help.style.marginBottom = 26;

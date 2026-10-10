@@ -405,7 +405,7 @@ public partial class AbilitySystem
             fleet.night = true;
             if (BattleLogUI.Instance != null) BattleLogUI.Instance.AddLog("夜戦突入！ 駆逐・軽巡・潜水の攻撃が2倍になり、空母は攻撃できない");
             if (BattleEffects.Instance != null) BattleEffects.Instance.SetNight(true);
-            yield return CutInUI.Play("夜戦突入", "夜戦に突入します！", null, CutInUI.Navy, 1.2f);
+            yield return CutInUI.Play("夜戦突入", "我、夜戦に突入す！", null, CutInUI.Navy, 1.2f);
         }
 
         var ships = new List<PieceInstance>();
