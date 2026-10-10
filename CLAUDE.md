@@ -6,7 +6,7 @@
 - 現状と次の作業は `docs/HANDOFF.md` にまとめてある。最初に読む。
 
 ## git
-- 作業ごとにブランチを切って PR を出す。#1〜#6 は main にマージ済み（feat/balance-v1・feat/kei は 2026-10-10 にノート PC からローカルで main にマージ）。そのあとは PR #7〜#13 が積み上がっていて未マージ（`feat/balance-v7` → `feat/growth` → `feat/awakening` → `feat/awakening-2` → `feat/bosses-ai` → `feat/run-flow` → `feat/new-members`、それぞれ1つ前のブランチ向け）。続きはいちばん新しい `feat/new-members` から。マージはユーザーの指示があればこちらで行う（#7 から順に）。GitHub CLI（`gh`）がない PC では PR を作れないので、ユーザーに確かめてからローカルでマージする。
+- 作業ごとにブランチを切って main 向けの PR を出す。#1〜#13 は main にマージ済み（#7〜#13 は 2026-10-11 夜にユーザーの指示で順にマージ）。マージはユーザーの指示があればこちらで行う。PR を積み上げるとき（前の PR のブランチ向けに出したとき）は、前をマージしたあと `gh pr edit <番号> --base main` で向き先を main に変えてからマージする。GitHub CLI（`gh`）がない PC では PR を作れないので、ユーザーに確かめてからローカルでマージする。
 - スクリプトの改行は LF（`core.autocrlf=false`、`core.eol=lf`）。PowerShell やエディタで書くと CRLF になることがあるので、コミット前に `sed -i 's/\r$//' <file>` でそろえる。
 - `BalanceReports/` は自動プレイの出力なので git に入れない。
 
