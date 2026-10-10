@@ -17,8 +17,9 @@ const out = { base: { n: base.length, avgWon: mean(base.map(wonStages)), cleared
 const variants = ['Monin','Boku','Wotsu','Nako','Rihaku','SN','Konishiki','Kei','Yuu','Kipu','Monotetsu','Teitoku','Lance','Knight','Silver','Gold','Bishop','Rook'];
 const nameOf = { Monin:'門人', Boku:'僕', Wotsu:'ヲツ', Nako:'なこ', Rihaku:'李白', SN:'SN', Konishiki:'小錦', Kei:'けい', Yuu:'ユウ', Kipu:'きぷ', Monotetsu:'物鉄', Teitoku:'物鉄', Lance:'香車', Knight:'桂馬', Silver:'銀将', Gold:'金将', Bishop:'角行', Rook:'飛車' };
 out.variants = [];
-for (const v of variants) {
-  const runs = load('force_' + v + '.jsonl');
+// force_X: 第一局から仲間にする。awaken_X: さらに各局の初めから覚醒させる
+for (const prefix of ['force_', 'awaken_']) for (const v of variants) {
+  const runs = load(prefix + v + '.jsonl');
   if (!runs.length) continue;
   const diffs = runs.filter(r => baseBySeed.has(r.seed)).map(r => wonStages(r) - wonStages(baseBySeed.get(r.seed)));
   const nm = nameOf[v];
@@ -31,7 +32,7 @@ for (const v of variants) {
   const kanmusuKills = stages.reduce((a, x) => a + (x.kills || []).filter(k => fleetNames.includes(k)).length, 0);
   const st = {};
   for (let s = 1; s <= 15; s++) { const r = stages.filter(x => x.stage === s); if (r.length) st[s] = [r.filter(isWin).length, r.length]; }
-  out.variants.push({ v, name: nm, n: runs.length, avgWon: mean(runs.map(wonStages)), diff: mean(diffs), diffSE: se(diffs), cleared: runs.filter(r => r.cleared).length,
+  out.variants.push({ v: prefix === 'awaken_' ? v + '(覚醒)' : v, name: nm, n: runs.length, avgWon: mean(runs.map(wonStages)), diff: mean(diffs), diffSE: se(diffs), cleared: runs.filter(r => r.cleared).length,
     killsPer: app ? kills / app : 0, lostRate: app ? lost / app : 0, promoRate: app ? promos / app : 0, kanmusuKillsPerStage: kanmusuKills / Math.max(1, stages.length), stageWin: st });
 }
 // 敵の分析（base）
@@ -57,4 +58,8 @@ out.base.stageWin = baseStageWin;
 fs.writeFileSync(process.argv[2] || 'agg3.json', JSON.stringify(out, null, 1));
 console.log('base', JSON.stringify(out.base));
 out.variants.forEach(v => console.log(v.v.padEnd(10), 'n', v.n, 'won', v.avgWon.toFixed(2), 'diff', (v.diff >= 0 ? '+' : '') + v.diff.toFixed(2), '±', v.diffSE.toFixed(2), 'clr', v.cleared, 'kills/局', v.killsPer.toFixed(2), 'lost', (100 * v.lostRate).toFixed(0) + '%', 'promo', (100 * v.promoRate).toFixed(0) + '%', 'kanmusuK/局', v.kanmusuKillsPerStage.toFixed(2)));
+// 通常の周で覚醒した回数（部員ごと）と、いちばん早かった局
+const awake = {};
+for (const x of bstages) for (const a of (x.awakenings || [])) { const n = a.split('@')[0]; awake[n] = awake[n] || []; awake[n].push(x.stage); }
+if (Object.keys(awake).length) console.log('覚醒（通常の周）:', Object.entries(awake).map(([n, st]) => n + ' ' + st.length + '回（平均 第' + (st.reduce((a, b) => a + b, 0) / st.length).toFixed(1) + '局）').join('、'));
 out.enemy.forEach(e => console.log(e.name.padEnd(4), 'app', e.app, 'kills/app', e.killsPer == null ? '-' : e.killsPer.toFixed(3), 'C3kills', e.c3kills, 'died', e.diedRate == null ? '-' : (100 * e.diedRate).toFixed(0) + '%'));

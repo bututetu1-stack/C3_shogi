@@ -296,7 +296,7 @@ public static class SpriteFactory
         return Cached("piece_" + rarity, () => CreatePieceBody(256, body, finish, edge, Palette.Hex(0x8A5BB8)));
     }
 
-    /// <summary>特別な駒の本体（提督＝紺の漆と金、艦娘＝鋼、深海＝深淵）</summary>
+    /// <summary>特別な駒の本体（提督＝紺の漆と金、艦娘＝鋼、深海＝深淵、覚醒＝黒紫の漆と金）</summary>
     public static Sprite SpecialBody(string kind)
     {
         if (PieceArt != null)
@@ -309,6 +309,8 @@ public static class SpriteFactory
                     return Cached("pieceart_steel", () => RecolorPieceArt(PieceArt, new Color(0.74f, 0.78f, 0.84f), false, new Color(1f, 1f, 1f, 0.35f)));
                 case "abyss":
                     return Cached("pieceart_abyss", () => RecolorPieceArt(PieceArt, new Color(0.08f, 0.11f, 0.15f), true, new Color(0.25f, 0.75f, 0.72f, 0.3f)));
+                case "awakened":
+                    return Cached("pieceart_awakened", () => RecolorPieceArt(PieceArt, new Color(0.17f, 0.09f, 0.24f), true, new Color(1f, 0.8f, 0.4f, 0.4f)));
             }
         }
         switch (kind)
@@ -319,6 +321,8 @@ public static class SpriteFactory
                 return Cached("piece_steel", () => CreatePieceBody(256, Palette.Hex(0xBAC4CF), BodyFinish.Metal, Palette.Hex(0x2A3B55), Color.white));
             case "abyss":
                 return Cached("piece_abyss", () => CreatePieceBody(256, Palette.Hex(0x151B25), BodyFinish.Lacquer, Palette.Hex(0x3FB8B0), Palette.Hex(0x2F6F78)));
+            case "awakened":
+                return Cached("piece_awakened", () => CreatePieceBody(256, Palette.Hex(0x2A1638), BodyFinish.Lacquer, Palette.Gold, Palette.Hex(0xB07CE8)));
             default:
                 return PieceBody(Rarity.Normal);
         }

@@ -26,13 +26,32 @@ public class PieceInstance
     public bool damageAnnounced;    // 艦娘の中破を知らせた
     public bool promotionSpent;     // この局ではもう成らない（作戦完了で生還した物鉄）
     public PieceInstance summoner;  // この駒を作った駒（中華を作ったヲツ。練度の活躍に数える）
+    public bool awakened;           // 覚醒した（練度★3の部員が、その局で活躍を重ねた）
+    public int awakenCharge;        // この局の活躍の数（覚醒まで）
+    public bool isSealed;             // けいの「デバッグ完了」で能力を封じられた（その局のあいだ）
+    public int bokuStacks;          // 僕に強化された量（覚醒した僕の強化の上限）
+    public bool substituteUsed;     // 覚醒した僕が身代わりを使った（1局に1回）
 
     public int ATK { get { return (isPromoted ? data.promotedATK : data.baseATK) + bonusATK; } }
     public int DEF { get { return (isPromoted ? data.promotedDEF : data.baseDEF) + bonusDEF; } }
     public int MaxHP { get { return (isPromoted ? data.promotedHP : data.baseHP) + bonusMaxHP; } }
     public string DisplayName { get { return isPromoted ? data.promotedDisplayName : data.displayName; } }
-    public string FullName { get { return isPromoted ? data.promotedName : (IsVeteran && !string.IsNullOrEmpty(data.veteranName) ? data.veteranName : data.pieceName); } }
-    public string Description { get { return isPromoted ? data.promotedDescription : (IsVeteran && !string.IsNullOrEmpty(data.veteranDescription) ? data.veteranDescription : data.description); } }
+    public string FullName
+    {
+        get
+        {
+            if (awakened && !string.IsNullOrEmpty(data.awakenedName)) return data.awakenedName;
+            return isPromoted ? data.promotedName : (IsVeteran && !string.IsNullOrEmpty(data.veteranName) ? data.veteranName : data.pieceName);
+        }
+    }
+    public string Description
+    {
+        get
+        {
+            if (awakened && !string.IsNullOrEmpty(data.awakenedDescription)) return data.awakenedDescription;
+            return isPromoted ? data.promotedDescription : (IsVeteran && !string.IsNullOrEmpty(data.veteranDescription) ? data.veteranDescription : data.description);
+        }
+    }
     /// <summary>作戦完了で生還した物鉄（物鉄・改）。この局ではもう成らない</summary>
     public bool IsVeteran { get { return promotionSpent && !isPromoted; } }
 
@@ -59,10 +78,16 @@ public class PieceInstance
     [System.NonSerialized] private MoveDirection[] baseDirsCache;
     [System.NonSerialized] private MoveDirection[] promotedDirsCache;
     [System.NonSerialized] private MoveDirection[] veteranDirsCache;
+    [System.NonSerialized] private MoveDirection[] awakenedDirsCache;
 
     /// <summary>この駒の移動方向（敵駒はY反転済み）。返した配列は書き換えないこと</summary>
     public MoveDirection[] GetMoveDirections()
     {
+        if (awakened && data.awakenedMoveDirections != null && data.awakenedMoveDirections.Length > 0)
+        {
+            if (awakenedDirsCache == null) awakenedDirsCache = BuildDirections(data.awakenedMoveDirections);
+            return awakenedDirsCache;
+        }
         bool usePromoted = isPromoted && data.promotedMoveDirections != null && data.promotedMoveDirections.Length > 0;
         if (usePromoted)
         {

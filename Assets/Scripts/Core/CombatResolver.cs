@@ -120,6 +120,17 @@ public static class CombatResolver
     /// <summary>通常攻撃。撃破したらtrue</summary>
     public static bool Attack(PieceInstance attacker, PieceInstance target)
     {
+        // 覚醒した僕の身代わり（倒されるはずの味方の代わりに受ける）
+        if (CalcDamage(attacker, target) >= target.currentHP)
+        {
+            PieceInstance sub = TakeSubstitute(target);
+            if (sub != null)
+            {
+                Attack(attacker, sub);
+                return false;
+            }
+        }
+
         if (BattleEffects.Instance != null)
             BattleEffects.Instance.PlaySlash(target.boardPosition, attacker.boardPosition);
 
@@ -179,6 +190,15 @@ public static class CombatResolver
         if (target == null || !target.isAlive) return false;
 
         int damage = piercing ? amount : Mathf.Max(0, amount - target.DEF);
+        if (damage >= target.currentHP)
+        {
+            PieceInstance sub = TakeSubstitute(target);
+            if (sub != null)
+            {
+                ApplyDamage(sub, amount, piercing);
+                return false;
+            }
+        }
         target.currentHP -= damage;
         RefreshHP(target);
         FloatingText.Spawn(target.boardPosition, damage > 0 ? "-" + damage : "0", damage > 0 ? (piercing ? PiercingColor : DamageColor) : Palette.TextSub);
@@ -192,6 +212,28 @@ public static class CombatResolver
 
         PlayHit(target);
         return false;
+    }
+
+    /// <summary>
+    /// 覚醒した僕の身代わり: 倒されそうな味方（C3・僕を除く）の隣に、まだ身代わりを使っていない覚醒した僕がいれば、
+    /// その僕を返して使ったことにする（1局に1回）
+    /// </summary>
+    private static PieceInstance TakeSubstitute(PieceInstance target)
+    {
+        if (target == null || target.data.pieceType == PieceType.C3 || target.data.pieceType == PieceType.Boku) return null;
+        BoardManager bm = BoardManager.Instance;
+        if (bm == null) return null;
+        foreach (var p in bm.GetTeamPieces(target.team))
+        {
+            if (p.data.pieceType != PieceType.Boku || !p.awakened || p.substituteUsed || !p.isAlive) continue;
+            if (Mathf.Max(Mathf.Abs(p.boardPosition.x - target.boardPosition.x), Mathf.Abs(p.boardPosition.y - target.boardPosition.y)) != 1) continue;
+            p.substituteUsed = true;
+            FloatingText.Spawn(p.boardPosition, "身代わり", Palette.GoldLight, 3.4f);
+            Log(Name(p) + " が " + Name(target) + " の身代わりになった");
+            if (BattleEffects.Instance != null) BattleEffects.Instance.PlayMentorBeam(target.boardPosition, p.boardPosition);
+            return p;
+        }
+        return null;
     }
 
     /// <summary>回復（最大HPまで）。回復量を返す</summary>

@@ -8,7 +8,7 @@ using UnityEngine;
 /// BalanceSimulator.RunBatch を回して終了する。画面なし（-batchmode -nographics）で何本も同時に動かせる。
 /// 起動は docs/balance/run_parallel.js から。
 ///
-///   -c3sim -runs 10 -seed 1 -out 出力.jsonl [-think 150] [-force Monin] [-teitoku]
+///   -c3sim -runs 10 -seed 1 -out 出力.jsonl [-think 150] [-force Monin] [-teitoku] [-awaken]
 ///          [-set 名前=値]...        BalanceTuning の値を変える（int / float / bool / int[] はカンマ区切り、空なら空配列）
 ///          [-piece 駒=JSON]...      PieceData の一部を JsonUtility の形で上書き（例: C3={"baseHP":10}）
 /// 終了コード: 0 = 回し終えた、1 = 失敗（理由は標準エラーとログ）
@@ -41,7 +41,7 @@ public class SimCommandLine : MonoBehaviour
             SimOptions options = null;
             string force = Arg(args, "-force", null);
             if (!string.IsNullOrEmpty(force))
-                options = new SimOptions { forcePick = (PieceType)Enum.Parse(typeof(PieceType), force), promoteAtStart = Array.IndexOf(args, "-teitoku") >= 0 };
+                options = new SimOptions { forcePick = (PieceType)Enum.Parse(typeof(PieceType), force), promoteAtStart = Array.IndexOf(args, "-teitoku") >= 0, awakenAtStart = Array.IndexOf(args, "-awaken") >= 0 };
 
             for (int i = 0; i < args.Length - 1; i++)
             {

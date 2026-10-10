@@ -70,7 +70,7 @@ public class PieceDetailUI : MonoBehaviour
     {
         RunMember m = piece.team == Team.Player && GameManager.Instance != null ? GameManager.Instance.Roster.Get(piece.data.pieceType) : null;
         return piece.currentHP + "|" + piece.ATK + "|" + piece.DEF + "|" + piece.MaxHP + "|" + (piece.isPromoted ? "1" : "0") + (piece.IsVeteran ? "v" : "")
-            + (m != null ? "|" + m.xp : "");
+            + (m != null ? "|" + m.xp : "") + "|" + piece.awakenCharge + (piece.awakened ? "a" : "") + (piece.isSealed ? "s" : "");
     }
 
     // ------------------------------------------------------------
@@ -138,6 +138,20 @@ public class PieceDetailUI : MonoBehaviour
             var effects = UIFactory.Paragraph("★1 " + RunRoster.StarEffectText(1) + "　★2 " + RunRoster.StarEffectText(2) + "　★3 " + RunRoster.StarEffectText(3)
                 + "。敵を倒す・局を生き残る・能力が決まると練度がたまる。", 15, Palette.TextSub);
             content.Add(effects);
+            if (d.canAwaken && member.stars >= 3)
+            {
+                string awake = piece.awakened ? "覚醒「" + d.awakenedName + "」"
+                    : "覚醒まで: この局の活躍あと" + Mathf.Max(0, BalanceTuning.AwakenActivities - piece.awakenCharge) + "（倒す・能力が決まる）";
+                var a = UIFactory.Label(awake, 18, d.awakenColor, "c3-bold");
+                a.style.marginTop = 6;
+                content.Add(a);
+            }
+        }
+        if (piece.isSealed)
+        {
+            var sealedNote = UIFactory.Label("封印されている（能力が止まっている）", 17, new Color(0.45f, 1f, 0.6f), "c3-bold");
+            sealedNote.style.marginTop = 6;
+            content.Add(sealedNote);
         }
 
         // 説明文

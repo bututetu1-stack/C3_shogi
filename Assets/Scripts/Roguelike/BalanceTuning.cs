@@ -80,6 +80,18 @@ public static class BalanceTuning
     public static int StarHP = 2;
     public static int StarDEF = 1;
 
+    // ---- 覚醒（練度★3の部員が、その局で活躍を重ねると覚醒する） ----
+
+    /// <summary>覚醒に必要な、その局の活躍（倒す・能力が決まる）の数</summary>
+    public static int AwakenActivities = 3;
+    /// <summary>小錦「横綱」の押し出し: 押せたときと、押した先がふさがっていたときのダメージ（防御無視）</summary>
+    public static int YokozunaPushDamage = 2;
+    public static int YokozunaWallDamage = 4;
+    /// <summary>押し出しで相手を動かす（false なら動かさずに張り手で YokozunaPushDamage+1。組み止めは外れない）</summary>
+    public static bool YokozunaPushMoves = true;
+    /// <summary>覚醒した僕が1体を強化できる量の上限</summary>
+    public static int BokuAwakenedCap = 2;
+
     // ---- 提督の艦隊 ----
 
     /// <summary>空母の開幕航空戦（着任時に深海すべてへ）のダメージの元の値</summary>

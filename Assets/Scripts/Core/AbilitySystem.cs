@@ -111,7 +111,7 @@ public partial class AbilitySystem : MonoBehaviour
             }
             foreach (var yomi in yomiList)
             {
-                if (!yomi.isAlive) continue;
+                if (!yomi.isAlive || yomi.isSealed) continue;
                 int used = 0;
                 if (yomigaeruSpawnCount.ContainsKey(yomi))
                     used = yomigaeruSpawnCount[yomi];
@@ -159,7 +159,7 @@ public partial class AbilitySystem : MonoBehaviour
             }
             foreach (var maou in maouList)
             {
-                if (!maou.isAlive) continue;
+                if (!maou.isAlive || maou.isSealed) continue;
                 List<PieceInstance> playerPieces = bm.GetTeamPieces(Team.Player);
                 var targets = new List<PieceInstance>();
                 foreach (var pp in playerPieces)
@@ -228,7 +228,7 @@ public partial class AbilitySystem : MonoBehaviour
             }
             foreach (var enmashi in enmashiList)
             {
-                if (!enmashi.isAlive) continue;
+                if (!enmashi.isAlive || enmashi.isSealed) continue;
                 HealAdjacentAllies(enmashi, 1);
             }
         }
@@ -245,7 +245,7 @@ public partial class AbilitySystem : MonoBehaviour
             }
             foreach (var gun in gunList)
             {
-                if (!gun.isAlive) continue;
+                if (!gun.isAlive || gun.isSealed) continue;
                 Vector2Int center = gun.boardPosition;
                 bool buffed = false;
                 for (int dx = -1; dx <= 1; dx++)
@@ -288,9 +288,10 @@ public partial class AbilitySystem : MonoBehaviour
             yield return SupportFleetFire();
         }
 
-        // けい・異端のバグ修正、きぷ・へるの冷笑
+        // けい・異端のバグ修正、きぷ・へるの冷笑、小錦（横綱）の押し出し
         yield return ExecuteKeiAbilities(team);
         yield return ExecuteKipuAbilities(team);
+        yield return ExecuteYokozuna(team);
 
         // 僕バフ処理
         yield return ProcessBokuBuffs(team);
@@ -341,16 +342,21 @@ public partial class AbilitySystem : MonoBehaviour
 
     private IEnumerator ExecuteKeiAbility(PieceInstance kei)
     {
+        // 覚醒（デバッグ完了）: 周りの敵の能力を封印する（その局のあいだ）
+        if (kei.awakened) yield return SealAdjacent(kei);
+
         // 下げられる数値が残っている敵だけ（攻撃・防御は0未満にせず、体力は0にしない）
         var targets = AdjacentEnemies(kei);
         targets.RemoveAll(target => LowerableStats(target).Count == 0);
         if (targets.Count == 0) yield break;
         ShuffleList(targets);
 
-        SpeechBubble.Say(kei, kei.isPromoted ? PieceLines.ItanBug : PieceLines.KeiBug);
+        bool strong = kei.isPromoted || kei.awakened;
+        SpeechBubble.Say(kei, strong ? PieceLines.ItanBug : PieceLines.KeiBug);
         RunRoster.Feat(kei);
-        int targetCount = Mathf.Min(kei.isPromoted ? 3 : 2, targets.Count);
-        int statCount = kei.isPromoted ? 2 : 1;
+        // 覚醒（デバッグ完了）は周りの敵すべて、異端は3体、けいは2体
+        int targetCount = Mathf.Min(kei.awakened ? targets.Count : strong ? 3 : 2, targets.Count);
+        int statCount = strong ? 2 : 1;
         for (int i = 0; i < targetCount; i++)
         {
             PieceInstance target = targets[i];
@@ -372,6 +378,60 @@ public partial class AbilitySystem : MonoBehaviour
                     BattleLogUI.Instance.AddLog(BattleLogUI.ColorName(kei.DisplayName, kei.team) + " が " + BattleLogUI.ColorName(target.DisplayName, target.team) + " の" + label + "を1下げた");
             }
             CombatResolver.RefreshStats(target);
+            yield return new WaitForSeconds(0.3f);
+        }
+    }
+
+    /// <summary>けい（デバッグ完了）: 周りの敵を封印する。雷撃・回復・強化・召喚・自爆・深海の攻撃が止まる</summary>
+    private IEnumerator SealAdjacent(PieceInstance kei)
+    {
+        bool any = false;
+        foreach (var target in AdjacentEnemies(kei))
+        {
+            if (target.isSealed) continue;
+            target.isSealed = true;
+            any = true;
+            if (BattleEffects.Instance != null) BattleEffects.Instance.PlayStream(kei.boardPosition, target.boardPosition, BugGreen);
+            CombatResolver.RefreshStats(target);
+            FloatingText.Spawn(target.boardPosition, "封印", BugGreen, 3.2f, 0.1f);
+            if (BattleLogUI.Instance != null)
+                BattleLogUI.Instance.AddLog(BattleLogUI.ColorName(kei.DisplayName, kei.team) + " が " + BattleLogUI.ColorName(target.DisplayName, target.team) + " の能力を封印した");
+        }
+        if (any) yield return new WaitForSeconds(0.3f);
+    }
+
+    // ============================================================
+    // 小錦「横綱」の押し出し（覚醒。自分の手番の終わりに、組み止めている敵1体を押し出す）
+    // ============================================================
+    private IEnumerator ExecuteYokozuna(Team team)
+    {
+        BoardManager bm = BoardManager.Instance;
+        foreach (var k in AlivePieces(team, PieceType.Konishiki))
+        {
+            if (!k.isAlive) continue;
+            var targets = AdjacentEnemies(k);
+            if (targets.Count == 0) continue;
+            // 敵を組み止めて手番を終えたら活躍（練度と覚醒に数える）
+            RunRoster.Feat(k);
+            if (!k.awakened) continue;
+            // いちばん攻撃の高い敵を押す
+            PieceInstance target = targets[0];
+            foreach (var t in targets) if (t.ATK > target.ATK) target = t;
+
+            Vector2Int dest = Awakening.PushDestination(k.boardPosition, target.boardPosition);
+            bool blocked = !bm.IsInBounds(dest) || !bm.IsEmpty(dest);
+            bool slap = !BalanceTuning.YokozunaPushMoves && !blocked;   // 動かさずに張り手（組み止めは外れない）
+            int damage = CombatResolver.AbilityDamage(k, blocked ? BalanceTuning.YokozunaWallDamage : BalanceTuning.YokozunaPushDamage + (slap ? 1 : 0));
+            if (BattleEffects.Instance != null) BattleEffects.Instance.PlayYokozunaEffect(k.boardPosition, target.boardPosition);
+            if (BattleLogUI.Instance != null)
+                BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("横綱", k.team) + "の" + (blocked ? "寄り倒し！" : slap ? "張り手！" : "押し出し！") + BattleLogUI.ColorName(target.DisplayName, target.team) + " に" + damage + "ダメージ");
+            FloatingText.Spawn(target.boardPosition, blocked ? "寄り倒し" : slap ? "張り手" : "押し出し", Palette.GoldLight, 3.2f);
+            yield return new WaitForSeconds(0.2f);
+            if (!blocked && !slap) CombatResolver.MovePieceTo(target, dest);
+            yield return new WaitForSeconds(0.15f);
+            var source = GameSim.BeginSource(k);
+            CombatResolver.ApplyDamage(target, damage, true);
+            GameSim.EndSource(source);
             yield return new WaitForSeconds(0.3f);
         }
     }
@@ -984,28 +1044,33 @@ public partial class AbilitySystem : MonoBehaviour
 
             bool nearBoku = false;
             bool nearPromotedBoku = false;
+            bool nearAwakenedBoku = false;
             PieceInstance mentor = null;
             foreach (var boku in bokuList)
             {
                 int dx = Mathf.Abs(ally.boardPosition.x - boku.boardPosition.x);
                 int dy = Mathf.Abs(ally.boardPosition.y - boku.boardPosition.y);
                 int dist = Mathf.Max(dx, dy);
-                int range = boku.isPromoted ? 2 : 1;
+                int range = boku.isPromoted || boku.awakened ? 2 : 1;
                 if (dist <= range)
                 {
                     nearBoku = true;
                     if (boku.isPromoted) nearPromotedBoku = true;
-                    if (mentor == null || boku.isPromoted) mentor = boku;
+                    if (boku.awakened) nearAwakenedBoku = true;
+                    if (mentor == null || boku.isPromoted || boku.awakened) mentor = boku;
                 }
             }
 
             if (nearBoku)
             {
                 ally.turnsNearBoku++;
-                if (ally.turnsNearBoku >= BalanceTuning.BokuBuffTurns)
+                // 覚醒した僕のそばなら待たずに毎手番（ただし1体に上限あり）
+                bool awakenedBuff = nearAwakenedBoku && ally.bokuStacks < BalanceTuning.BokuAwakenedCap;
+                if (awakenedBuff || ally.turnsNearBoku >= BalanceTuning.BokuBuffTurns)
                 {
-                    int buffAmount = nearPromotedBoku ? 2 : 1;
-                    bool buffATK = Random.value < 0.5f;
+                    int buffAmount = awakenedBuff ? 1 : (nearPromotedBoku ? 2 : 1);
+                    bool buffATK = awakenedBuff ? ally.ATK <= ally.DEF : Random.value < 0.5f;
+                    ally.bokuStacks += buffAmount;
                     string statName;
                     if (buffATK)
                     {
@@ -1053,6 +1118,7 @@ public partial class AbilitySystem : MonoBehaviour
     {
         if (piece == null) return;
         if (piece.data.pieceType != PieceType.Dokuro) return;
+        if (piece.isSealed) return;   // けいに封印された髑髏は爆発しない
 
         // 連鎖爆発防止
         if (explodingPositions.Contains(deathPos)) return;

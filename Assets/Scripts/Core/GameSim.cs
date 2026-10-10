@@ -28,6 +28,8 @@ public static class GameSim
     public static readonly List<string> StagePromotions = new List<string>();
     /// <summary>この局の艦隊の出来事（"着任@手数" "夜戦@着任からの手数" "S@着任からの手数" "A@…" "轟沈@…"）</summary>
     public static readonly List<string> StageFleet = new List<string>();
+    /// <summary>この局で覚醒した部員（"小錦@12" 手数つき）</summary>
+    public static readonly List<string> StageAwakenings = new List<string>();
 
     public static void BeginStageStats()
     {
@@ -37,6 +39,7 @@ public static class GameSim
         StageLossKillers.Clear();
         StagePromotions.Clear();
         StageFleet.Clear();
+        StageAwakenings.Clear();
         AbilitySource = null;
         attacker = null;
     }
@@ -82,6 +85,12 @@ public static class GameSim
     public static void RecordPromotion(PieceInstance piece)
     {
         if (Headless && piece != null && piece.team == Team.Player) StagePromotions.Add(piece.data.displayName);
+    }
+
+    /// <summary>覚醒を記録する（Headless のときだけ）</summary>
+    public static void RecordAwakening(PieceInstance piece, int moves)
+    {
+        if (Headless && piece != null) StageAwakenings.Add(piece.data.displayName + "@" + moves);
     }
 
     /// <summary>艦隊の出来事を記録する（Headless のときだけ）</summary>

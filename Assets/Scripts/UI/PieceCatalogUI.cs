@@ -43,6 +43,7 @@ public class PieceCatalogUI : MonoBehaviour
     private PieceData selected;
     private bool showPromoted;
     private bool showVeteran;
+    private bool showAwakened;
 
     public static bool IsOpen { get { return instance != null && instance.overlay != null; } }
 
@@ -230,6 +231,14 @@ public class PieceCatalogUI : MonoBehaviour
         selected = data;
         showPromoted = promoted && data != null && data.canPromote;
         showVeteran = veteran && !showPromoted && HasVeteran(data);
+        showAwakened = false;
+    }
+
+    private void SelectAwakened(PieceData data)
+    {
+        Select(data, false);
+        showAwakened = data != null && data.canAwaken;
+        RenderDetail();
         foreach (var card in cards)
         {
             bool on = card.userData == (object)data;
@@ -253,6 +262,7 @@ public class PieceCatalogUI : MonoBehaviour
         if (d == null) return;
         bool promoted = showPromoted;
         bool veteran = showVeteran;
+        bool awakened = showAwakened;
 
         var top = new VisualElement();
         top.style.flexDirection = FlexDirection.Row;
@@ -263,8 +273,8 @@ public class PieceCatalogUI : MonoBehaviour
         names.style.flexShrink = 1;
         names.style.flexGrow = 1;
         names.style.alignItems = Align.FlexStart;
-        string displayName = promoted ? d.promotedDisplayName : (veteran && !string.IsNullOrEmpty(d.veteranName) ? d.veteranName : CardName(d));
-        string fullName = promoted ? d.promotedName : (veteran ? null : d.pieceName);
+        string displayName = awakened ? d.awakenedName : promoted ? d.promotedDisplayName : (veteran && !string.IsNullOrEmpty(d.veteranName) ? d.veteranName : CardName(d));
+        string fullName = awakened ? d.pieceName + "の覚醒" : promoted ? d.promotedName : (veteran ? null : d.pieceName);
         names.Add(UIFactory.Label(displayName, 30, Palette.Text, "c3-mincho"));
         if (!string.IsNullOrEmpty(fullName) && fullName != displayName)
             names.Add(UIFactory.Label(fullName, 17, Palette.TextSub));
@@ -275,9 +285,9 @@ public class PieceCatalogUI : MonoBehaviour
         chips.style.marginTop = 4;
         Rarity rarity = promoted && d.hasPromotedRarity ? d.promotedRarity : d.rarity;
         chips.Add(UIFactory.Chip(Palette.RarityName(rarity), Palette.RarityLabel(rarity)));
-        if (promoted || veteran)
+        if (promoted || veteran || awakened)
         {
-            var promo = UIFactory.Chip(promoted ? "成り" : "生還", promoted ? Palette.EnemyLight : Palette.GoldLight);
+            var promo = UIFactory.Chip(awakened ? "覚醒" : promoted ? "成り" : "生還", awakened ? d.awakenColor : promoted ? Palette.EnemyLight : Palette.GoldLight);
             promo.style.marginLeft = 6;
             chips.Add(promo);
         }
@@ -286,9 +296,9 @@ public class PieceCatalogUI : MonoBehaviour
         detail.Add(top);
 
         // 生還すると攻撃+1・体力+1（AbilitySystem.ReturnAsVeteran）
-        int atk = promoted ? d.promotedATK : d.baseATK + (veteran ? 1 : 0);
-        int def = promoted ? d.promotedDEF : d.baseDEF;
-        int hp = promoted ? d.promotedHP : d.baseHP + (veteran ? 1 : 0);
+        int atk = promoted ? d.promotedATK : d.baseATK + (veteran ? 1 : 0) + (awakened ? d.awakenedATK : 0);
+        int def = promoted ? d.promotedDEF : d.baseDEF + (awakened ? d.awakenedDEF : 0);
+        int hp = promoted ? d.promotedHP : d.baseHP + (veteran ? 1 : 0) + (awakened ? d.awakenedHP : 0);
         var stats = UIFactory.StatRow(atk, def, UIFactory.FormatHP(hp));
         stats.style.marginTop = 12;
         detail.Add(stats);
@@ -299,6 +309,12 @@ public class PieceCatalogUI : MonoBehaviour
         buttons.style.marginTop = 10;
         if (d.canPromote)
             buttons.Add(UIFactory.Button(promoted ? "成る前を見る" : "成った姿を見る", () => Select(d, !promoted)));
+        if (d.canAwaken)
+        {
+            var ab = UIFactory.Button(awakened ? "覚醒する前を見る" : "覚醒した姿を見る", () => { if (awakened) Select(d, false); else SelectAwakened(d); });
+            ab.style.marginLeft = buttons.childCount > 0 ? 8 : 0;
+            buttons.Add(ab);
+        }
         if (HasVeteran(d))
         {
             var vb = UIFactory.Button(veteran ? "生還する前を見る" : "生還した姿を見る", () => Select(d, false, !veteran));
@@ -307,7 +323,8 @@ public class PieceCatalogUI : MonoBehaviour
         }
         if (buttons.childCount > 0) detail.Add(buttons);
 
-        string desc = promoted ? d.promotedDescription : (veteran ? d.veteranDescription : d.description);
+        string desc = awakened ? d.awakenedDescription + "（練度★3の部員が、その局で活躍を" + BalanceTuning.AwakenActivities + "回重ねると覚醒する）"
+            : promoted ? d.promotedDescription : (veteran ? d.veteranDescription : d.description);
         if (!string.IsNullOrEmpty(desc))
         {
             var p = UIFactory.Paragraph(desc, 19, Palette.Text);
@@ -324,11 +341,13 @@ public class PieceCatalogUI : MonoBehaviour
             detail.Add(s);
         }
 
-        var moveTitle = UIFactory.Label(promoted ? "動き（成り）" : (veteran ? "動き（生還後）" : "動き"), 18, Palette.Gold, "c3-bold");
+        var moveTitle = UIFactory.Label(awakened ? "動き（覚醒）" : promoted ? "動き（成り）" : (veteran ? "動き（生還後）" : "動き"), 18, Palette.Gold, "c3-bold");
         moveTitle.style.marginTop = 16;
         moveTitle.style.marginBottom = 8;
         detail.Add(moveTitle);
-        MoveDirection[] moves = veteran ? d.veteranMoveDirections : UIFactory.MovesOf(d, promoted);
+        MoveDirection[] moves = veteran ? d.veteranMoveDirections
+            : awakened && d.awakenedMoveDirections != null && d.awakenedMoveDirections.Length > 0 ? d.awakenedMoveDirections
+            : UIFactory.MovesOf(d, promoted);
         detail.Add(UIFactory.MoveGrid(moves, false, 24f));
         Label immovable = UIFactory.ImmovableNote(moves);
         detail.Add(immovable != null ? immovable : UIFactory.MoveLegend());
