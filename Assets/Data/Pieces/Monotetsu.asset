@@ -39,11 +39,38 @@ MonoBehaviour:
   canPromote: 1
   promotedDisplayName: "\u63D0\u7763"
   promotedName: "\u63D0\u7763"
-  promotedDescription: "\u6210\u3063\u305F\u77AC\u9593\u3001\u81EA\u8ECD\u306E\u7A7A\u3044\u3066\u3044\u308B\u5834\u6240\u306B\u30EF\u30FC\u30D7\u3059\u308B\u3002\u540C\u6642\u306B\u3001\u6575\u99D2\u306E\u300C\u6DF1\u6D77\u300D\u30923\u3064\u81EA\u8ECD\u4EE5\u5916\u306E\u5834\u6240\u306B\u3001\u5473\u65B9\u99D2\u306E\u300C\u8266\u5A18\u300D\u30922\u3064\u81EA\u8ECD\u306E\u7A7A\u3044\u3066\u3044\u308B\u5834\u6240\u306B\u53EC\u559A\u3059\u308B\u3002\u300C\u6DF1\u6D77\u300D\u3092\u3059\u3079\u3066\u6483\u7834\u3057\u305F\u969B\u3001\u76E4\u4E0A\u304B\u3089\u64A4\u9000\u3059\u308B\uFF08\u6483\u7834\u3055\u308C\u308B\uFF09\u3002\u3053\u306E\u99D2\u304C\u6483\u7834\u3055\u308C\u305F\u5834\u5408\u3001\u300C\u8266\u5A18\u300D\u3082\u540C\u6642\u306B\u6483\u7834\u3055\u308C\u308B\u3002"
+  promotedDescription: "成った瞬間、自陣の奥へワープして着任する。建造で艦種の違う「艦娘」を2隻出撃させ、敵側には「深海」の旗艦1隻と随伴2隻が浮上する。旗艦を沈めると作戦完了で、艦隊は帰投し、提督は「物鉄・改」として生還する。艦娘が1隻も沈まなければS勝利で、支援艦隊が援護につく。提督は動けず、撃破されると艦娘も沈む。"
   promotedATK: 0
   promotedDEF: 0
   promotedHP: 1
   promotedMoveDirections: []
+  veteranName: "物鉄・改"
+  veteranDescription: "作戦を終えて生還し、前線に戻った歴戦の物鉄。全方向に1マス、前にだけ2マス進める。この局ではもう着任しない。"
+  veteranMoveDirections:
+  - direction: {x: 0, y: 1}
+    maxDistance: 2
+    canJump: 0
+  - direction: {x: 1, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: -1, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 1, y: 0}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: -1, y: 0}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 0, y: -1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 1, y: -1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: -1, y: -1}
+    maxDistance: 1
+    canJump: 0
   hasPromotedRarity: 1
   promotedRarity: 2
   isAutoMove: 0

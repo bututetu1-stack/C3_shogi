@@ -19,7 +19,7 @@ MonoBehaviour:
   baseATK: 1
   baseDEF: 2
   baseHP: 2
-  rarity: 1
+  rarity: 4
   moveDirections:
   - direction: {x: 1, y: 1}
     maxDistance: 1
@@ -53,6 +53,9 @@ MonoBehaviour:
   - direction: {x: -1, y: -1}
     maxDistance: 2
     canJump: 0
+  veteranName: 
+  veteranDescription: 
+  veteranMoveDirections: []
   hasPromotedRarity: 0
   promotedRarity: 0
   isAutoMove: 0

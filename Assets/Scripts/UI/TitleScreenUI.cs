@@ -2,10 +2,9 @@ using System;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-/// <summary>タイトル画面（はじめる・遊び方・音量）</summary>
+/// <summary>タイトル画面（はじめる・駒一覧・遊び方・設定）</summary>
 public class TitleScreenUI : MonoBehaviour
 {
-    public const string VolumeKey = "c3_volume";
 
     private static TitleScreenUI instance;
     private UIDocument uiDocument;
@@ -102,27 +101,19 @@ public class TitleScreenUI : MonoBehaviour
         start.style.marginBottom = 14;
         column.Add(start);
 
+        var catalog = UIFactory.Button("駒一覧", PieceCatalogUI.Open);
+        catalog.style.width = 320;
+        catalog.style.marginBottom = 14;
+        column.Add(catalog);
+
         var help = UIFactory.Button("遊び方", ShowHelp);
         help.style.width = 320;
-        help.style.marginBottom = 26;
+        help.style.marginBottom = 14;
         column.Add(help);
 
-        // 音量
-        var volumeRow = new VisualElement();
-        volumeRow.style.flexDirection = FlexDirection.Row;
-        volumeRow.style.alignItems = Align.Center;
-        volumeRow.Add(UIFactory.Label("音量", 16, Palette.TextSub, "c3-bold"));
-        var slider = new Slider(0f, 1f);
-        slider.value = AudioListener.volume;
-        slider.style.width = 240;
-        slider.style.marginLeft = 12;
-        slider.RegisterValueChangedCallback(evt =>
-        {
-            AudioListener.volume = evt.newValue;
-            PlayerPrefs.SetFloat(VolumeKey, evt.newValue);
-        });
-        volumeRow.Add(slider);
-        column.Add(volumeRow);
+        var settings = UIFactory.Button("設定", SettingsUI.Open);
+        settings.style.width = 320;
+        column.Add(settings);
 
         var credit = UIFactory.Label("フォント: しっぽり明朝 B1 / Zen角ゴシック New（SIL Open Font License）", 12, new Color(1f, 1f, 1f, 0.35f));
         credit.style.position = Position.Absolute;

@@ -232,14 +232,28 @@ public static class CombatResolver
         if (target.data.pieceType == PieceType.Monotetsu && !target.isPromoted)
             SpeechBubble.Say(target, PieceLines.MonotetsuDown);
 
+        // 海の駒（艦娘・深海）は撃破ではなく轟沈の演出で沈む
+        bool atSea = PieceTypes.IsKanmusu(target.data.pieceType) || PieceTypes.IsShinkai(target.data.pieceType);
         if (BattleEffects.Instance != null)
-            BattleEffects.Instance.PlayDefeatEffect(pos);
+        {
+            if (atSea) BattleEffects.Instance.PlaySinkEffect(pos, target.team == Team.Player);
+            else BattleEffects.Instance.PlayDefeatEffect(pos);
+        }
         if (target.team == Team.Enemy && GameManager.Instance != null)
             GameManager.Instance.RegisterKill();
         GameSim.RecordKill(target);
 
-        bm.RemovePieceController(pos);
-        bm.RemovePiece(pos);
+        if (atSea)
+        {
+            PieceController pc = bm.DetachPieceController(pos);
+            bm.RemovePiece(pos);
+            if (pc != null) pc.PlayExit(PieceController.ExitStyle.Sink);
+        }
+        else
+        {
+            bm.RemovePieceController(pos);
+            bm.RemovePiece(pos);
+        }
 
         if (checkLinkedDeaths && AbilitySystem.Instance != null)
             AbilitySystem.Instance.CheckLinkedDeaths(groupId, target);

@@ -73,6 +73,8 @@ public class TurnIndicatorUI : MonoBehaviour
         buttonContainer.style.flexDirection = FlexDirection.Row;
         buttonContainer.style.marginLeft = 12;
         buttonContainer.pickingMode = PickingMode.Ignore;
+        buttonContainer.Add(UIFactory.Button("駒一覧", PieceCatalogUI.Open));
+        buttonContainer.Add(UIFactory.Button("設定", SettingsUI.Open));
         buttonContainer.Add(UIFactory.Button("パス", OnPassClicked));
         buttonContainer.Add(UIFactory.Button("投了", OnResignClicked, "c3-button--danger"));
         bar.Add(buttonContainer);

@@ -68,7 +68,7 @@ public class PieceDetailUI : MonoBehaviour
 
     private static string GetStateKey(PieceInstance piece)
     {
-        return piece.currentHP + "|" + piece.ATK + "|" + piece.DEF + "|" + piece.MaxHP + "|" + (piece.isPromoted ? "1" : "0");
+        return piece.currentHP + "|" + piece.ATK + "|" + piece.DEF + "|" + piece.MaxHP + "|" + (piece.isPromoted ? "1" : "0") + (piece.IsVeteran ? "v" : "");
     }
 
     // ------------------------------------------------------------
@@ -141,8 +141,13 @@ public class PieceDetailUI : MonoBehaviour
         var moveTitle = UIFactory.Label(promoted ? "動き（成り）" : "動き", 18, Palette.Gold, "c3-bold");
         moveTitle.style.marginBottom = 8;
         content.Add(moveTitle);
-        content.Add(UIFactory.MoveGrid(UIFactory.MovesOf(d, promoted), piece.team == Team.Enemy, 24f));
-        content.Add(UIFactory.MoveLegend());
+        MoveDirection[] moves = UIFactory.MovesOf(d, promoted);
+        if (isCurrentForm && piece.IsVeteran && d.veteranMoveDirections != null && d.veteranMoveDirections.Length > 0)
+            moves = d.veteranMoveDirections;
+        content.Add(UIFactory.MoveGrid(moves, piece.team == Team.Enemy, 24f));
+        Label immovable = UIFactory.ImmovableNote(moves);
+        if (immovable != null) content.Add(immovable);
+        else content.Add(UIFactory.MoveLegend());
 
         if (d.canPromote)
         {

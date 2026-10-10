@@ -65,6 +65,9 @@ MonoBehaviour:
   - direction: {x: 1, y: 1}
     maxDistance: 1
     canJump: 0
+  veteranName: 
+  veteranDescription: 
+  veteranMoveDirections: []
   hasPromotedRarity: 0
   promotedRarity: 0
   isAutoMove: 0

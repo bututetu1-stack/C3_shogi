@@ -36,6 +36,13 @@ public class PieceRenderer : MonoBehaviour
     private Color auraColor;
     private bool auraRing;
     private float auraPhase;
+    private Sprite auraArt;          // 深海棲姫の妖気（Resources/Effects/HimeAura.png があるとき）
+    private SpriteRenderer flagRenderer;   // 深海の旗艦の旗
+    private SpriteRenderer fireRenderer;   // 大破した艦娘の炎
+    private Sprite fireArt;
+    private bool fireIsMuzzle;
+    private float smokeTimer;
+    private float emberTimer;
     private TextMeshPro labelTop;
     private TextMeshPro labelBottom;
 
@@ -104,6 +111,21 @@ public class PieceRenderer : MonoBehaviour
         // ステータスは駒から見て 左肩=攻撃、右肩=防御、右下=体力（数字は常に正立）
         stats = CreateChild("Stats", transform);
         float flip = isEnemyPiece ? -1f : 1f;
+
+        // 旗艦の旗は、バッジのない角（駒から見て左下。敵駒なら画面の右上）に立てる
+        var flagObj = CreateChild("FlagshipMark", transform);
+        flagObj.localPosition = new Vector3(-0.36f, -0.3f, 0f) * flip + new Vector3(0f, 0.08f, 0f);
+        flagRenderer = flagObj.gameObject.AddComponent<SpriteRenderer>();
+        flagRenderer.sortingOrder = OrderBadge;
+        flagRenderer.enabled = false;
+
+        // 大破の炎（艦娘は自軍なので、駒から見て左下の角から燃え上がる）
+        var fireObj = CreateChild("DamageFire", visual);
+        fireObj.localPosition = new Vector3(-0.28f, -0.06f, 0f);
+        fireRenderer = fireObj.gameObject.AddComponent<SpriteRenderer>();
+        fireRenderer.sortingOrder = OrderBadge;
+        fireRenderer.enabled = false;
+
         atkBadge = CreateBadge("ATK", SpriteFactory.Circle, Palette.ATK, new Vector3(-0.34f, 0.34f, 0f) * flip, 0.27f);
         defBadge = CreateBadge("DEF", SpriteFactory.Shield, Palette.DEF, new Vector3(0.34f, 0.34f, 0f) * flip, 0.27f);
         hpBadge = CreateBadge("HP", SpriteFactory.Circle, Palette.HP, new Vector3(0.34f, -0.36f, 0f) * flip, 0.27f);
@@ -226,7 +248,7 @@ public class PieceRenderer : MonoBehaviour
         Rarity rarity = pieceInstance.CurrentRarity;
         bool promoted = pieceInstance.isPromoted;
         string name = pieceInstance.DisplayName ?? "";
-        bool kai2 = pieceInstance.kai2;
+        bool kai2 = pieceInstance.kai2 || pieceInstance.IsVeteran;
         if (!force && rarity == appliedRarity && promoted == appliedPromoted && kai2 == appliedKai2 && name == appliedName) return;
 
         appliedRarity = rarity;
@@ -245,6 +267,12 @@ public class PieceRenderer : MonoBehaviour
         auraRenderer.sprite = look.auraRing ? SpriteFactory.Ring : SpriteFactory.SoftCircle;
         auraColor = look.auraColor;
         auraRing = look.auraRing;
+        auraArt = pieceInstance.data.pieceType == PieceType.ShinkaiHime ? EffectArt.Get("HimeAura") : null;
+        if (auraArt != null)
+        {
+            auraRenderer.enabled = true;
+            auraRenderer.sprite = auraArt;
+        }
         IsFloating = look.floating;
 
         // 紋章がある駒は文字を少し下げる
@@ -273,7 +301,14 @@ public class PieceRenderer : MonoBehaviour
     {
         if (auraRenderer != null && auraRenderer.enabled)
         {
-            if (auraRing)
+            if (auraArt != null)
+            {
+                // 姫級の妖気はゆっくり渦を巻いて脈打つ
+                auraRenderer.transform.localScale = Vector3.one * (1.6f + 0.08f * Mathf.Sin(Time.time * 2.4f + auraPhase));
+                auraRenderer.transform.localRotation = Quaternion.Euler(0f, 0f, -Time.time * 25f);
+                auraRenderer.color = new Color(1f, 1f, 1f, 0.85f);
+            }
+            else if (auraRing)
             {
                 // 挑発の輪は広がりながら薄れ、また足元から広がる
                 float k = Mathf.Repeat(Time.time * 0.9f + auraPhase, 1f);
@@ -287,6 +322,85 @@ public class PieceRenderer : MonoBehaviour
                 float a = 0.3f + 0.12f * Mathf.Sin(Time.time * 2.2f + auraPhase);
                 auraRenderer.color = new Color(auraColor.r, auraColor.g, auraColor.b, a);
             }
+        }
+        UpdateFleetMarks();
+    }
+
+    /// <summary>旗艦の旗と、艦娘の損傷（中破は黒煙、大破は炎と濃い黒煙）</summary>
+    private void UpdateFleetMarks()
+    {
+        if (pieceInstance == null || flagRenderer == null) return;
+        bool alive = pieceInstance.isAlive;
+
+        bool flag = alive && pieceInstance.isFlagship;
+        if (flagRenderer.enabled != flag)
+        {
+            flagRenderer.enabled = flag;
+            if (flag)
+            {
+                flagRenderer.sprite = SpriteFactory.FlagshipMark;
+                flagRenderer.color = EffectArt.Has("FlagshipMark") ? Color.white : new Color(0.86f, 0.2f, 0.18f);
+            }
+        }
+        if (flag)
+        {
+            // 旗が風にはためく
+            float k = Mathf.Sin(Time.time * 3.1f + auraPhase);
+            flagRenderer.transform.localScale = new Vector3(0.44f * (1f + 0.07f * k), 0.44f, 1f);
+            flagRenderer.transform.localRotation = Quaternion.Euler(0f, 0f, 4f * k);
+        }
+
+        bool ship = alive && PieceTypes.IsKanmusu(pieceInstance.data.pieceType);
+        bool damaged = ship && AbilitySystem.IsDamaged(pieceInstance);
+        bool heavy = damaged && AbilitySystem.IsHeavilyDamaged(pieceInstance);
+        if (fireRenderer.enabled != heavy)
+        {
+            fireRenderer.enabled = heavy;
+            if (heavy)
+            {
+                // 画像がなければ発砲炎を上に向けて炎の代わりにする（それもなければ光の玉）
+                fireArt = EffectArt.Get("DamageFire");
+                fireIsMuzzle = fireArt == null && EffectArt.Has("MuzzleFlash");
+                if (fireIsMuzzle) fireArt = EffectArt.Get("MuzzleFlash");
+                fireRenderer.sprite = fireArt != null ? fireArt : SpriteFactory.SoftCircle;
+                fireRenderer.transform.localRotation = Quaternion.Euler(0f, 0f, fireIsMuzzle ? 90f : 0f);
+            }
+        }
+        if (!damaged || BattleEffects.Instance == null) return;
+
+        if (heavy)
+        {
+            // 炎はゆらめき、火の粉が舞う
+            float f = Mathf.PerlinNoise(Time.time * 7f, auraPhase);
+            if (fireIsMuzzle)
+            {
+                // 回した発砲炎は x が高さになる
+                fireRenderer.transform.localScale = new Vector3(0.5f + 0.14f * f, 0.42f + 0.06f * f, 1f);
+                fireRenderer.color = new Color(1f, 1f, 1f, 0.8f + 0.2f * f);
+            }
+            else if (fireArt != null)
+            {
+                fireRenderer.transform.localScale = new Vector3(0.6f + 0.05f * f, 0.6f + 0.14f * f, 1f);
+                fireRenderer.color = new Color(1f, 1f, 1f, 0.85f + 0.15f * f);
+            }
+            else
+            {
+                fireRenderer.transform.localScale = new Vector3(0.3f + 0.06f * f, 0.38f + 0.12f * f, 1f);
+                fireRenderer.color = new Color(1f, 0.45f + 0.3f * f, 0.12f, 0.75f + 0.25f * f);
+            }
+            emberTimer -= Time.deltaTime;
+            if (emberTimer <= 0f)
+            {
+                emberTimer = Random.Range(0.12f, 0.3f);
+                BattleEffects.Instance.PlayEmber(fireRenderer.transform.position + new Vector3(0f, 0.08f, 0f));
+            }
+        }
+
+        smokeTimer -= Time.deltaTime;
+        if (smokeTimer <= 0f)
+        {
+            smokeTimer = heavy ? 0.15f : 0.3f;
+            BattleEffects.Instance.PlayDamageSmoke(transform.position + new Vector3(Random.Range(-0.18f, 0.18f), 0.36f, 0f), heavy);
         }
     }
     private static bool IsAscii(string s)

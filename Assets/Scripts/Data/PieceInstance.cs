@@ -22,14 +22,18 @@ public class PieceInstance
     public bool isFlagship;         // 深海の旗艦（沈めると作戦完了）
     public bool kai2;               // 艦娘の改二（改のまま敵陣を出た）
     public int fleetDamage;         // 艦娘が深海に与えたダメージ（MVP の判定）
+    public int fleetDamageAll;      // 艦娘が与えたダメージの合計（深海以外も。自動プレイの集計用）
     public bool damageAnnounced;    // 艦娘の中破を知らせた
+    public bool promotionSpent;     // この局ではもう成らない（作戦完了で生還した物鉄）
 
     public int ATK { get { return (isPromoted ? data.promotedATK : data.baseATK) + bonusATK; } }
     public int DEF { get { return (isPromoted ? data.promotedDEF : data.baseDEF) + bonusDEF; } }
     public int MaxHP { get { return (isPromoted ? data.promotedHP : data.baseHP) + bonusMaxHP; } }
     public string DisplayName { get { return isPromoted ? data.promotedDisplayName : data.displayName; } }
-    public string FullName { get { return isPromoted ? data.promotedName : data.pieceName; } }
-    public string Description { get { return isPromoted ? data.promotedDescription : data.description; } }
+    public string FullName { get { return isPromoted ? data.promotedName : (IsVeteran && !string.IsNullOrEmpty(data.veteranName) ? data.veteranName : data.pieceName); } }
+    public string Description { get { return isPromoted ? data.promotedDescription : (IsVeteran && !string.IsNullOrEmpty(data.veteranDescription) ? data.veteranDescription : data.description); } }
+    /// <summary>作戦完了で生還した物鉄（物鉄・改）。この局ではもう成らない</summary>
+    public bool IsVeteran { get { return promotionSpent && !isPromoted; } }
 
     public Rarity CurrentRarity
     {
@@ -53,6 +57,7 @@ public class PieceInstance
     // 陣営に合わせた移動方向のキャッシュ（AIの探索で毎回配列を作らないため）
     [System.NonSerialized] private MoveDirection[] baseDirsCache;
     [System.NonSerialized] private MoveDirection[] promotedDirsCache;
+    [System.NonSerialized] private MoveDirection[] veteranDirsCache;
 
     /// <summary>この駒の移動方向（敵駒はY反転済み）。返した配列は書き換えないこと</summary>
     public MoveDirection[] GetMoveDirections()
@@ -62,6 +67,11 @@ public class PieceInstance
         {
             if (promotedDirsCache == null) promotedDirsCache = BuildDirections(data.promotedMoveDirections);
             return promotedDirsCache;
+        }
+        if (IsVeteran && data.veteranMoveDirections != null && data.veteranMoveDirections.Length > 0)
+        {
+            if (veteranDirsCache == null) veteranDirsCache = BuildDirections(data.veteranMoveDirections);
+            return veteranDirsCache;
         }
         if (baseDirsCache == null) baseDirsCache = BuildDirections(data.moveDirections);
         return baseDirsCache;
@@ -139,7 +149,7 @@ public class PieceInstance
 
     public bool CanPromoteAt(int boardRow, int boardSize)
     {
-        if (!data.canPromote || isPromoted) return false;
+        if (!data.canPromote || isPromoted || promotionSpent) return false;
         int promoteRows = BoardCell.GetPromoteRows(boardSize);
         if (team == Team.Player)
             return boardRow >= boardSize - promoteRows;

@@ -19,6 +19,8 @@ public static class BalanceTuning
     public static int PlayerHpDivisor = 4;
     /// <summary>自軍の防御の上乗せ = (局−1) ÷ この値（C3は除く）</summary>
     public static int PlayerDefDivisor = 5;
+    /// <summary>自軍の攻撃の上乗せ = (局−1) ÷ この値（C3は除く。0なら上乗せしない）</summary>
+    public static int PlayerAtkDivisor = 0;
 
     /// <summary>仲間を2枚選べる局（盤が9×9になり、駒の数が一気に増える第五局）</summary>
     public static int[] TwoPickStages = { 5 };
@@ -42,8 +44,13 @@ public static class BalanceTuning
     public static int ChukaHeal = 3;
     /// <summary>中華を食べた味方の「満腹」（攻撃+1）を1体が受けられる回数（その局のあいだ）</summary>
     public static int ChukaFullMax = 1;
+    /// <summary>組み止め: 小錦の隣にいる敵は小錦の隣から離れられない（挑発を当てにできるデコイにする）</summary>
+    public static bool KonishikiGrapple = true;
     /// <summary>小錦が攻撃されたときの「同情」（周りの味方の攻撃+1）を1体が受けられる回数（その局のあいだ）</summary>
     public static int KonishikiSympathyMax = 2;
+
+    /// <summary>僕のそばに何手番続けていると強化されるか</summary>
+    public static int BokuBuffTurns = 2;
 
     /// <summary>ユウの助走: 敵まで走ったマスのうち、2マス目から1マスごとの攻撃の上乗せ（3マス先なら+2）</summary>
     public static int YuuRunUpPerSquare = 1;
@@ -53,10 +60,32 @@ public static class BalanceTuning
 
     // ---- 提督の艦隊 ----
 
+    /// <summary>空母の開幕航空戦（着任時に深海すべてへ）のダメージの元の値</summary>
+    public static int CarrierOpeningDamage = 1;
+    /// <summary>空母の空爆で、狙った深海に当てるダメージの元の値（周りの敵2体へは CarrierSplashDamage）</summary>
+    public static int CarrierStrikeDamage = 1;
+    public static int CarrierSplashDamage = 2;
+
     /// <summary>着任のときに建造する艦娘の数（艦種は重複なし）</summary>
     public static int FleetShips = 2;
-    /// <summary>着任から何手（両軍の手の合計）で夜戦に入るか</summary>
-    public static int FleetNightAfterMoves = 20;
+    /// <summary>着任から何手（両軍の手の合計）で夜戦に入るか（4なら、着任の手番と次の手番の2巡が昼戦で、3巡目から夜戦）</summary>
+    public static int FleetNightAfterMoves = 4;
     /// <summary>提督の隣にいる艦娘が、自軍の手番の開始時に回復する量（入渠）</summary>
     public static int FleetDockHeal = 1;
+    /// <summary>艦娘の攻撃（雷撃・砲撃・空爆）のダメージに足す値</summary>
+    public static int FleetDamageBonus = 0;
+    /// <summary>作戦完了のあとも提督と艦娘が盤に残る（false なら帰投して盤を去る）</summary>
+    public static bool FleetStaysAfterVictory = false;
+    /// <summary>艦娘は随伴の深海を先に狙い、旗艦は最後に狙う（作戦が長く続く）</summary>
+    public static bool FleetEscortsFirst = false;
+    /// <summary>随伴艦の壁: 随伴が残っているあいだ、旗艦が艦隊から受けるダメージを半分にする</summary>
+    public static bool FlagshipGuard = true;
+    /// <summary>生還と再配置: 作戦完了で提督は物鉄に戻って盤に残る（攻撃+1・体力+1、その局ではもう着任しない）</summary>
+    public static bool FleetVeteranReturn = true;
+    /// <summary>支援艦隊: 作戦完了のあと、その局のあいだ自軍の手番の終わりに支援射撃をする回数（0なら無し）</summary>
+    public static int FleetSupportShots = 1;
+    /// <summary>支援射撃1回のダメージ（防御を無視）</summary>
+    public static int FleetSupportDamage = 1;
+    /// <summary>支援艦隊はS勝利（艦娘が1隻も沈まなかった）ときだけ付く</summary>
+    public static bool FleetSupportNeedsS = true;
 }

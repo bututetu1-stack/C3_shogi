@@ -65,7 +65,8 @@ public class GameManager : MonoBehaviour
     {
         if (Instance == null) Instance = this;
         else { Destroy(gameObject); return; }
-        AudioListener.volume = PlayerPrefs.GetFloat(TitleScreenUI.VolumeKey, 0.8f);
+        // 音量は BGM と効果音に分けて SoundSettings で持つ（全体の音量は使わない）
+        AudioListener.volume = 1f;
     }
 
     void Start()

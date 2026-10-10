@@ -331,12 +331,23 @@ public static class UIFactory
         return n.ToString();
     }
 
-    /// <summary>駒の動き（成り後にデータがなければ通常の動き）</summary>
+    /// <summary>駒の動き（成り後にデータがなければ通常の動き。動けない駒・成ると動けなくなる駒（提督）は空）</summary>
     public static MoveDirection[] MovesOf(PieceData data, bool promoted)
     {
-        if (promoted && data.canPromote && data.promotedMoveDirections != null && data.promotedMoveDirections.Length > 0)
+        promoted = promoted && data.canPromote;
+        if (data.isImmovable || (promoted && data.isImmovableWhenPromoted)) return new MoveDirection[0];
+        if (promoted && data.promotedMoveDirections != null && data.promotedMoveDirections.Length > 0)
             return data.promotedMoveDirections;
-        return data.moveDirections;
+        return data.moveDirections ?? new MoveDirection[0];
+    }
+
+    /// <summary>動きの図の下に添える「動けない」の注記（動ける駒なら null）</summary>
+    public static Label ImmovableNote(MoveDirection[] moves)
+    {
+        if (moves != null && moves.Length > 0) return null;
+        var note = Label("動けない", 18, Palette.TextSub, "c3-bold");
+        note.style.marginTop = 6;
+        return note;
     }
 
     private static bool IsAscii(string s)

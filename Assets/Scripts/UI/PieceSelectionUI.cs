@@ -172,9 +172,15 @@ public class PieceSelectionUI : MonoBehaviour
         name.style.marginTop = 10;
         card.Add(name);
 
-        var chip = UIFactory.Chip("全軍強化", Palette.GoldLight);
+        var chip = UpgradeChip(option);
         chip.style.marginTop = 6;
         card.Add(chip);
+        if (option.fleetReward)
+        {
+            // S勝利のごほうびは海の色の縁で目立たせる
+            card.style.borderTopColor = card.style.borderBottomColor = card.style.borderLeftColor = card.style.borderRightColor = CutInUI.SeaLight;
+            card.style.borderTopWidth = card.style.borderBottomWidth = card.style.borderLeftWidth = card.style.borderRightWidth = 3;
+        }
 
         card.RegisterCallback<ClickEvent>(evt => SelectCard(option));
         cards.Add(card);
@@ -229,12 +235,24 @@ public class PieceSelectionUI : MonoBehaviour
         head.style.alignItems = Align.Center;
         head.style.marginBottom = 12;
         head.Add(UIFactory.Label(option.Title, 30, Palette.Text, "c3-mincho"));
-        var chip = UIFactory.Chip("全軍強化", Palette.GoldLight);
+        var chip = UpgradeChip(option);
         chip.style.marginLeft = 12;
         head.Add(chip);
         detailPanel.Add(head);
 
         detailPanel.Add(UIFactory.Paragraph(option.Description, 21, Palette.Text));
+        if (option.fleetReward)
+        {
+            var note = UIFactory.Paragraph("提督の艦隊がS勝利（艦娘が1隻も沈まずに作戦完了）したごほうびで、選択肢が1枚増えています。", 19, CutInUI.SeaLight);
+            note.style.marginTop = 8;
+            detailPanel.Add(note);
+        }
+    }
+
+    /// <summary>強化カードの種類の札（S勝利で増えた1枚は「S勝利のごほうび」）</summary>
+    private static VisualElement UpgradeChip(DraftOption option)
+    {
+        return option.fleetReward ? UIFactory.Chip("S勝利のごほうび", CutInUI.SeaLight) : UIFactory.Chip("全軍強化", Palette.GoldLight);
     }
 
     private void RenderPieceDetail(PieceData piece, bool promoted)
@@ -303,10 +321,13 @@ public class PieceSelectionUI : MonoBehaviour
         right.style.alignItems = Align.Center;
         right.style.flexShrink = 0;
         right.Add(UIFactory.Label(promoted ? "動き（成り）" : "動き", 20, Palette.Gold, "c3-bold"));
-        var grid = UIFactory.MoveGrid(UIFactory.MovesOf(piece, promoted), false, 22f);
+        MoveDirection[] moves = UIFactory.MovesOf(piece, promoted);
+        var grid = UIFactory.MoveGrid(moves, false, 22f);
         grid.style.marginTop = 10;
         right.Add(grid);
-        right.Add(UIFactory.MoveLegend());
+        Label immovable = UIFactory.ImmovableNote(moves);
+        if (immovable != null) right.Add(immovable);
+        else right.Add(UIFactory.MoveLegend());
         detailPanel.Add(right);
     }
 

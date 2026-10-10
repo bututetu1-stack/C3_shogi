@@ -19,7 +19,7 @@ public static class PieceSkin
     public static readonly Color NavalInk = Palette.Hex(0x1E3358);
     public static readonly Color AbyssInk = Palette.Hex(0x86E8DC);
 
-    /// <summary>kai2: 艦娘の改二（金の光をまとう）</summary>
+    /// <summary>kai2: 艦娘の改二・生還した物鉄（金の光をまとう）</summary>
     public static PieceLook For(PieceData data, bool promoted, bool kai2 = false)
     {
         promoted = promoted && data.canPromote;
@@ -42,6 +42,13 @@ public static class PieceSkin
                     look.emblemColor = Palette.Gold;
                     look.aura = true;
                     look.auraColor = Palette.Gold;
+                }
+                else if (kai2)
+                {
+                    // 物鉄・改（作戦完了から生還）: 金の錨と金の光
+                    look.emblem = SpriteFactory.Anchor;
+                    look.emblemColor = Palette.Gold;
+                    SetAura(ref look, Palette.Gold, false);
                 }
                 else
                 {

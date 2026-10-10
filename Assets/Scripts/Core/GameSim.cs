@@ -26,6 +26,8 @@ public static class GameSim
     public static readonly List<string> StageLossKillers = new List<string>();
     /// <summary>この局で成った自軍の駒の名前</summary>
     public static readonly List<string> StagePromotions = new List<string>();
+    /// <summary>この局の艦隊の出来事（"着任@手数" "夜戦@着任からの手数" "S@着任からの手数" "A@…" "轟沈@…"）</summary>
+    public static readonly List<string> StageFleet = new List<string>();
 
     public static void BeginStageStats()
     {
@@ -34,6 +36,7 @@ public static class GameSim
         StageLosses.Clear();
         StageLossKillers.Clear();
         StagePromotions.Clear();
+        StageFleet.Clear();
         AbilitySource = null;
         attacker = null;
     }
@@ -76,6 +79,12 @@ public static class GameSim
     public static void RecordPromotion(PieceInstance piece)
     {
         if (Headless && piece != null && piece.team == Team.Player) StagePromotions.Add(piece.data.displayName);
+    }
+
+    /// <summary>艦隊の出来事を記録する（Headless のときだけ）</summary>
+    public static void RecordFleet(string kind, int moves)
+    {
+        if (Headless) StageFleet.Add(kind + "@" + moves);
     }
 
     /// <summary>

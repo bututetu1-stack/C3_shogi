@@ -25,6 +25,12 @@ public class PieceData : ScriptableObject
     public int promotedHP;
     public MoveDirection[] promotedMoveDirections;
 
+    [Header("Veteran")]
+    public string veteranName;                      // 作戦完了で生還したあとのフルネーム（物鉄・改）
+    [TextArea(2, 4)]
+    public string veteranDescription;
+    public MoveDirection[] veteranMoveDirections;   // 生還したあとの動き（空なら通常の動き）
+
     [Header("Promotion Rarity")]
     public bool hasPromotedRarity;                  // 成り後にレアリティが変わる（物鉄→提督）
     public Rarity promotedRarity;
