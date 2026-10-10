@@ -366,6 +366,52 @@ public static class SpriteFactory
         }
     }
 
+    /// <summary>旗竿と燕尾の旗（深海の旗艦の印）。Resources/Effects/FlagshipMark.png があればそちらを使う</summary>
+    public static Sprite FlagshipMark
+    {
+        get
+        {
+            Sprite art = EffectArt.Get("FlagshipMark");
+            if (art != null) return art;
+            return Cached("flagshipmark", () => Shape(96, (x, y) =>
+            {
+                float pole = Box(x + 0.62f, y, 0.055f, 0.9f);
+                float knob = new Vector2(x + 0.62f, y - 0.9f).magnitude - 0.09f;
+                // 旗: 竿の右へなびき、右端が二股に切れ込む
+                float dy = Mathf.Abs(y - 0.45f);
+                float flag = Mathf.Max(Mathf.Max(-0.6f - x, dy - 0.36f), (x - (0.78f - 0.42f * (1f - dy / 0.36f))) * 0.7f);
+                return Mathf.Min(Mathf.Min(pole, knob), flag);
+            }));
+        }
+    }
+
+    /// <summary>下端の光源から上へ広がる光の筋（探照灯）。下端が光源</summary>
+    public static Sprite Beam
+    {
+        get
+        {
+            return Cached("beam", () =>
+            {
+                const int w = 64, h = 192;
+                var tex = NewTexture(w, h, true);
+                var px = new Color[w * h];
+                for (int y = 0; y < h; y++)
+                    for (int x = 0; x < w; x++)
+                    {
+                        float t = (y + 0.5f) / h;                    // 0=光源 1=先
+                        float nx = Mathf.Abs((x + 0.5f) / w * 2f - 1f);
+                        float halfWidth = 0.1f + 0.9f * t;
+                        float across = Mathf.Clamp01(1f - nx / halfWidth);
+                        float along = (1f - t) * Mathf.Clamp01(t * 12f);
+                        px[y * w + x] = new Color(1, 1, 1, across * across * along);
+                    }
+                tex.SetPixels(px);
+                tex.Apply(true);
+                return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), h);
+            });
+        }
+    }
+
     private static float Box(float x, float y, float hw, float hh)
     {
         float dx = Mathf.Abs(x) - hw;

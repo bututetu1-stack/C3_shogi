@@ -362,6 +362,260 @@ public class BattleEffects : MonoBehaviour
         StartCoroutine(Bubble(worldPos));
     }
 
+    // --- 艦隊の状態（損傷・轟沈・夜戦・かばう・MVP） ---
+
+    /// <summary>損傷した艦娘から上がる黒煙のひとかたまり（heavy=大破は濃く大きい）</summary>
+    public void PlayDamageSmoke(Vector3 worldPos, bool heavy)
+    {
+        StartCoroutine(DamageSmokeRoutine(worldPos, heavy));
+    }
+
+    private IEnumerator DamageSmokeRoutine(Vector3 pos, bool heavy)
+    {
+        Sprite art = EffectArt.Get("DamageSmoke");
+        Color tint = Color.white;
+        if (art == null)
+        {
+            // 画像がなければ砲煙を黒く染めて使う（それもなければぼかし円）
+            art = EffectArt.Get("Smoke");
+            tint = art != null ? new Color(0.17f, 0.16f, 0.17f) : new Color(0.1f, 0.1f, 0.11f);
+        }
+        float alpha = heavy ? 0.85f : 0.6f;
+        var sr = CreateSprite(art != null ? art : SpriteFactory.SoftCircle, pos, new Color(tint.r, tint.g, tint.b, 0f), 0.2f, OrderGlow - 1);
+        sr.transform.rotation = Quaternion.Euler(0, 0, Random.Range(0f, 360f));
+        float spin = Random.Range(-40f, 40f);
+        float sway = Random.Range(0f, 6.28f);
+        float rise = heavy ? 0.85f : 0.65f;
+        float startSize = heavy ? 0.26f : 0.2f;
+        float endSize = heavy ? 0.75f : 0.55f;
+        float life = heavy ? 1.4f : 1.2f;
+        float elapsed = 0f;
+        while (elapsed < life)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / life;
+            sr.transform.position = pos + new Vector3(Mathf.Sin(t * 4f + sway) * 0.05f + t * 0.15f, rise * Ease.OutCubic(t), 0f);
+            sr.transform.localScale = Vector3.one * Mathf.Lerp(startSize, endSize, Ease.OutCubic(t));
+            sr.transform.Rotate(0f, 0f, spin * Time.deltaTime);
+            sr.color = new Color(tint.r, tint.g, tint.b, alpha * Mathf.Clamp01(t * 6f) * (1f - t));
+            yield return null;
+        }
+        Destroy(sr.gameObject);
+    }
+
+    /// <summary>火の粉がひとつ舞い上がる（大破の炎）</summary>
+    public void PlayEmber(Vector3 worldPos)
+    {
+        StartCoroutine(EmberRoutine(worldPos));
+    }
+
+    private IEnumerator EmberRoutine(Vector3 pos)
+    {
+        Color c = Color.Lerp(new Color(1f, 0.85f, 0.35f), new Color(1f, 0.4f, 0.15f), Random.value);
+        var sr = CreateSprite(SpriteFactory.SoftCircle, pos, c, 0.08f, OrderParticle);
+        Vector3 vel = new Vector3(Random.Range(-0.25f, 0.25f), Random.Range(0.5f, 0.9f), 0f);
+        const float life = 0.7f;
+        float elapsed = 0f;
+        while (elapsed < life)
+        {
+            float dt = Time.deltaTime;
+            elapsed += dt;
+            vel.x += Mathf.Sin(elapsed * 9f) * 0.6f * dt;
+            sr.transform.position += vel * dt;
+            sr.color = new Color(c.r, c.g, c.b, 1f - elapsed / life);
+            yield return null;
+        }
+        Destroy(sr.gameObject);
+    }
+
+    /// <summary>轟沈（艦娘・深海が沈む）: 炎の混じった水柱と黒煙、海へ引き込む渦。ownShip=自軍の艦娘なら「轟沈」と出す</summary>
+    public void PlaySinkEffect(Vector2Int pos, bool ownShip)
+    {
+        PlayLimited(Clip("Sink"), 1.6f, defeatClip);
+        Vector3 p = World(pos);
+        Sprite blast = EffectArt.Get("SinkBlast");
+        if (blast != null)
+        {
+            StartCoroutine(SplashFx(blast, p, 1.5f, 1.15f, 0.95f));
+            StartCoroutine(Burst(p, 12, Color.white, Sea, 1.5f, 3.5f, 0.12f, 0.6f, -6f));
+        }
+        else
+        {
+            if (!ArtFx("Explosion", p, 0.5f, 1.5f, 0.45f))
+                StartCoroutine(Glow(p, new Color(1f, 0.6f, 0.2f, 0.95f), 0.5f, 1.8f, 0.4f));
+            StartCoroutine(WaterColumn(p, 24, 1.6f));
+        }
+        if (!ArtFx("Ripple", p, 0.5f, 2.0f, 0.8f, 0f))
+            StartCoroutine(RingWave(p, Sea, 0.4f, 1.8f, 0.6f));
+        StartCoroutine(Implode(p, 10, ownShip ? Sea : AbyssTeal, SeaDeep, 0.9f, 0.6f));
+        StartCoroutine(Burst(p, 8, new Color(0.25f, 0.24f, 0.24f, 0.8f), new Color(0.08f, 0.08f, 0.08f, 0.8f), 0.5f, 1.4f, 0.22f, 1.0f, 1.2f));
+        if (ownShip) FloatingText.Spawn(pos, "轟沈", new Color(1f, 0.45f, 0.4f), 3.8f, 0.15f);
+        ShakeCamera(0.2f, 0.08f);
+    }
+
+    /// <summary>随伴艦が旗艦をかばう: 随伴から旗艦へ光が流れ、旗艦の前に深海の障壁が張られる</summary>
+    public void PlayAbyssGuard(Vector2Int flagship, Vector2Int escort)
+    {
+        Vector3 p = World(flagship);
+        Color mote = new Color(AbyssTeal.r, AbyssTeal.g, AbyssTeal.b, 0.9f);
+        for (int i = 0; i < 4; i++)
+            StartCoroutine(Mote(World(escort), p, mote, 0.3f, i * 0.04f, 0.15f));
+        if (!ArtFx("AbyssShield", p, 0.75f, 1.05f, 0.55f, 0f))
+        {
+            StartCoroutine(Glow(p, new Color(AbyssTeal.r, AbyssTeal.g, AbyssTeal.b, 0.55f), 0.6f, 1.1f, 0.45f));
+            StartCoroutine(RingWave(p, AbyssTeal, 0.5f, 1.15f, 0.45f));
+        }
+    }
+
+    /// <summary>MVP: 勲章が浮かび、桜の花びらが舞う</summary>
+    public void PlayMvp(Vector2Int pos)
+    {
+        Vector3 p = World(pos);
+        StartCoroutine(MvpRoutine(p + new Vector3(0f, 0.3f, 0f)));
+        StartCoroutine(RingWave(p, Palette.GoldLight, 0.4f, 1.6f, 0.5f));
+        for (int i = 0; i < 16; i++)
+            StartCoroutine(SakuraPetal(p, i * 0.03f));
+    }
+
+    private IEnumerator MvpRoutine(Vector3 at)
+    {
+        StartCoroutine(Glow(at, new Color(1f, 0.85f, 0.4f, 0.8f), 0.3f, 1.3f, 0.7f));
+        Sprite medal = EffectArt.Get("MvpMedal");
+        if (medal == null) yield break;
+        var sr = CreateSprite(medal, at, Color.white, 0f, OrderParticle + 4);
+        const float life = 2.2f;
+        float elapsed = 0f;
+        while (elapsed < life)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / life;
+            float pop = Ease.OutBack(Mathf.Clamp01(elapsed / 0.3f));
+            sr.transform.localScale = Vector3.one * 0.62f * pop;
+            sr.transform.position = at + new Vector3(0f, 0.2f * Ease.OutCubic(t), 0f);
+            sr.transform.rotation = Quaternion.Euler(0f, 0f, Mathf.Sin(elapsed * 3f) * 5f);
+            sr.color = new Color(1f, 1f, 1f, t < 0.8f ? 1f : 1f - (t - 0.8f) / 0.2f);
+            yield return null;
+        }
+        Destroy(sr.gameObject);
+    }
+
+    private IEnumerator SakuraPetal(Vector3 center, float delay)
+    {
+        if (delay > 0f) yield return new WaitForSeconds(delay);
+        Color c = Color.Lerp(new Color(1f, 0.6f, 0.75f), new Color(1f, 0.85f, 0.9f), Random.value);
+        var sr = CreateSprite(SpriteFactory.SoftCircle, center, c, 0.1f, OrderParticle + 1);
+        float ang = Random.Range(0f, Mathf.PI * 2f);
+        Vector3 vel = new Vector3(Mathf.Cos(ang), Mathf.Sin(ang) * 0.6f + 0.9f, 0f) * Random.Range(1f, 1.8f);
+        float spin = Random.Range(-300f, 300f);
+        float sway = Random.Range(0f, 6.28f);
+        const float life = 1.5f;
+        float elapsed = 0f;
+        while (elapsed < life)
+        {
+            float dt = Time.deltaTime;
+            elapsed += dt;
+            float t = elapsed / life;
+            vel *= 1f - 2.5f * dt;
+            vel.y -= 0.9f * dt;
+            sr.transform.position += vel * dt + new Vector3(Mathf.Sin(elapsed * 5f + sway) * 0.3f * dt, 0f, 0f);
+            sr.transform.localScale = new Vector3(0.22f, 0.13f, 1f);
+            sr.transform.Rotate(0f, 0f, spin * dt);
+            sr.color = new Color(c.r, c.g, c.b, 1f - t * t);
+            yield return null;
+        }
+        Destroy(sr.gameObject);
+    }
+
+    /// <summary>夜戦の幕開け: 手前から探照灯が盤を照らして左右に振れ、照明弾が打ち上がってゆっくり降りてくる</summary>
+    private void PlayNightOpening(int size)
+    {
+        float c = (size - 1) / 2f;
+        StartCoroutine(SearchlightRoutine(new Vector3(c - size * 0.25f, -0.9f, 0f), 24f, size, 0f));
+        StartCoroutine(SearchlightRoutine(new Vector3(c + size * 0.25f, -0.9f, 0f), -24f, size, 0.15f));
+        for (int i = 0; i < 2; i++)
+        {
+            Vector3 at = new Vector3(c + (i == 0 ? -1f : 1f) * size * 0.22f + Random.Range(-0.4f, 0.4f),
+                c + size * 0.2f + Random.Range(-0.4f, 0.4f), 0f);
+            StartCoroutine(StarShellRoutine(at, 0.5f + i * 0.45f));
+        }
+    }
+
+    private IEnumerator SearchlightRoutine(Vector3 origin, float tilt, int size, float delay)
+    {
+        if (delay > 0f) yield return new WaitForSeconds(delay);
+        Sprite art = EffectArt.Get("Searchlight");
+        Sprite sprite = art != null ? art : SpriteFactory.Beam;
+        Color tint = art != null ? Color.white : new Color(0.85f, 0.95f, 1f);
+        float maxAlpha = art != null ? 0.45f : 0.26f;
+        var sr = CreateSprite(sprite, origin, new Color(tint.r, tint.g, tint.b, 0f), 1f, PieceRenderer.OrderShadow - 1);
+        float length = size * 1.2f;
+        float k = length / sprite.bounds.size.y;
+        sr.transform.localScale = new Vector3(k * (art != null ? 0.8f : 0.9f), k, 1f);
+        const float life = 2.8f;
+        float elapsed = 0f;
+        while (elapsed < life)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / life;
+            float angle = tilt * Mathf.Cos(t * Mathf.PI * 1.3f);   // 外側から内側へ振り、2本が交差する
+            Vector3 dir = Quaternion.Euler(0f, 0f, angle) * Vector3.up;
+            sr.transform.rotation = Quaternion.Euler(0f, 0f, angle);
+            sr.transform.position = origin + dir * (length * 0.5f);
+            float a = maxAlpha * Mathf.Clamp01(elapsed / 0.3f) * (t > 0.75f ? 1f - (t - 0.75f) / 0.25f : 1f);
+            sr.color = new Color(tint.r, tint.g, tint.b, a);
+            yield return null;
+        }
+        Destroy(sr.gameObject);
+    }
+
+    private IEnumerator StarShellRoutine(Vector3 at, float delay)
+    {
+        if (delay > 0f) yield return new WaitForSeconds(delay);
+        // 打ち上げ: 下から光の点が昇っていく
+        Vector3 from = new Vector3(at.x, -1f, 0f);
+        var rocket = CreateSprite(SpriteFactory.SoftCircle, from, new Color(1f, 0.9f, 0.6f, 0.9f), 0.14f, OrderParticle);
+        const float climb = 0.45f;
+        float elapsed = 0f;
+        while (elapsed < climb)
+        {
+            elapsed += Time.deltaTime;
+            rocket.transform.position = Vector3.Lerp(from, at, Ease.OutCubic(elapsed / climb));
+            yield return null;
+        }
+        Destroy(rocket.gameObject);
+
+        // 炸裂して輝き、ゆっくり降りてくる。真下の盤がぼんやり照らされる
+        Sprite art = EffectArt.Get("StarShell");
+        var flare = CreateSprite(art != null ? art : SpriteFactory.SoftCircle, at, Color.white, 0.5f, OrderParticle + 1);
+        var halo = art != null ? null : CreateSprite(SpriteFactory.SoftCircle, at, new Color(1f, 0.92f, 0.7f, 0.5f), 1.8f, OrderGlow);
+        var pool = CreateSprite(SpriteFactory.SoftCircle, at, new Color(1f, 0.93f, 0.75f, 0f), 3.2f, PieceRenderer.OrderShadow - 1);
+        StartCoroutine(Burst(at, 10, Color.white, new Color(1f, 0.85f, 0.45f), 1f, 2.5f, 0.06f, 0.5f, -2f, SpriteFactory.Pixel));
+        const float life = 3.2f;
+        elapsed = 0f;
+        while (elapsed < life)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / life;
+            float flicker = 0.88f + 0.12f * Mathf.PerlinNoise(elapsed * 14f, at.x);
+            float fade = Mathf.Clamp01(elapsed / 0.15f) * (t > 0.75f ? 1f - (t - 0.75f) / 0.25f : 1f);
+            Vector3 p = at + new Vector3(Mathf.Sin(elapsed * 1.3f) * 0.12f, -0.8f * t, 0f);
+            flare.transform.position = p;
+            flare.transform.localScale = Vector3.one * (art != null ? 1.0f : 0.7f) * flicker;
+            flare.color = new Color(1f, art != null ? 1f : 0.97f, art != null ? 1f : 0.85f, fade);
+            if (halo != null)
+            {
+                halo.transform.position = p;
+                halo.color = new Color(1f, 0.92f, 0.7f, 0.5f * fade * flicker);
+            }
+            pool.transform.position = p + new Vector3(0f, -0.6f, 0f);
+            pool.color = new Color(1f, 0.93f, 0.75f, 0.22f * fade * flicker);
+            yield return null;
+        }
+        Destroy(flare.gameObject);
+        if (halo != null) Destroy(halo.gameObject);
+        Destroy(pool.gameObject);
+    }
+
     // --- 艦娘の攻撃 ---
 
     public void PlayAirRaidEffect(Vector2Int from, Vector2Int to)
@@ -831,8 +1085,9 @@ public class BattleEffects : MonoBehaviour
         if (GameSim.Headless || nightOverlay != null || BoardManager.Instance == null) return;
         int size = BoardManager.Instance.CurrentBoardSize;
         float c = (size - 1) / 2f;
-        nightOverlay = CreateSprite(SpriteFactory.Pixel, new Vector3(c, c, 0f), new Color(0.03f, 0.05f, 0.16f, 0.65f), size + 0.3f, PieceRenderer.OrderShadow - 2);
+        nightOverlay = CreateSprite(SpriteFactory.Pixel, new Vector3(c, c, 0f), new Color(0.03f, 0.05f, 0.18f, 0.8f), size + 0.3f, PieceRenderer.OrderShadow - 2);
         nightOverlay.gameObject.name = "NightOverlay";
+        PlayNightOpening(size);
     }
 
     /// <summary>光の粒が相手へ飛び、相手の上で細かい破片が散る（けいのバグ修正は緑、きぷの冷笑は水色）</summary>
@@ -1037,18 +1292,17 @@ public class BattleEffects : MonoBehaviour
     }
 
     /// <summary>水柱の画像（下から上へ伸びて消える。画像は横から見た水柱の前提）</summary>
-    private IEnumerator SplashFx(Sprite art, Vector3 pos, float height)
+    private IEnumerator SplashFx(Sprite art, Vector3 pos, float height, float width = 0.9f, float life = 0.6f)
     {
         var sr = CreateSprite(art, pos, Color.white, 1f, OrderParticle + 3);
         float h = 1.3f * height;
-        const float life = 0.6f;
         float elapsed = 0f;
         while (elapsed < life)
         {
             elapsed += Time.deltaTime;
             float t = elapsed / life;
             float k = Ease.OutCubic(Mathf.Clamp01(t / 0.5f));
-            sr.transform.localScale = new Vector3(0.9f, Mathf.Max(0.01f, h * k), 1f);
+            sr.transform.localScale = new Vector3(width, Mathf.Max(0.01f, h * k), 1f);
             sr.transform.position = pos + new Vector3(0f, h * k * 0.5f - 0.2f, 0f);
             sr.color = new Color(1f, 1f, 1f, t < 0.55f ? 1f : 1f - (t - 0.55f) / 0.45f);
             yield return null;

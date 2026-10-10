@@ -231,6 +231,7 @@ public partial class AbilitySystem
             if (mvp != null && mvp.fleetDamage > 0)
             {
                 FloatingText.Spawn(mvp.boardPosition, "MVP", Palette.GoldLight, 4f, 0.3f);
+                if (BattleEffects.Instance != null) BattleEffects.Instance.PlayMvp(mvp.boardPosition);
                 if (BattleLogUI.Instance != null)
                     BattleLogUI.Instance.AddLog("MVP: " + BattleLogUI.ColorName(ClassName(mvp.data.pieceType), Team.Player) + "（深海に" + mvp.fleetDamage + "ダメージ）");
             }
@@ -268,7 +269,11 @@ public partial class AbilitySystem
         {
             if (BattleLogUI.Instance != null)
                 BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("提督", Team.Player) + "轟沈……" + BattleLogUI.ColorName("艦娘", Team.Player) + "たちも海へ消えた");
-            foreach (var ship in ships) CombatResolver.RemoveWithExit(ship, PieceController.ExitStyle.Sink);
+            foreach (var ship in ships)
+            {
+                if (BattleEffects.Instance != null) BattleEffects.Instance.PlaySinkEffect(ship.boardPosition, true);
+                CombatResolver.RemoveWithExit(ship, PieceController.ExitStyle.Sink);
+            }
             if (BattleEffects.Instance != null) BattleEffects.Instance.SetNight(false);
             fleets.Remove(groupId);
         }
@@ -442,6 +447,15 @@ public partial class AbilitySystem
         {
             damage = (damage + 1) / 2;
             FloatingText.Spawn(target.boardPosition, "かばう", new Color(0.6f, 0.85f, 1f), 2.8f, 0.15f);
+            if (BattleEffects.Instance != null)
+            {
+                // いちばん近い随伴から障壁が張られる
+                PieceInstance escort = null;
+                foreach (var s in AliveShinkai())
+                    if (!s.isFlagship && (escort == null || (s.boardPosition - target.boardPosition).sqrMagnitude < (escort.boardPosition - target.boardPosition).sqrMagnitude))
+                        escort = s;
+                if (escort != null) BattleEffects.Instance.PlayAbyssGuard(target.boardPosition, escort.boardPosition);
+            }
         }
         if (PieceTypes.IsShinkai(target.data.pieceType)) ship.fleetDamage += Mathf.Min(damage, target.currentHP);
         CombatResolver.ApplyDamage(target, damage, true);
