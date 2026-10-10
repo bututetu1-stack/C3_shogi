@@ -58,8 +58,8 @@ public static class BalanceTuning
 
     /// <summary>着任のときに建造する艦娘の数（艦種は重複なし）</summary>
     public static int FleetShips = 2;
-    /// <summary>着任から何手（両軍の手の合計）で夜戦に入るか</summary>
-    public static int FleetNightAfterMoves = 20;
+    /// <summary>着任から何手（両軍の手の合計）で夜戦に入るか（4なら、着任の手番と次の手番の2巡が昼戦で、3巡目から夜戦）</summary>
+    public static int FleetNightAfterMoves = 4;
     /// <summary>提督の隣にいる艦娘が、自軍の手番の開始時に回復する量（入渠）</summary>
     public static int FleetDockHeal = 1;
     /// <summary>艦娘の攻撃（雷撃・砲撃・空爆）のダメージに足す値</summary>
