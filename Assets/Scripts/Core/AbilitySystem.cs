@@ -200,11 +200,14 @@ public partial class AbilitySystem : MonoBehaviour
         {
             if (!p.stunned) continue;
             p.stunned = false;
-            if (p.frozen)
-            {
-                p.frozen = false;
-                p.bonusDEF += 1;
-            }
+            CombatResolver.RefreshStats(p);
+        }
+        // 絶対零度で凍らせた相手は、こちらの次の手番が終わるまで防御−1（相手の手番のうちに解けると、攻める側の得にならない）
+        foreach (var p in bm.GetTeamPieces(team == Team.Player ? Team.Enemy : Team.Player))
+        {
+            if (!p.frozen) continue;
+            p.frozen = false;
+            p.bonusDEF += 1;
             CombatResolver.RefreshStats(p);
         }
 
@@ -436,7 +439,9 @@ public partial class AbilitySystem : MonoBehaviour
             if (BattleLogUI.Instance != null)
                 BattleLogUI.Instance.AddLog(BattleLogUI.ColorName(kei.DisplayName, kei.team) + " が " + BattleLogUI.ColorName(target.DisplayName, target.team) + " の能力を封印した");
         }
-        if (any) yield return new WaitForSeconds(0.3f);
+        if (!any) yield break;
+        if (BattleEffects.Instance != null) BattleEffects.Instance.PlayAwakenBurst("CodeRing", kei.boardPosition, kei.data.awakenColor);
+        yield return new WaitForSeconds(0.3f);
     }
 
     // ============================================================
@@ -549,7 +554,7 @@ public partial class AbilitySystem : MonoBehaviour
     {
         if (rihaku == null || !rihaku.isAlive || rihaku.data.pieceType != PieceType.Rihaku) return;
 
-        int radius = rihaku.isPromoted ? 2 : 1;
+        int radius = (rihaku.isPromoted ? 2 : 1) + (rihaku.awakened ? BalanceTuning.RihakuAwakenedRadius : 0);
         int flipCount = (rihaku.isPromoted ? 3 : 1) + (rihaku.awakened ? 1 : 0);
 
         BoardManager bm = BoardManager.Instance;

@@ -9,9 +9,10 @@ public class TitleScreenUI : MonoBehaviour
     private static TitleScreenUI instance;
     private UIDocument uiDocument;
     private Action onStart;
+    private Action onContinue;
     private VisualElement helpOverlay;
 
-    public static void Show(Action onStart)
+    public static void Show(Action onStart, Action onContinue = null)
     {
         if (instance == null)
         {
@@ -29,6 +30,7 @@ public class TitleScreenUI : MonoBehaviour
             instance.uiDocument.sortingOrder = 90;
         }
         instance.onStart = onStart;
+        instance.onContinue = onContinue;
         instance.Build();
         if (BattleEffects.Instance != null) BattleEffects.Instance.PlayBGM("Title");
     }
@@ -96,7 +98,17 @@ public class TitleScreenUI : MonoBehaviour
         subtitle.style.marginBottom = 48;
         column.Add(subtitle);
 
-        var start = UIFactory.Button("対局を始める", OnStartClicked, "c3-button--primary", "c3-button--big");
+        // 中断した周があれば「続きから」を先に出す
+        RunSaveData saved = onContinue != null ? RunSave.Load() : null;
+        if (saved != null)
+        {
+            var resume = UIFactory.Button("続きから（第" + UIFactory.Kanji(Mathf.Max(1, saved.stage)) + "局）", OnContinueClicked, "c3-button--primary", "c3-button--big");
+            resume.style.width = 320;
+            resume.style.marginBottom = 14;
+            column.Add(resume);
+        }
+
+        var start = UIFactory.Button(saved != null ? "はじめから" : "対局を始める", OnStartClicked, saved != null ? "c3-button--big" : "c3-button--primary", "c3-button--big");
         start.style.width = 320;
         start.style.marginBottom = 14;
         column.Add(start);
@@ -120,6 +132,25 @@ public class TitleScreenUI : MonoBehaviour
         credit.style.bottom = 14;
         credit.style.right = 18;
         root.Add(credit);
+    }
+
+    private void OnContinueClicked()
+    {
+        Action resume = onContinue;
+        onStart = null;
+        onContinue = null;
+        ClearTitle();
+        if (resume != null) resume();
+    }
+
+    private void ClearTitle()
+    {
+        if (uiDocument != null && uiDocument.rootVisualElement != null)
+        {
+            uiDocument.rootVisualElement.Clear();
+            uiDocument.rootVisualElement.pickingMode = PickingMode.Ignore;
+            uiDocument.rootVisualElement.style.backgroundColor = new Color(0, 0, 0, 0);
+        }
     }
 
     private void OnStartClicked()
@@ -169,7 +200,11 @@ public class TitleScreenUI : MonoBehaviour
         AddSection(scroll, "動かし方", "自分の駒をクリックすると、動けるマスに点が表示されます。点をクリックすると移動します。橙の点は敵に狙われるマス、赤い枠は攻撃できる敵です。");
         AddSection(scroll, "戦い", "ダメージは「攻撃力 − 防御力」。体力が0になった駒は撃破されます。倒しきれなかったときは、攻撃した駒はその場に留まります。");
         AddSection(scroll, "成り", "敵陣（奥の2〜3段）に入るか、敵陣から出ると、駒は必ず成ります。SNや小錦のように、成ると退場してしまう駒もいるので注意。");
-        AddSection(scroll, "仲間と強化", "各局の前に、新しい仲間か全軍の強化をひとつ選びます。仲間は次の局にも連れて行けます。選び直しは1局につき1回まで。");
+        AddSection(scroll, "仲間と強化", "各局の前に、新しい仲間か全軍の強化をひとつ選びます。仲間は次の局にも連れて行けます。選び直しは1局につき1回まで。第三局からは「〇〇を鍛える」札も出ます。");
+        AddSection(scroll, "練度と★", "部員は、敵を倒す・局を生き残る・能力が決まると練度がたまり、★が上がります。★1で攻撃+1、★2で体力+2、★3で防御+1。練度は最後まで続きます（ブロンズは早く、激レアは遅く育ちます）。");
+        AddSection(scroll, "覚醒", "★3の部員は、その局で活躍（倒す・能力が決まる）を3回重ねると、その場で覚醒して上の姿になります。小錦は「横綱」、僕は「後方腕組の極み」など、部員ごとに覚醒した姿があります。敵の雷帝・龍神・魔王も、体力が半分を切ると第二形態になります。");
+        AddSection(scroll, "挑発と組み止め", "小錦を攻撃できる敵は、小錦しか攻撃できません。小錦の隣にいる敵は、小錦の隣から離れられません。小錦を敵の前線に寄せて足止めしましょう。");
+        AddSection(scroll, "部の時間と中断", "第二局に勝ったあとから、局の合間に「部の時間」があり、2つのできごとから1つを選べます。対局中は上の「中断」でタイトルに戻れ、タイトルの「続きから」でその局の初めから再開できます。");
         AddSection(scroll, "手数の上限", "1局が" + GameManager.MoveLimit + "手を超えると、残った駒の強さとC3の体力で判定になります。");
 
         var close = UIFactory.Button("閉じる", () => { helpOverlay.RemoveFromHierarchy(); helpOverlay = null; });

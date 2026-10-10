@@ -60,8 +60,8 @@ public static class CombatResolver
                 int runUp = RunUpBonus(piece, target);
                 bool killed = Attack(piece, target);
                 ShowLastMove(from, to);
-                // 覚醒したユウ「ゾーン」: 助走で倒したら、もう一度動ける
-                if (killed && piece.awakened && runUp > 0 && GameManager.Instance != null)
+                // 覚醒したユウ「ゾーン」: 助走で倒したら、もう一度動ける（C3 を倒したら決着なので出さない）
+                if (killed && piece.awakened && runUp > 0 && target.data.pieceType != PieceType.C3 && GameManager.Instance != null)
                     GameManager.Instance.GrantBonusMove(piece);
 
                 // 撃破できなければ攻撃側はその場に留まる
