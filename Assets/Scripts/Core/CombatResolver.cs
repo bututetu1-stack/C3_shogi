@@ -7,9 +7,19 @@ using System.Collections;
 /// </summary>
 public static class CombatResolver
 {
+    /// <summary>通常攻撃のダメージ = 攻撃（＋ユウの助走）− 防御。0未満にはならない</summary>
     public static int CalcDamage(PieceInstance attacker, PieceInstance target)
     {
-        return Mathf.Max(0, attacker.ATK - target.DEF);
+        return Mathf.Max(0, attacker.ATK + RunUpBonus(attacker, target) - target.DEF);
+    }
+
+    /// <summary>ユウの助走: 2マス以上離れた敵へ走って攻撃すると攻撃が上がる（攻撃の前の位置で測る）</summary>
+    public static int RunUpBonus(PieceInstance attacker, PieceInstance target)
+    {
+        if (attacker.data.pieceType != PieceType.Yuu) return 0;
+        Vector2Int d = target.boardPosition - attacker.boardPosition;
+        if (Mathf.Max(Mathf.Abs(d.x), Mathf.Abs(d.y)) < 2) return 0;
+        return attacker.isPromoted ? BalanceTuning.YuuPromotedRunUpBonus : BalanceTuning.YuuRunUpBonus;
     }
 
     /// <summary>
@@ -109,10 +119,19 @@ public static class CombatResolver
         if (BattleEffects.Instance != null)
             BattleEffects.Instance.PlaySlash(target.boardPosition, attacker.boardPosition);
 
+        int runUp = RunUpBonus(attacker, target);
         int damage = CalcDamage(attacker, target);
         target.currentHP -= damage;
         RefreshHP(target);
-        if (attacker.data.pieceType == PieceType.Yuu) SpeechBubble.SayMaybe(attacker, PieceLines.YuuAttack, 0.5f);
+        if (attacker.data.pieceType == PieceType.Yuu)
+        {
+            if (runUp > 0)
+            {
+                FloatingText.Spawn(attacker.boardPosition, "助走+" + runUp, YuuOrange, 2.8f);
+                if (BattleEffects.Instance != null) BattleEffects.Instance.PlayDashStreak(attacker.boardPosition, target.boardPosition, YuuOrange, 0.25f);
+            }
+            SpeechBubble.SayMaybe(attacker, PieceLines.YuuAttack, 0.5f);
+        }
 
         if (target.currentHP <= 0)
         {
@@ -138,6 +157,7 @@ public static class CombatResolver
     }
 
     private static readonly Color DamageColor = new Color(1f, 0.5f, 0.4f);
+    private static readonly Color YuuOrange = new Color(1f, 0.6f, 0.25f);
     private static readonly Color PiercingColor = new Color(0.85f, 0.6f, 1f);
     public static readonly Color HealColor = new Color(0.5f, 0.95f, 0.55f);
 

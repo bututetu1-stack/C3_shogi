@@ -104,6 +104,32 @@ public class PieceInstanceTests
     }
 
     [Test]
+    public void YuuRunUp_AddsAttackOnlyFromTwoSquaresAway()
+    {
+        var yuuData = ScriptableObject.CreateInstance<PieceData>();
+        yuuData.pieceType = PieceType.Yuu;
+        yuuData.baseATK = 2;
+        yuuData.baseHP = 4;
+        yuuData.canPromote = true;
+        yuuData.promotedATK = 2;
+        yuuData.promotedHP = 4;
+        try
+        {
+            var yuu = new PieceInstance(yuuData, Team.Player, new Vector2Int(0, 0));
+            var near = new PieceInstance(data, Team.Enemy, new Vector2Int(1, 1));   // 防御1
+            var far = new PieceInstance(data, Team.Enemy, new Vector2Int(0, 3));
+            Assert.AreEqual(1, CombatResolver.CalcDamage(yuu, near), "隣は助走なし");
+            Assert.AreEqual(2, CombatResolver.CalcDamage(yuu, far), "2マス以上走ると攻撃+1");
+            yuu.Promote();
+            Assert.AreEqual(3, CombatResolver.CalcDamage(yuu, far), "成ると攻撃+2");
+        }
+        finally
+        {
+            Object.DestroyImmediate(yuuData);
+        }
+    }
+
+    [Test]
     public void AbilityDamage_CanLeaveOutStageBonus()
     {
         var piece = new PieceInstance(data, Team.Enemy, Vector2Int.zero);

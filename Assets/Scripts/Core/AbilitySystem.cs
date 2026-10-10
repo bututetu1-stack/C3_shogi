@@ -377,7 +377,7 @@ public class AbilitySystem : MonoBehaviour
     }
 
     // ============================================================
-    // きぷ／へるの冷笑（自分の手番の終わりに、周囲1マスの敵を1体冷笑し、次の手番は動けなくする。へるは周りの敵すべて）
+    // きぷ／へるの冷笑（自分の手番の終わりに、周囲1マスの敵を2体まで冷笑し、次の手番は動けなくする。へるは周りの敵すべて）
     // ============================================================
     private static readonly Color SneerBlue = new Color(0.62f, 0.85f, 1f);
 
@@ -398,9 +398,9 @@ public class AbilitySystem : MonoBehaviour
         if (targets.Count == 0) yield break;
         if (!kipu.isPromoted)
         {
-            PieceInstance one = targets[Random.Range(0, targets.Count)];
-            targets.Clear();
-            targets.Add(one);
+            ShuffleList(targets);
+            if (targets.Count > BalanceTuning.KipuSneerTargets)
+                targets.RemoveRange(BalanceTuning.KipuSneerTargets, targets.Count - BalanceTuning.KipuSneerTargets);
         }
 
         SpeechBubble.Say(kipu, PieceLines.KipuLaugh);

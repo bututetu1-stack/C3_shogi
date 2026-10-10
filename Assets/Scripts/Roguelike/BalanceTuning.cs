@@ -4,10 +4,10 @@
 /// </summary>
 public static class BalanceTuning
 {
-    /// <summary>敵の攻撃の上乗せ = 局 ÷ この値（5なら第五局から+1、第十局から+2、第十五局で+3）</summary>
-    public static int EnemyAtkDivisor = 5;
-    /// <summary>敵の体力の上乗せ = 局 ÷ この値</summary>
-    public static int EnemyHpDivisor = 3;
+    /// <summary>敵の攻撃の上乗せ = 局 ÷ この値（4なら第四局から+1、第八局から+2、第十二局から+3）</summary>
+    public static int EnemyAtkDivisor = 4;
+    /// <summary>敵の体力の上乗せ = 局 ÷ この値（2なら第二局から+1、第十五局で+7）</summary>
+    public static int EnemyHpDivisor = 2;
     /// <summary>敵C3の体力の上乗せ = (局−1) ÷ この値</summary>
     public static int EnemyC3HpDivisor = 2;
     /// <summary>敵C3の体力にさらに足す値（自軍のC3とは別に調整するため）</summary>
@@ -38,6 +38,13 @@ public static class BalanceTuning
     public static bool ChukaNearAllies = true;
     /// <summary>中華が周りの味方を回復する量</summary>
     public static int ChukaHeal = 2;
+
+    /// <summary>ユウの助走: 2マス以上離れた敵へ走って攻撃したときの攻撃の上乗せ（成る前／成った後）</summary>
+    public static int YuuRunUpBonus = 1;
+    public static int YuuPromotedRunUpBonus = 2;
+
+    /// <summary>きぷが冷笑する敵の数（へるは周りの敵すべて）</summary>
+    public static int KipuSneerTargets = 2;
 
     /// <summary>艦娘の空爆が巻き込む敵の数</summary>
     public static int AirRaidSplashTargets = 2;
