@@ -27,7 +27,7 @@ public class GameManager : MonoBehaviour
     /// <summary>その局の前に選べる仲間・強化の枚数（盤が広がる第三局・第五局は2枚）</summary>
     public static int PicksForStage(int stage)
     {
-        return stage == 3 || stage == 5 ? 2 : 1;
+        return Array.IndexOf(BalanceTuning.TwoPickStages, stage) >= 0 ? 2 : 1;
     }
 
     private BoardManager boardManager;

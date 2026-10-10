@@ -113,18 +113,18 @@ public static class PiecePool
     }
 
     /// <summary>
-    /// 仲間にした素の将棋駒は最初からいる歩兵より鍛えられている: 体力+1。
+    /// 仲間にした素の将棋駒は最初からいる歩兵より鍛えられている: 体力の上乗せ（BalanceTuning）。
     /// 敵の同じ駒や、最初からいる歩兵には付かない
     /// </summary>
     public static int RecruitBonusHP(PieceData data)
     {
-        return data != null && IsStandardPiece(data) ? 1 : 0;
+        return data != null && IsStandardPiece(data) ? BalanceTuning.RecruitBonusHP : 0;
     }
 
-    /// <summary>仲間にした飛車・角は攻撃も+1</summary>
+    /// <summary>仲間にした飛車・角は攻撃にも上乗せ（BalanceTuning）</summary>
     public static int RecruitBonusATK(PieceData data)
     {
-        return data != null && (data.pieceType == PieceType.Bishop || data.pieceType == PieceType.Rook) ? 1 : 0;
+        return data != null && (data.pieceType == PieceType.Bishop || data.pieceType == PieceType.Rook) ? BalanceTuning.RecruitBonusATK : 0;
     }
 
     /// <summary>
