@@ -140,7 +140,9 @@ public class InputManager : MonoBehaviour
             return;
         }
 
-        if (clickedPiece.team == Team.Player && isPlayerTurn)
+        // 再行動中は、その駒しか動かせない
+        PieceInstance only = GameManager.Instance.ActiveBonusPiece;
+        if (clickedPiece.team == Team.Player && isPlayerTurn && (only == null || clickedPiece == only))
             SelectPiece(clickedPiece);
         else
             ViewPiece(clickedPiece); // 敵駒 or プレイヤーターン外: 閲覧のみ
@@ -200,6 +202,13 @@ public class InputManager : MonoBehaviour
         yield return CombatResolver.ExecuteMove(piece, move);
 
         isExecutingMove = false;
+        // 再行動（ゾーン）: その駒だけもう一度動かせる。パスで手番を終えてもよい
+        PieceInstance again = GameManager.Instance.TakeBonusMove();
+        if (again != null)
+        {
+            SelectPiece(again);
+            yield break;
+        }
         GameManager.Instance.EndTurn();
     }
 

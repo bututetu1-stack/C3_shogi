@@ -57,8 +57,12 @@ public static class CombatResolver
                 if (attackerPC != null) attackerPC.Lunge(to);
                 yield return new WaitForSeconds(0.09f);
 
+                int runUp = RunUpBonus(piece, target);
                 bool killed = Attack(piece, target);
                 ShowLastMove(from, to);
+                // 覚醒したユウ「ゾーン」: 助走で倒したら、もう一度動ける
+                if (killed && piece.awakened && runUp > 0 && GameManager.Instance != null)
+                    GameManager.Instance.GrantBonusMove(piece);
 
                 // 撃破できなければ攻撃側はその場に留まる
                 if (!killed)
@@ -275,6 +279,9 @@ public static class CombatResolver
         BoardManager bm = BoardManager.Instance;
         Vector2Int pos = target.boardPosition;
         int groupId = target.linkedGroupId;
+        // 先代部長（SN）の引退
+        if (target.data.pieceType == PieceType.SN && target.team == Team.Player && GameManager.Instance != null)
+            GameManager.Instance.PlaySnRetire(target);
         if (target.data.pieceType == PieceType.Monotetsu && !target.isPromoted)
             SpeechBubble.Say(target, PieceLines.MonotetsuDown);
 

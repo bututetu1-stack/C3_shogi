@@ -138,15 +138,16 @@ public class SimpleAI : MonoBehaviour
     /// 自動プレイ用: team の手を1つ選ぶ（指せる手がなければ false＝パス）。
     /// 敵は本番と同じ強さ設定、自軍はいちばん強い設定で読む。budget は1手の思考時間（ミリ秒）
     /// </summary>
-    public bool TryChooseMove(Team team, float budget, out PieceInstance piece, out MoveValidator.MoveResult move)
+    /// <summary>onlyPiece を指定すると、その駒の手だけから選ぶ（再行動）</summary>
+    public bool TryChooseMove(Team team, float budget, out PieceInstance piece, out MoveValidator.MoveResult move, PieceInstance onlyPiece = null)
     {
-        MoveEntry? choice = ChooseMove(team, budget);
+        MoveEntry? choice = ChooseMove(team, budget, onlyPiece);
         piece = choice.HasValue ? choice.Value.piece : null;
         move = choice.HasValue ? choice.Value.move : default(MoveValidator.MoveResult);
         return choice.HasValue;
     }
 
-    private MoveEntry? ChooseMove(Team team, float budget)
+    private MoveEntry? ChooseMove(Team team, float budget, PieceInstance onlyPiece = null)
     {
         clock = System.Diagnostics.Stopwatch.StartNew();
         timeUp = false;
@@ -159,6 +160,7 @@ public class SimpleAI : MonoBehaviour
         BoardManager bm = BoardManager.Instance;
         List<MoveEntry> root = new List<MoveEntry>();
         GenerateOrderedMoves(team, root, GetPieceBuffer(0));
+        if (onlyPiece != null) root.RemoveAll(e => e.piece != onlyPiece);
         if (root.Count == 0) return null;
 
         // 即勝ち: 相手のC3を倒せるなら迷わず指す

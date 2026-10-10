@@ -87,6 +87,24 @@ public class AwakeningTests
     }
 
     [Test]
+    public void Poet_FlipsOnlyWhatHelps()
+    {
+        var rihaku = new PieceInstance(Make(PieceType.Rihaku, Rarity.SuperRare), Team.Player, Vector2Int.zero);
+        PieceData yuu = Make(PieceType.Yuu, Rarity.SuperRare); yuu.canPromote = true;
+        PieceData sn = Make(PieceType.SN, Rarity.SuperRare); sn.canPromote = true; sn.diesOnPromotion = true;
+        PieceData pawn = Make(PieceType.Pawn, Rarity.Normal); pawn.canPromote = true;
+        var ally = new PieceInstance(yuu, Team.Player, Vector2Int.one);
+        Assert.IsTrue(AbilitySystem.WorthFlipping(rihaku, ally), "成ると得な味方は成らせる");
+        ally.isPromoted = true;
+        Assert.IsFalse(AbilitySystem.WorthFlipping(rihaku, ally), "成っている味方は戻さない");
+        Assert.IsFalse(AbilitySystem.WorthFlipping(rihaku, new PieceInstance(sn, Team.Player, Vector2Int.one)), "成ると退場する味方は成らせない");
+        var enemy = new PieceInstance(pawn, Team.Enemy, Vector2Int.one);
+        Assert.IsFalse(AbilitySystem.WorthFlipping(rihaku, enemy), "成っていない敵は成らせない");
+        enemy.isPromoted = true;
+        Assert.IsTrue(AbilitySystem.WorthFlipping(rihaku, enemy), "成っている敵は戻す");
+    }
+
+    [Test]
     public void AwakenedMoves_OverrideNormalMoves()
     {
         PieceData data = Make(PieceType.Yuu, Rarity.SuperRare);
