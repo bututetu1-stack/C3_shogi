@@ -17,6 +17,8 @@ public class DraftOption
 {
     public PieceData piece;
     public UpgradeKind upgrade;
+    /// <summary>提督の艦隊のS勝利で増えた1枚</summary>
+    public bool fleetReward;
 
     public bool IsUpgrade { get { return piece == null; } }
 
@@ -201,6 +203,9 @@ public static class PiecePool
     {
         var kinds = UpgradeKinds(owned);
         kinds.RemoveAll(k => options.Exists(o => o.IsUpgrade && o.upgrade == k));
-        if (kinds.Count > 0) options.Add(DraftOption.Upgrade(kinds[Random.Range(0, kinds.Count)]));
+        if (kinds.Count == 0) return;
+        DraftOption reward = DraftOption.Upgrade(kinds[Random.Range(0, kinds.Count)]);
+        reward.fleetReward = true;
+        options.Add(reward);
     }
 }
