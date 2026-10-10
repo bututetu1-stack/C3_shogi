@@ -988,7 +988,7 @@ public partial class AbilitySystem : MonoBehaviour
             if (nearBoku)
             {
                 ally.turnsNearBoku++;
-                if (ally.turnsNearBoku >= 2)
+                if (ally.turnsNearBoku >= BalanceTuning.BokuBuffTurns)
                 {
                     int buffAmount = nearPromotedBoku ? 2 : 1;
                     bool buffATK = Random.value < 0.5f;

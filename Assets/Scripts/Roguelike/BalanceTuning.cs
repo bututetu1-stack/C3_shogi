@@ -45,6 +45,9 @@ public static class BalanceTuning
     /// <summary>小錦が攻撃されたときの「同情」（周りの味方の攻撃+1）を1体が受けられる回数（その局のあいだ）</summary>
     public static int KonishikiSympathyMax = 2;
 
+    /// <summary>僕のそばに何手番続けていると強化されるか</summary>
+    public static int BokuBuffTurns = 2;
+
     /// <summary>ユウの助走: 敵まで走ったマスのうち、2マス目から1マスごとの攻撃の上乗せ（3マス先なら+2）</summary>
     public static int YuuRunUpPerSquare = 1;
 

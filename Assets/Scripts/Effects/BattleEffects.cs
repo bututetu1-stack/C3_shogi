@@ -380,14 +380,14 @@ public class BattleEffects : MonoBehaviour
             art = EffectArt.Get("Smoke");
             tint = art != null ? new Color(0.17f, 0.16f, 0.17f) : new Color(0.1f, 0.1f, 0.11f);
         }
-        float alpha = heavy ? 0.85f : 0.6f;
+        float alpha = heavy ? 0.75f : 0.5f;
         var sr = CreateSprite(art != null ? art : SpriteFactory.SoftCircle, pos, new Color(tint.r, tint.g, tint.b, 0f), 0.2f, OrderGlow - 1);
         sr.transform.rotation = Quaternion.Euler(0, 0, Random.Range(0f, 360f));
         float spin = Random.Range(-40f, 40f);
         float sway = Random.Range(0f, 6.28f);
-        float rise = heavy ? 0.85f : 0.65f;
-        float startSize = heavy ? 0.26f : 0.2f;
-        float endSize = heavy ? 0.75f : 0.55f;
+        float rise = heavy ? 0.8f : 0.6f;
+        float startSize = heavy ? 0.22f : 0.18f;
+        float endSize = heavy ? 0.62f : 0.46f;
         float life = heavy ? 1.4f : 1.2f;
         float elapsed = 0f;
         while (elapsed < life)
@@ -548,7 +548,7 @@ public class BattleEffects : MonoBehaviour
         Color tint = art != null ? Color.white : new Color(0.85f, 0.95f, 1f);
         float maxAlpha = art != null ? 0.45f : 0.26f;
         var sr = CreateSprite(sprite, origin, new Color(tint.r, tint.g, tint.b, 0f), 1f, PieceRenderer.OrderShadow - 1);
-        float length = size * 1.2f;
+        float length = size * 1.05f;
         float k = length / sprite.bounds.size.y;
         sr.transform.localScale = new Vector3(k * (art != null ? 0.8f : 0.9f), k, 1f);
         const float life = 2.8f;

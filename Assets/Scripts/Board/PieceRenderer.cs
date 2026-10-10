@@ -121,7 +121,7 @@ public class PieceRenderer : MonoBehaviour
 
         // 大破の炎（艦娘は自軍なので、駒から見て左下の角から燃え上がる）
         var fireObj = CreateChild("DamageFire", visual);
-        fireObj.localPosition = new Vector3(-0.3f, -0.1f, 0f);
+        fireObj.localPosition = new Vector3(-0.28f, -0.06f, 0f);
         fireRenderer = fireObj.gameObject.AddComponent<SpriteRenderer>();
         fireRenderer.sortingOrder = OrderBadge;
         fireRenderer.enabled = false;
@@ -248,7 +248,7 @@ public class PieceRenderer : MonoBehaviour
         Rarity rarity = pieceInstance.CurrentRarity;
         bool promoted = pieceInstance.isPromoted;
         string name = pieceInstance.DisplayName ?? "";
-        bool kai2 = pieceInstance.kai2;
+        bool kai2 = pieceInstance.kai2 || pieceInstance.IsVeteran;
         if (!force && rarity == appliedRarity && promoted == appliedPromoted && kai2 == appliedKai2 && name == appliedName) return;
 
         appliedRarity = rarity;
@@ -346,7 +346,7 @@ public class PieceRenderer : MonoBehaviour
         {
             // 旗が風にはためく
             float k = Mathf.Sin(Time.time * 3.1f + auraPhase);
-            flagRenderer.transform.localScale = new Vector3(0.34f * (1f + 0.07f * k), 0.34f, 1f);
+            flagRenderer.transform.localScale = new Vector3(0.44f * (1f + 0.07f * k), 0.44f, 1f);
             flagRenderer.transform.localRotation = Quaternion.Euler(0f, 0f, 4f * k);
         }
 
@@ -380,7 +380,7 @@ public class PieceRenderer : MonoBehaviour
             }
             else if (fireArt != null)
             {
-                fireRenderer.transform.localScale = new Vector3(0.42f + 0.04f * f, 0.42f + 0.12f * f, 1f);
+                fireRenderer.transform.localScale = new Vector3(0.6f + 0.05f * f, 0.6f + 0.14f * f, 1f);
                 fireRenderer.color = new Color(1f, 1f, 1f, 0.85f + 0.15f * f);
             }
             else

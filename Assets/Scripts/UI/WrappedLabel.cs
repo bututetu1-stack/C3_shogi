@@ -38,7 +38,8 @@ public class WrappedLabel : Label
         wrappedWidth = width;
 
         // 測定の誤差でUI側が勝手に折り返さないよう、少し余裕を持たせる
-        string wrapped = JapaneseLineBreaker.Wrap(rawText, width - 2f, Measure);
+        // （スクロールバーが出て幅が少し縮んだときなどに、最後の1文字だけ次の行へ落ちるのを防ぐ）
+        string wrapped = JapaneseLineBreaker.Wrap(rawText, width - Mathf.Max(8f, width * 0.035f), Measure);
         if (wrapped != text) text = wrapped;
     }
 
