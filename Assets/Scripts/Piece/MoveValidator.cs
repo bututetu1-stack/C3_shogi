@@ -21,6 +21,7 @@ public static class MoveValidator
     {
         results.Clear();
         if (piece == null || !piece.isAlive) return;
+        if (piece.stunned) return;   // 冷笑されて、この手番は動けない
         if (piece.data.isImmovable) return;
         if (piece.isPromoted && piece.data.isImmovableWhenPromoted) return;
 

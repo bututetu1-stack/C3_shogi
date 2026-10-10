@@ -1,0 +1,92 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01e8fb0f6e3e9d54297b027b2b9c6457, type: 3}
+  m_Name: Yuu
+  m_EditorClassIdentifier: Shogi::PieceData
+  pieceType: 33
+  displayName: "\u30E6\u30A6"
+  pieceName: "\u30E6\u30A6"
+  description: "\u9678\u4E0A\u90E8\u90E8\u9577\u3082\u52D9\u3081\u3066\u3044\u308BMovie\u6240\u5C5E\u90E8\u54E1\u3002\u8D70\u308B\u306E\u304C\u901F\u304F\u3066\u30E2\u30C6\u305D\u3046\u3002\u3084\u308B\u6C17\u306B\u6E80\u3061\u3042\u3075\u308C\u3066\u3044\u308B\u306E\u3067\u653B\u6483\u529B\u3082\u9AD8\u3044\u3002\u6301\u4E45\u529B\u304C\u3042\u308B\u306E\u3067\u4F53\u529B\u3082\u9AD8\u3044\u3002\u8DB3\u304C\u65E9\u3044\u304B\u3089\u3082\u3061\u308D\u3093\u6A5F\u52D5\u529B\u3082\u9AD8\u3044\u3002\u3059\u3054\u3044\u3002\u7E26\u6A2A\u306B\u307E\u3063\u3059\u30503\u30DE\u30B9\u8D70\u308C\u308B\uFF08\u659C\u3081\u306F1\u30DE\u30B9\uFF09\u3002\u8D70\u3063\u3066\u653B\u6483\u3059\u308B\u3068\u30012\u30DE\u30B9\u76EE\u304B\u30891\u30DE\u30B9\u3054\u3068\u306B\u52A9\u8D70\u3067\u653B\u6483\u529B\u304C1\u4E0A\u304C\u308B\u3002"
+  baseATK: 2
+  baseDEF: 0
+  baseHP: 3
+  rarity: 2
+  moveDirections:
+  - direction: {x: 0, y: 1}
+    maxDistance: 3
+    canJump: 0
+  - direction: {x: 0, y: -1}
+    maxDistance: 3
+    canJump: 0
+  - direction: {x: 1, y: 0}
+    maxDistance: 3
+    canJump: 0
+  - direction: {x: -1, y: 0}
+    maxDistance: 3
+    canJump: 0
+  - direction: {x: 1, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: -1, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 1, y: -1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: -1, y: -1}
+    maxDistance: 1
+    canJump: 0
+  canPromote: 1
+  promotedDisplayName: "\u30E6\u30A6"
+  promotedName: "\u30E6\u30A6"
+  promotedDescription: "\u9678\u4E0A\u90E8\u90E8\u9577\u3082\u52D9\u3081\u3066\u3044\u308BMovie\u6240\u5C5E\u90E8\u54E1\u3002\u8D70\u308B\u306E\u304C\u901F\u304F\u3066\u30E2\u30C6\u305D\u3046\u3002\u3084\u308B\u6C17\u306B\u6E80\u3061\u3042\u3075\u308C\u3066\u3044\u308B\u306E\u3067\u653B\u6483\u529B\u3082\u9AD8\u3044\u3002\u6301\u4E45\u529B\u304C\u3042\u308B\u306E\u3067\u4F53\u529B\u3082\u9AD8\u3044\u3002\u8DB3\u304C\u65E9\u3044\u304B\u3089\u3082\u3061\u308D\u3093\u6A5F\u52D5\u529B\u3082\u9AD8\u3044\u3002\u6210\u3063\u305F\u3053\u3068\u3067\u9632\u5FA1\u529B\u3068\u3055\u3089\u306A\u308B\u6A5F\u52D5\u529B\u3092\u624B\u306B\u5165\u308C\u305F\u3002\u3059\u3054\u3044\u3002\u7E26\u6A2A\u306B\u307E\u3063\u3059\u30504\u30DE\u30B9\u8D70\u308C\u308B\uFF08\u659C\u3081\u306F1\u30DE\u30B9\uFF09\u3002\u8D70\u3063\u3066\u653B\u6483\u3059\u308B\u3068\u30012\u30DE\u30B9\u76EE\u304B\u30891\u30DE\u30B9\u3054\u3068\u306B\u52A9\u8D70\u3067\u653B\u6483\u529B\u304C1\u4E0A\u304C\u308B\u3002"
+  promotedATK: 2
+  promotedDEF: 2
+  promotedHP: 3
+  promotedMoveDirections:
+  - direction: {x: 0, y: 1}
+    maxDistance: 4
+    canJump: 0
+  - direction: {x: 0, y: -1}
+    maxDistance: 4
+    canJump: 0
+  - direction: {x: 1, y: 0}
+    maxDistance: 4
+    canJump: 0
+  - direction: {x: -1, y: 0}
+    maxDistance: 4
+    canJump: 0
+  - direction: {x: 1, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: -1, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 1, y: -1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: -1, y: -1}
+    maxDistance: 1
+    canJump: 0
+  hasPromotedRarity: 0
+  promotedRarity: 0
+  isAutoMove: 0
+  isManualControllable: 1
+  excludeFromDraft: 0
+  isImmovable: 0
+  immuneToFlip: 0
+  losesHPOnMove: 0
+  diesOnPromotion: 0
+  isImmovableWhenPromoted: 0
+  isTauntPiece: 0
+  portrait: {fileID: 0}
+  promotedPortrait: {fileID: 0}

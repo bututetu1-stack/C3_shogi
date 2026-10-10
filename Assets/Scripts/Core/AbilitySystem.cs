@@ -2,7 +2,8 @@ using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 
-public class AbilitySystem : MonoBehaviour
+/// <summary>駒の能力。提督の艦隊は AbilitySystem.Fleet.cs</summary>
+public partial class AbilitySystem : MonoBehaviour
 {
     public static AbilitySystem Instance { get; private set; }
 
@@ -32,6 +33,7 @@ public class AbilitySystem : MonoBehaviour
     {
         yomigaeruSpawnCount.Clear();
         explodingPositions.Clear();
+        ResetFleets();
     }
 
     // ============================================================
@@ -40,6 +42,10 @@ public class AbilitySystem : MonoBehaviour
     public IEnumerator ExecuteTurnStartAbilities(Team team)
     {
         BoardManager bm = BoardManager.Instance;
+
+        // 艦隊の入渠（提督の隣の艦娘が回復）
+        if (team == Team.Player) DockShips();
+
         List<PieceInstance> pieces = bm.GetTeamPieces(team);
 
         // ヲツの中華生成
@@ -129,6 +135,7 @@ public class AbilitySystem : MonoBehaviour
                     if (pawnData != null)
                     {
                         bm.SpawnPiece(pawnData, Team.Enemy, spawnPos);
+                        GameManager.Instance.ApplySummonBonuses(bm.GetPieceAt(spawnPos));
                         if (BattleEffects.Instance != null) BattleEffects.Instance.PlaySoulFire(spawnPos);
                         SpeechBubble.Say(yomi, PieceLines.YomigaeruSummon);
                         if (yomigaeruSpawnCount.ContainsKey(yomi))
@@ -164,11 +171,12 @@ public class AbilitySystem : MonoBehaviour
                 {
                     var source = GameSim.BeginSource(maou);
                     PieceInstance victim = targets[Random.Range(0, targets.Count)];
+                    int lightning = CombatResolver.AbilityDamage(maou, 1, false);   // 局による強化は足さない
                     if (BattleLogUI.Instance != null)
-                        BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("魔王", Team.Enemy) + " の雷撃！" + BattleLogUI.ColorName(victim.DisplayName, victim.team) + " に貫通1ダメージ");
+                        BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("魔王", Team.Enemy) + " の雷撃！" + BattleLogUI.ColorName(victim.DisplayName, victim.team) + " に貫通" + lightning + "ダメージ");
                     if (BattleEffects.Instance != null) BattleEffects.Instance.PlayLightningEffect(victim.boardPosition);
                     yield return new WaitForSeconds(0.2f);
-                    CombatResolver.ApplyDamage(victim, 1, true);
+                    CombatResolver.ApplyDamage(victim, lightning, true);
                     GameSim.EndSource(source);
                     yield return new WaitForSeconds(0.4f);
                 }
@@ -183,6 +191,14 @@ public class AbilitySystem : MonoBehaviour
     {
         BoardManager bm = BoardManager.Instance;
 
+        // 冷笑されていた駒は、この手番を動けずに過ごしたので元に戻る
+        foreach (var p in bm.GetTeamPieces(team))
+        {
+            if (!p.stunned) continue;
+            p.stunned = false;
+            CombatResolver.RefreshStats(p);
+        }
+
         // 中華の回復と消滅
         List<PieceInstance> pieces = bm.GetTeamPieces(team);
         var chukaList = new List<PieceInstance>();
@@ -194,7 +210,7 @@ public class AbilitySystem : MonoBehaviour
         foreach (var chuka in chukaList)
         {
             if (!chuka.isAlive) continue;
-            HealAdjacentAllies(chuka, BalanceTuning.ChukaHeal);
+            HealAdjacentAllies(chuka, BalanceTuning.ChukaHeal, true);
             // 食べられて湯気とともに消える
             if (BattleEffects.Instance != null) BattleEffects.Instance.PlaySteam(chuka.boardPosition);
             CombatResolver.RemoveWithExit(chuka, PieceController.ExitStyle.Eaten);
@@ -271,8 +287,146 @@ public class AbilitySystem : MonoBehaviour
             yield return ExecuteKanmusuAbilities();
         }
 
+        // けい・異端のバグ修正、きぷ・へるの冷笑
+        yield return ExecuteKeiAbilities(team);
+        yield return ExecuteKipuAbilities(team);
+
         // 僕バフ処理
         yield return ProcessBokuBuffs(team);
+    }
+
+    /// <summary>team の生きている type の駒</summary>
+    private static List<PieceInstance> AlivePieces(Team team, PieceType type)
+    {
+        var list = new List<PieceInstance>();
+        foreach (var p in BoardManager.Instance.GetTeamPieces(team))
+            if (p.data.pieceType == type && p.isAlive) list.Add(p);
+        return list;
+    }
+
+    /// <summary>周囲1マスにいる敵（C3は能力の影響を受けないので除く）</summary>
+    private static List<PieceInstance> AdjacentEnemies(PieceInstance center)
+    {
+        BoardManager bm = BoardManager.Instance;
+        var list = new List<PieceInstance>();
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                if (dx == 0 && dy == 0) continue;
+                PieceInstance target = bm.GetPieceAt(new Vector2Int(center.boardPosition.x + dx, center.boardPosition.y + dy));
+                if (target != null && target.team != center.team && target.isAlive && target.data.pieceType != PieceType.C3)
+                    list.Add(target);
+            }
+        }
+        return list;
+    }
+
+    // ============================================================
+    // けい／異端のバグ修正（自分の手番の終わりに、周囲1マスの敵を2体まで選び、それぞれの数値を1つ1下げる。
+    // 異端は3体まで、それぞれの数値を2つ1ずつ下げる）
+    // ============================================================
+    private static readonly StatKind[] AllStats = { StatKind.ATK, StatKind.DEF, StatKind.HP };
+    private static readonly Color BugGreen = new Color(0.36f, 1f, 0.6f);
+
+    private IEnumerator ExecuteKeiAbilities(Team team)
+    {
+        foreach (var kei in AlivePieces(team, PieceType.Kei))
+        {
+            if (!kei.isAlive) continue;
+            yield return ExecuteKeiAbility(kei);
+        }
+    }
+
+    private IEnumerator ExecuteKeiAbility(PieceInstance kei)
+    {
+        // 下げられる数値が残っている敵だけ（攻撃・防御は0未満にせず、体力は0にしない）
+        var targets = AdjacentEnemies(kei);
+        targets.RemoveAll(target => LowerableStats(target).Count == 0);
+        if (targets.Count == 0) yield break;
+        ShuffleList(targets);
+
+        SpeechBubble.Say(kei, kei.isPromoted ? PieceLines.ItanBug : PieceLines.KeiBug);
+        int targetCount = Mathf.Min(kei.isPromoted ? 3 : 2, targets.Count);
+        int statCount = kei.isPromoted ? 2 : 1;
+        for (int i = 0; i < targetCount; i++)
+        {
+            PieceInstance target = targets[i];
+            if (!target.isAlive) continue;
+            if (BattleEffects.Instance != null) BattleEffects.Instance.PlayStream(kei.boardPosition, target.boardPosition, BugGreen);
+
+            List<StatKind> stats = LowerableStats(target);
+            for (int k = 0; k < statCount && stats.Count > 0; k++)
+            {
+                int idx = Random.Range(0, stats.Count);
+                StatKind stat = stats[idx];
+                stats.RemoveAt(idx);
+                target.Lower(stat);
+
+                string label = stat == StatKind.ATK ? "攻撃" : stat == StatKind.DEF ? "防御" : "体力";
+                Color color = stat == StatKind.ATK ? Palette.ATK : stat == StatKind.DEF ? Palette.DEF : Palette.HP;
+                FloatingText.Spawn(target.boardPosition, label.Substring(0, 1) + "-1", color, 3.2f, k * 0.25f);
+                if (BattleLogUI.Instance != null)
+                    BattleLogUI.Instance.AddLog(BattleLogUI.ColorName(kei.DisplayName, kei.team) + " が " + BattleLogUI.ColorName(target.DisplayName, target.team) + " の" + label + "を1下げた");
+            }
+            CombatResolver.RefreshStats(target);
+            yield return new WaitForSeconds(0.3f);
+        }
+    }
+
+    private static List<StatKind> LowerableStats(PieceInstance piece)
+    {
+        var list = new List<StatKind>();
+        foreach (StatKind stat in AllStats)
+            if (piece.CanLower(stat)) list.Add(stat);
+        return list;
+    }
+
+    // ============================================================
+    // きぷ／へるの冷笑（自分の手番の終わりに、周囲1マスの敵を2体まで冷笑し、次の手番は動けなくする。へるは周りの敵すべて）
+    // ============================================================
+    private static readonly Color SneerBlue = new Color(0.62f, 0.85f, 1f);
+
+    private IEnumerator ExecuteKipuAbilities(Team team)
+    {
+        foreach (var kipu in AlivePieces(team, PieceType.Kipu))
+        {
+            if (!kipu.isAlive) continue;
+            yield return ExecuteKipuAbility(kipu);
+        }
+    }
+
+    private IEnumerator ExecuteKipuAbility(PieceInstance kipu)
+    {
+        // もともと動けない駒（深海・中華など）や、もう冷笑された駒は相手にしない
+        var targets = AdjacentEnemies(kipu);
+        targets.RemoveAll(target => target.stunned || !CanEverMove(target));
+        if (targets.Count == 0) yield break;
+        if (!kipu.isPromoted)
+        {
+            ShuffleList(targets);
+            if (targets.Count > BalanceTuning.KipuSneerTargets)
+                targets.RemoveRange(BalanceTuning.KipuSneerTargets, targets.Count - BalanceTuning.KipuSneerTargets);
+        }
+
+        SpeechBubble.Say(kipu, PieceLines.KipuLaugh);
+        foreach (var target in targets)
+        {
+            target.stunned = true;
+            if (BattleEffects.Instance != null) BattleEffects.Instance.PlayStream(kipu.boardPosition, target.boardPosition, SneerBlue);
+            CombatResolver.RefreshStats(target);
+            FloatingText.Spawn(target.boardPosition, "冷笑", SneerBlue);
+            if (BattleLogUI.Instance != null)
+                BattleLogUI.Instance.AddLog(BattleLogUI.ColorName(kipu.DisplayName, kipu.team) + " が " + BattleLogUI.ColorName(target.DisplayName, target.team) + " を冷笑した（次の手番は動けない）");
+        }
+        yield return new WaitForSeconds(0.3f);
+    }
+
+    private static bool CanEverMove(PieceInstance piece)
+    {
+        if (piece.data.isImmovable) return false;
+        if (piece.isPromoted && piece.data.isImmovableWhenPromoted) return false;
+        return piece.GetMoveDirections().Length > 0;
     }
 
     // ============================================================
@@ -342,374 +496,6 @@ public class AbilitySystem : MonoBehaviour
             }
             SpeechBubble.Say(rihaku, PieceLines.RihakuFlip);
         }
-    }
-
-    // ============================================================
-    // 物鉄 → 提督（着任のカットイン → 裏返し → ワープ → 深海浮上 → 艦娘出撃）
-    // ============================================================
-    public IEnumerator TeitokuPromotionRoutine(PieceInstance monotetsu)
-    {
-        if (BattleLogUI.Instance != null)
-            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("物鉄", monotetsu.team) + " が " + BattleLogUI.ColorName("提督", monotetsu.team) + " に着任！");
-
-        if (BattleEffects.Instance != null) BattleEffects.Instance.PlayTeitokuFanfare();
-        yield return CutInUI.Play("提督 着任", "全艦隊、抜錨せよ！",
-            monotetsu.data.promotedPortrait != null ? monotetsu.data.promotedPortrait : monotetsu.data.portrait,
-            CutInUI.Navy, 1.7f);
-        if (!monotetsu.isAlive || monotetsu.isPromoted) yield break;
-
-        monotetsu.Promote();
-        GameSim.RecordPromotion(monotetsu);
-        CombatResolver.PlayFlip(monotetsu);
-        FloatingText.Spawn(monotetsu.boardPosition, "提督", Palette.GoldLight, 4f);
-        yield return new WaitForSeconds(0.45f);
-
-        yield return TeitokuArrivalRoutine(monotetsu);
-    }
-
-    /// <summary>提督のワープと艦隊の召喚（深海3体・艦娘2体）</summary>
-    public IEnumerator TeitokuArrivalRoutine(PieceInstance teitoku)
-    {
-        BoardManager bm = BoardManager.Instance;
-        int groupId = nextGroupId++;
-        teitoku.linkedGroupId = groupId;
-
-        int size = bm.CurrentBoardSize;
-        int halfBoard = size / 2;
-        int promoteRows = BoardCell.GetPromoteRows(size);
-        BattleEffects fx = BattleEffects.Instance;
-
-        // 提督は自陣の奥へ潜航してワープ
-        Vector2Int? newPos = FindEmptyInRange(0, promoteRows);
-        if (newPos.HasValue && teitoku.isAlive)
-        {
-            Vector2Int oldPos = teitoku.boardPosition;
-            PieceController pc = bm.GetPieceController(oldPos);
-            if (fx != null) fx.PlayDiveEffect(oldPos);
-            if (pc != null) yield return pc.WarpOutRoutine();
-
-            bm.MovePiece(oldPos, newPos.Value);
-            bm.UpdatePieceControllerPosition(oldPos, newPos.Value);
-            if (pc != null) pc.SnapTo(newPos.Value);
-
-            if (fx != null) fx.PlaySurfaceEffect(newPos.Value);
-            if (pc != null) yield return pc.WarpInRoutine();
-            yield return new WaitForSeconds(0.15f);
-        }
-        if (!teitoku.isAlive) yield break;
-        Vector2Int teitokuPos = teitoku.boardPosition;
-
-        // 深海3体が敵陣側に浮上（提督と最低2マス離す）
-        PieceData shinkaiData = bm.GetPieceDataByType(PieceType.Shinkai);
-        int risen = 0;
-        if (shinkaiData != null)
-        {
-            if (fx != null) fx.PlayAbyssRumble();
-            for (int i = 0; i < 3; i++)
-            {
-                Vector2Int? spawnPos = FindEmptyWithMinDistance(halfBoard, size, teitokuPos, 2);
-                if (!spawnPos.HasValue) continue;
-                if (fx != null) fx.PlayAbyssRiseEffect(spawnPos.Value);
-                yield return new WaitForSeconds(0.18f);
-                PieceInstance shinkai = bm.Spawn(shinkaiData, Team.Enemy, spawnPos.Value);
-                if (shinkai == null) continue;
-                shinkai.linkedGroupId = groupId;
-                risen++;
-                yield return new WaitForSeconds(0.2f);
-            }
-            if (risen > 0 && BattleLogUI.Instance != null)
-                BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("深海", Team.Enemy) + " が" + risen + "体、海の底から浮上した");
-        }
-
-        // 艦娘2隻が自陣から出撃
-        PieceData kanmusuData = bm.GetPieceDataByType(PieceType.Kanmusu);
-        int launched = 0;
-        if (kanmusuData != null)
-        {
-            for (int i = 0; i < 2; i++)
-            {
-                Vector2Int? spawnPos = FindEmptyInRange(0, halfBoard + 1);
-                if (!spawnPos.HasValue) continue;
-                if (fx != null) fx.PlaySortieEffect(spawnPos.Value);
-                PieceInstance kanmusu = bm.Spawn(kanmusuData, Team.Player, spawnPos.Value);
-                if (kanmusu == null) continue;
-                kanmusu.linkedGroupId = groupId;
-                FloatingText.Spawn(spawnPos.Value, "出撃！", CutInUI.SeaLight, 3.6f);
-                launched++;
-                yield return new WaitForSeconds(0.3f);
-            }
-            if (launched > 0 && BattleLogUI.Instance != null)
-                BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("艦娘", Team.Player) + " " + launched + "隻、出撃！");
-        }
-    }
-
-    // ============================================================
-    // 艦隊のつながり（全深海撃破で帰投、提督が沈めば艦娘も沈む）
-    // ============================================================
-    public void CheckLinkedDeaths(int groupId)
-    {
-        if (groupId < 0) return;
-
-        BoardManager bm = BoardManager.Instance;
-        var allAlive = new List<PieceInstance>();
-        allAlive.AddRange(bm.GetTeamPieces(Team.Player));
-        allAlive.AddRange(bm.GetTeamPieces(Team.Enemy));
-
-        PieceInstance teitoku = null;
-        bool anyShinkaiAlive = false;
-        var kanmusuList = new List<PieceInstance>();
-
-        foreach (var p in allAlive)
-        {
-            if (p.linkedGroupId != groupId || !p.isAlive) continue;
-            if (p.data.pieceType == PieceType.Monotetsu && p.isPromoted) teitoku = p;
-            else if (p.data.pieceType == PieceType.Shinkai) anyShinkaiAlive = true;
-            else if (p.data.pieceType == PieceType.Kanmusu) kanmusuList.Add(p);
-        }
-
-        // 全深海撃破 → 作戦完了。提督と艦娘は帰投する
-        if (!anyShinkaiAlive && teitoku != null)
-        {
-            if (BattleLogUI.Instance != null)
-                BattleLogUI.Instance.AddLog("全" + BattleLogUI.ColorName("深海", Team.Enemy) + "撃破！ 作戦完了、" + BattleLogUI.ColorName("提督", Team.Player) + "の艦隊は帰投する");
-            if (BattleEffects.Instance != null) BattleEffects.Instance.PlayRetreatHorn();
-            StartCoroutine(CutInUI.Play("作戦完了", "艦隊、帰投せよ", null, CutInUI.Navy, 1.2f));
-            CombatResolver.RemoveWithExit(teitoku, PieceController.ExitStyle.Retreat);
-            foreach (var k in kanmusuList) CombatResolver.RemoveWithExit(k, PieceController.ExitStyle.Retreat);
-            return;
-        }
-
-        // 提督が沈んだら艦娘も沈む
-        if (teitoku == null && kanmusuList.Count > 0)
-        {
-            if (BattleLogUI.Instance != null)
-                BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("提督", Team.Player) + "轟沈……" + BattleLogUI.ColorName("艦娘", Team.Player) + "たちも海へ消えた");
-            foreach (var k in kanmusuList) CombatResolver.RemoveWithExit(k, PieceController.ExitStyle.Sink);
-        }
-    }
-
-    // ============================================================
-    // 深海のターン終了時攻撃
-    // ============================================================
-    private IEnumerator ExecuteShinkaiAbilities()
-    {
-        BoardManager bm = BoardManager.Instance;
-        var shinkaiList = new List<PieceInstance>();
-        var pieces = bm.GetTeamPieces(Team.Enemy);
-        foreach (var p in pieces)
-        {
-            if (p.data.pieceType == PieceType.Shinkai && p.isAlive)
-                shinkaiList.Add(p);
-        }
-        foreach (var shinkai in shinkaiList)
-        {
-            if (!shinkai.isAlive) continue;
-            yield return ExecuteShinkaiAttack(shinkai);
-        }
-    }
-
-    private IEnumerator ExecuteShinkaiAttack(PieceInstance shinkai)
-    {
-        BoardManager bm = BoardManager.Instance;
-        Vector2Int center = shinkai.boardPosition;
-
-        // 周囲1マスのプレイヤー駒を収集
-        var targets = new List<PieceInstance>();
-        for (int dx = -1; dx <= 1; dx++)
-        {
-            for (int dy = -1; dy <= 1; dy++)
-            {
-                if (dx == 0 && dy == 0) continue;
-                Vector2Int pos = new Vector2Int(center.x + dx, center.y + dy);
-                if (!bm.IsInBounds(pos)) continue;
-                PieceInstance target = bm.GetPieceAt(pos);
-                if (target != null && target.team == Team.Player && target.isAlive
-                    && target.data.pieceType != PieceType.C3)
-                    targets.Add(target);
-            }
-        }
-
-        if (targets.Count == 0) yield break;
-
-        // ランダム1枚に通常2ダメージ
-        PieceInstance victim = targets[Random.Range(0, targets.Count)];
-        if (BattleLogUI.Instance != null)
-            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("深海", shinkai.team) + "が " + BattleLogUI.ColorName(victim.DisplayName, victim.team) + " を海へ引きずり込む");
-        if (BattleEffects.Instance != null)
-            BattleEffects.Instance.PlayAbyssStrike(shinkai.boardPosition, victim.boardPosition);
-        yield return new WaitForSeconds(0.3f);
-        var source = GameSim.BeginSource(shinkai);
-        CombatResolver.ApplyDamage(victim, 2, false);
-        GameSim.EndSource(source);
-        yield return new WaitForSeconds(0.25f);
-    }
-
-    // ============================================================
-    // 艦娘のターン終了時攻撃 (空爆/雷撃/砲撃)
-    // ============================================================
-    private IEnumerator ExecuteKanmusuAbilities()
-    {
-        BoardManager bm = BoardManager.Instance;
-        var kanmusuList = new List<PieceInstance>();
-        var pieces = bm.GetTeamPieces(Team.Player);
-        foreach (var p in pieces)
-        {
-            if (p.data.pieceType == PieceType.Kanmusu && p.isAlive)
-                kanmusuList.Add(p);
-        }
-        foreach (var kanmusu in kanmusuList)
-        {
-            if (!kanmusu.isAlive) continue;
-            yield return ExecuteKanmusuAttack(kanmusu);
-        }
-    }
-
-    private IEnumerator ExecuteKanmusuAttack(PieceInstance kanmusu)
-    {
-        if (!kanmusu.isAlive) yield break;
-        GameSim.AbilitySource = kanmusu;
-        yield return KanmusuAttackBody(kanmusu);
-        GameSim.AbilitySource = null;
-    }
-
-    private IEnumerator KanmusuAttackBody(PieceInstance kanmusu)
-    {
-        BoardManager bm = BoardManager.Instance;
-
-        // 盤上のランダムな深海を選択（毎回再スキャン）
-        var shinkaiList = new List<PieceInstance>();
-        var enemyPieces = bm.GetTeamPieces(Team.Enemy);
-        foreach (var p in enemyPieces)
-        {
-            if (p.data.pieceType == PieceType.Shinkai && p.isAlive)
-                shinkaiList.Add(p);
-        }
-
-        if (shinkaiList.Count == 0) yield break;
-
-        PieceInstance targetShinkai = shinkaiList[Random.Range(0, shinkaiList.Count)];
-
-        // 空爆/雷撃/砲撃からランダム選択
-        int attackType = Random.Range(0, 3);
-        string[] calls = { "空爆！", "雷撃！", "砲撃！" };
-        FloatingText.Spawn(kanmusu.boardPosition, calls[attackType], CutInUI.SeaLight, 3.8f);
-        PieceController kpc = bm.GetPieceController(kanmusu.boardPosition);
-        if (kpc != null) kpc.Lunge(targetShinkai.boardPosition);
-        yield return new WaitForSeconds(0.3f);
-        if (!kanmusu.isAlive || !targetShinkai.isAlive) yield break;
-
-        switch (attackType)
-        {
-            case 0:
-                yield return ExecuteAirRaid(kanmusu, targetShinkai);
-                break;
-            case 1:
-                yield return ExecuteTorpedo(kanmusu, targetShinkai);
-                break;
-            case 2:
-                yield return ExecuteBombardment(kanmusu, targetShinkai);
-                break;
-        }
-    }
-
-    // --- 空爆 ---
-    private IEnumerator ExecuteAirRaid(PieceInstance kanmusu, PieceInstance shinkai)
-    {
-        if (!shinkai.isAlive) yield break;
-
-        Vector2Int targetPos = shinkai.boardPosition;
-
-        if (BattleEffects.Instance != null)
-            BattleEffects.Instance.PlayAirRaidEffect(kanmusu.boardPosition, targetPos);
-
-        yield return new WaitForSeconds(BattleEffects.AirRaidImpactTime);
-
-        // 深海に防御貫通1ダメージ
-        CombatResolver.ApplyDamage(shinkai, 1, true);
-
-        // 深海の周囲2マス以内のランダムな敵駒（BalanceTuning.AirRaidSplashTargets 枚）に1ダメージ
-        var nearby = GetEnemiesInRange(targetPos, 2, Team.Enemy, shinkai);
-        ShuffleList(nearby);
-        int splashCount = Mathf.Min(BalanceTuning.AirRaidSplashTargets, nearby.Count);
-        for (int i = 0; i < splashCount; i++)
-            CombatResolver.ApplyDamage(nearby[i], 1, false);
-
-        if (BattleLogUI.Instance != null)
-            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("艦娘", kanmusu.team) + "が空爆！");
-        yield return new WaitForSeconds(0.2f);
-    }
-
-    // --- 雷撃 ---
-    private IEnumerator ExecuteTorpedo(PieceInstance kanmusu, PieceInstance shinkai)
-    {
-        if (!kanmusu.isAlive || !shinkai.isAlive) yield break;
-
-        BoardManager bm = BoardManager.Instance;
-        Vector2Int from = kanmusu.boardPosition;
-        Vector2Int to = shinkai.boardPosition;
-
-        if (BattleEffects.Instance != null)
-            BattleEffects.Instance.PlayTorpedoEffect(from, to);
-
-        yield return new WaitForSeconds(BattleEffects.TorpedoImpactTime);
-
-        // Bresenham直線上のマスを取得（始点・終点含まない）
-        List<Vector2Int> line = GetBresenhamLine(from, to);
-
-        // 直線上の敵駒を収集
-        var lineEnemies = new List<PieceInstance>();
-        foreach (var pos in line)
-        {
-            PieceInstance piece = bm.GetPieceAt(pos);
-            if (piece != null && piece.team == Team.Enemy && piece.isAlive
-                && piece.data.pieceType != PieceType.C3)
-                lineEnemies.Add(piece);
-        }
-
-        if (lineEnemies.Count > 0)
-        {
-            // 直線上の最も近い敵駒1体に3ダメージ
-            PieceInstance nearest = lineEnemies[0];
-            if (BattleLogUI.Instance != null)
-                BattleLogUI.Instance.AddLog("雷撃！" + BattleLogUI.ColorName(nearest.DisplayName, nearest.team) + " に3ダメージ");
-            CombatResolver.ApplyDamage(nearest, 3, false);
-        }
-        else
-        {
-            // 直線上に敵駒がいない: 深海に防御貫通2ダメージ
-            if (BattleLogUI.Instance != null)
-                BattleLogUI.Instance.AddLog("雷撃！" + BattleLogUI.ColorName("深海", Team.Enemy) + "に防御貫通2ダメージ");
-            CombatResolver.ApplyDamage(shinkai, 2, true);
-        }
-
-        yield return new WaitForSeconds(0.2f);
-    }
-
-    // --- 砲撃 ---
-    private IEnumerator ExecuteBombardment(PieceInstance kanmusu, PieceInstance shinkai)
-    {
-        if (!shinkai.isAlive) yield break;
-
-        Vector2Int targetPos = shinkai.boardPosition;
-
-        if (BattleEffects.Instance != null)
-            BattleEffects.Instance.PlayBombardmentEffect(kanmusu.boardPosition, targetPos);
-
-        yield return new WaitForSeconds(BattleEffects.BombardmentImpactTime);
-
-        // 深海に防御貫通4ダメージ
-        CombatResolver.ApplyDamage(shinkai, 4, true);
-
-        // 深海の周囲1マス以内のランダムな敵駒2枚に BalanceTuning.BombardmentSplashDamage ダメージ
-        var nearby = GetEnemiesInRange(targetPos, 1, Team.Enemy, shinkai);
-        ShuffleList(nearby);
-        int splashCount = Mathf.Min(2, nearby.Count);
-        for (int i = 0; i < splashCount; i++)
-            CombatResolver.ApplyDamage(nearby[i], BalanceTuning.BombardmentSplashDamage, false);
-
-        if (BattleLogUI.Instance != null)
-            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("艦娘", kanmusu.team) + "が砲撃！");
-        yield return new WaitForSeconds(0.2f);
     }
 
     // ============================================================
@@ -809,7 +595,8 @@ public class AbilitySystem : MonoBehaviour
             else if (nakoPC != null)
                 nakoPC.MoveTo(nakoPos);
 
-            // パス上の敵駒に2ダメージ（スライド到着後）。C3は能力の影響を受けない
+            // パス上の敵駒に2ダメージ（スライド到着後。攻撃の上乗せぶん増える）。C3は能力の影響を受けない
+            int dash = CombatResolver.AbilityDamage(nako, 2);
             foreach (var pos in path)
             {
                 PieceInstance target = bm.GetPieceAt(pos);
@@ -817,8 +604,8 @@ public class AbilitySystem : MonoBehaviour
                     && target.data.pieceType != PieceType.C3)
                 {
                     if (BattleLogUI.Instance != null)
-                        BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("なこ", nako.team) + "の突撃！" + BattleLogUI.ColorName(target.DisplayName, target.team) + " に2ダメージ");
-                    CombatResolver.ApplyDamage(target, 2, false);
+                        BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("なこ", nako.team) + "の突撃！" + BattleLogUI.ColorName(target.DisplayName, target.team) + " に" + dash + "ダメージ");
+                    CombatResolver.ApplyDamage(target, dash, false);
                     yield return new WaitForSeconds(0.15f);
                 }
             }
@@ -1039,7 +826,8 @@ public class AbilitySystem : MonoBehaviour
         return list;
     }
 
-    private void HealAdjacentAllies(PieceInstance chuka, int amount)
+    /// <summary>周りの味方を回復する。feed=true（中華）なら食べた味方は「満腹」で攻撃+1（C3・中華を除く、1体に上限あり）</summary>
+    private void HealAdjacentAllies(PieceInstance chuka, int amount, bool feed = false)
     {
         BoardManager bm = BoardManager.Instance;
         Vector2Int center = chuka.boardPosition;
@@ -1053,10 +841,44 @@ public class AbilitySystem : MonoBehaviour
                 if (!bm.IsInBounds(pos)) continue;
 
                 PieceInstance target = bm.GetPieceAt(pos);
-                if (target != null && target.team == chuka.team && target != chuka)
-                    CombatResolver.Heal(target, amount);
+                if (target == null || target.team != chuka.team || target == chuka) continue;
+                CombatResolver.Heal(target, amount);
+                if (feed && target.data.pieceType != PieceType.C3 && target.data.pieceType != PieceType.Chuka
+                    && target.fullCount < BalanceTuning.ChukaFullMax)
+                {
+                    target.fullCount++;
+                    target.bonusATK += 1;
+                    CombatResolver.RefreshStats(target);
+                    FloatingText.Spawn(target.boardPosition, "満腹 攻+1", Palette.ATK, 2.8f, 0.3f);
+                }
             }
         }
+    }
+
+    /// <summary>小錦が攻撃されたとき、周りの味方が「同情」して攻撃+1（C3・小錦を除く、1体に上限あり）</summary>
+    public void Sympathize(PieceInstance konishiki)
+    {
+        BoardManager bm = BoardManager.Instance;
+        bool any = false;
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                if (dx == 0 && dy == 0) continue;
+                PieceInstance ally = bm.GetPieceAt(new Vector2Int(konishiki.boardPosition.x + dx, konishiki.boardPosition.y + dy));
+                if (ally == null || ally.team != konishiki.team || !ally.isAlive) continue;
+                if (ally.data.pieceType == PieceType.C3 || ally.data.pieceType == PieceType.Konishiki) continue;
+                if (ally.sympathyCount >= BalanceTuning.KonishikiSympathyMax) continue;
+                ally.sympathyCount++;
+                ally.bonusATK += 1;
+                CombatResolver.RefreshStats(ally);
+                FloatingText.Spawn(ally.boardPosition, "同情 攻+1", Palette.ATK, 2.8f, 0.2f);
+                if (BattleEffects.Instance != null) BattleEffects.Instance.PlayBuffEffect(ally.boardPosition, true);
+                any = true;
+            }
+        }
+        if (any && BattleLogUI.Instance != null)
+            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("小錦", konishiki.team) + " がいじめられて、周りが奮起した（攻撃+1）");
     }
 
     // ============================================================
@@ -1222,12 +1044,13 @@ public class AbilitySystem : MonoBehaviour
 
         BoardManager bm = BoardManager.Instance;
 
+        int blast = CombatResolver.AbilityDamage(piece, 1);
         if (BattleEffects.Instance != null)
             BattleEffects.Instance.PlayExplosionEffect(deathPos);
         if (BattleLogUI.Instance != null)
-            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("髑髏", piece.team) + " が爆発！隣接駒に貫通1ダメージ");
+            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("髑髏", piece.team) + " が爆発！隣接駒に貫通" + blast + "ダメージ");
 
-        // 隣接全セルに貫通1ダメージ（C3は能力の影響を受けない）
+        // 隣接全セルに貫通1ダメージ（攻撃の上乗せぶん増える。C3は能力の影響を受けない）
         var victims = new List<PieceInstance>();
         for (int dx = -1; dx <= 1; dx++)
         {
@@ -1244,7 +1067,7 @@ public class AbilitySystem : MonoBehaviour
 
         var source = GameSim.BeginSource(piece);
         foreach (var victim in victims)
-            CombatResolver.ApplyDamage(victim, 1, true);
+            CombatResolver.ApplyDamage(victim, blast, true);
         GameSim.EndSource(source);
 
         explodingPositions.Remove(deathPos);

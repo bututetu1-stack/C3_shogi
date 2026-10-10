@@ -15,6 +15,14 @@ public class PieceInstance
     public int bonusMaxHP;          // ステージ強化による最大HP増加
     public int turnsNearBoku;       // 僕の近くにいたターン数
     public int gundaishouStacks;    // 軍将バフを受けた回数（上限管理用）
+    public int stageBonusATK;       // bonusATK のうち局による強化の分（魔王の雷撃には足さない）
+    public bool stunned;            // きぷ・へるに冷笑され、次の自分の手番は動けない
+    public int fullCount;           // 中華で「満腹」になった回数（攻撃+1、上限あり）
+    public int sympathyCount;       // 小錦への「同情」で攻撃が上がった回数（上限あり）
+    public bool isFlagship;         // 深海の旗艦（沈めると作戦完了）
+    public bool kai2;               // 艦娘の改二（改のまま敵陣を出た）
+    public int fleetDamage;         // 艦娘が深海に与えたダメージ（MVP の判定）
+    public bool damageAnnounced;    // 艦娘の中破を知らせた
 
     public int ATK { get { return (isPromoted ? data.promotedATK : data.baseATK) + bonusATK; } }
     public int DEF { get { return (isPromoted ? data.promotedDEF : data.baseDEF) + bonusDEF; } }
@@ -80,6 +88,33 @@ public class PieceInstance
         if (amount <= 0) return;
         bonusMaxHP += amount;
         currentHP += amount;
+    }
+
+    /// <summary>けいの「バグ修正」で下げられるか（攻撃・防御は0未満にならず、体力は0にならない）</summary>
+    public bool CanLower(StatKind stat)
+    {
+        switch (stat)
+        {
+            case StatKind.ATK: return ATK > 0;
+            case StatKind.DEF: return DEF > 0;
+            default: return currentHP > 1;
+        }
+    }
+
+    /// <summary>数値を1下げる（その局のあいだ残る）。体力は最大と現在を両方下げ、どちらも1は残す</summary>
+    public void Lower(StatKind stat)
+    {
+        if (!CanLower(stat)) return;
+        switch (stat)
+        {
+            case StatKind.ATK: bonusATK--; break;
+            case StatKind.DEF: bonusDEF--; break;
+            default:
+                currentHP--;
+                if (MaxHP > 1) bonusMaxHP--;
+                if (currentHP > MaxHP) currentHP = MaxHP;
+                break;
+        }
     }
 
     public void Promote()

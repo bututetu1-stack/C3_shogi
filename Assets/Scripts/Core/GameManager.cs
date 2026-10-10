@@ -51,6 +51,10 @@ public class GameManager : MonoBehaviour
     public int RunBonusDEF { get; private set; }
     public int RunBonusHP { get; private set; }
     public int RunBonusC3HP { get; private set; }
+    /// <summary>応急修理要員の残り（艦娘が沈むとき1回ずつ使う）</summary>
+    public int RunDamageControl { get; private set; }
+    // 艦隊がS勝利したら、次の局の選択肢に強化が1枚増える（その局の番号）
+    private int bonusUpgradeStage;
 
     // 戦績
     public int TotalKills { get; private set; }
@@ -97,6 +101,8 @@ public class GameManager : MonoBehaviour
         currentTurn = Team.Player;
         playerOwnedPieces.Clear();
         RunBonusATK = RunBonusDEF = RunBonusHP = RunBonusC3HP = 0;
+        RunDamageControl = 0;
+        bonusUpgradeStage = 0;
         TotalKills = TotalMoves = StagesCleared = 0;
         if (stageManager != null) stageManager.currentStage = 1;
     }
@@ -159,7 +165,7 @@ public class GameManager : MonoBehaviour
             picksLeft = PicksForStage(stage);
         }
         bool canDeploy = boardManager.FindPlayerDeploySlot().HasValue;
-        List<DraftOption> options = PiecePool.DrawOptions(boardManager.allPieceData, 3, playerOwnedPieces, stage, canDeploy);
+        List<DraftOption> options = DrawStageOptions(stage, canDeploy);
 
         if (options.Count == 0 || pieceSelectionUI == null)
         {
@@ -203,6 +209,7 @@ public class GameManager : MonoBehaviour
                 case UpgradeKind.AllDEF: RunBonusDEF += 1; break;
                 case UpgradeKind.AllHP: RunBonusHP += 2; break;
                 case UpgradeKind.C3HP: RunBonusC3HP += 4; break;
+                case UpgradeKind.DamageControl: RunDamageControl += 1; break;
             }
         }
     }
@@ -211,19 +218,77 @@ public class GameManager : MonoBehaviour
     private void ApplyRunBonuses()
     {
         foreach (var p in boardManager.GetTeamPieces(Team.Player))
+            ApplyRunBonus(p);
+    }
+
+    private void ApplyRunBonus(PieceInstance p)
+    {
+        if (p.data.pieceType == PieceType.C3)
         {
-            if (p.data.pieceType == PieceType.C3)
-            {
-                p.AddMaxHP(RunBonusC3HP);
-            }
-            else
-            {
-                p.bonusATK += RunBonusATK;
-                p.bonusDEF += RunBonusDEF;
-                p.AddMaxHP(RunBonusHP);
-            }
+            p.AddMaxHP(RunBonusC3HP);
+        }
+        else
+        {
+            p.bonusATK += RunBonusATK;
+            p.bonusDEF += RunBonusDEF;
+            p.AddMaxHP(RunBonusHP);
+        }
+        CombatResolver.RefreshStats(p);
+    }
+
+    /// <summary>
+    /// 対局の途中で出てきた駒（艦娘・深海・黄泉の歩）に、その局のほかの駒と同じ強化を付ける。
+    /// 能力による攻撃も、この攻撃の上乗せのぶん増える
+    /// </summary>
+    public void ApplySummonBonuses(PieceInstance p)
+    {
+        if (p == null) return;
+        int stage = stageManager != null ? stageManager.currentStage : 1;
+        if (PieceTypes.IsShinkai(p.data.pieceType))
+        {
+            // 深海の体力はランクで決まっているので、局による強化は攻撃だけ
+            p.stageBonusATK = StageManager.EnemyStageAtk(stage);
+            p.bonusATK += p.stageBonusATK;
             CombatResolver.RefreshStats(p);
         }
+        else if (p.team == Team.Enemy)
+        {
+            StageManager.ScaleEnemy(p, stage);
+        }
+        else
+        {
+            StageManager.ScalePlayer(p, stage);
+            ApplyRunBonus(p);
+            // 艦娘は提督の練度として、敵と同じだけ攻撃も上がる
+            if (PieceTypes.IsKanmusu(p.data.pieceType))
+            {
+                p.stageBonusATK = StageManager.EnemyStageAtk(stage);
+                p.bonusATK += p.stageBonusATK;
+                CombatResolver.RefreshStats(p);
+            }
+        }
+    }
+
+    /// <summary>その局の仲間選択の候補。艦隊がS勝利した次の局は、強化が1枚増える</summary>
+    private List<DraftOption> DrawStageOptions(int stage, bool canDeploy)
+    {
+        List<DraftOption> options = PiecePool.DrawOptions(boardManager.allPieceData, 3, playerOwnedPieces, stage, canDeploy);
+        if (stage == bonusUpgradeStage) PiecePool.AddExtraUpgrade(options, playerOwnedPieces);
+        return options;
+    }
+
+    /// <summary>艦隊のS勝利: 次の局の選択肢に強化を1枚増やす</summary>
+    public void GrantFleetBonus()
+    {
+        bonusUpgradeStage = (stageManager != null ? stageManager.currentStage : 1) + 1;
+    }
+
+    /// <summary>応急修理要員を1つ使う（残っていれば true）</summary>
+    public bool UseDamageControl()
+    {
+        if (RunDamageControl <= 0) return false;
+        RunDamageControl--;
+        return true;
     }
 
     // ================================================================
@@ -520,6 +585,16 @@ public class GameManager : MonoBehaviour
     public void PromotePiece(PieceInstance piece, bool cutIn = true)
     {
         if (piece == null || !piece.isAlive || piece.isPromoted || !piece.data.canPromote) return;
+
+        // 大破進軍: 大破した艦娘が敵陣に入ると轟沈する
+        if (AbilitySystem.SinksOnPromotion(piece))
+        {
+            FloatingText.Spawn(piece.boardPosition, "大破進軍", new Color(1f, 0.45f, 0.4f), 3.6f);
+            if (BattleLogUI.Instance != null)
+                BattleLogUI.Instance.AddLog("大破進軍……" + BattleLogUI.ColorName(piece.DisplayName, piece.team) + " は轟沈した");
+            CombatResolver.KillPiece(piece);
+            return;
+        }
         if (cutIn && !GameSim.Headless && piece.data.pieceType != PieceType.Monotetsu)
             StartCoroutine(PromotionCutIn(piece));
 
@@ -595,7 +670,7 @@ public class GameManager : MonoBehaviour
     {
         int stage = stageManager != null ? stageManager.currentStage : 1;
         bool canDeploy = boardManager.FindPlayerDeploySlot().HasValue;
-        return PiecePool.DrawOptions(boardManager.allPieceData, 3, playerOwnedPieces, stage, canDeploy);
+        return DrawStageOptions(stage, canDeploy);
     }
 
     public void SimApplyOption(DraftOption option) { ApplyOption(option); }

@@ -7,9 +7,33 @@ using System.Collections;
 /// </summary>
 public static class CombatResolver
 {
+    /// <summary>通常攻撃のダメージ = 攻撃（＋ユウの助走）− 防御。0未満にはならない。潜水艦には0</summary>
     public static int CalcDamage(PieceInstance attacker, PieceInstance target)
     {
-        return Mathf.Max(0, attacker.ATK - target.DEF);
+        // 潜水艦は通常の攻撃を受けない（能力の攻撃は受ける）
+        if (target.data.pieceType == PieceType.KanmusuSS) return 0;
+        return Mathf.Max(0, attacker.ATK + RunUpBonus(attacker, target) - target.DEF);
+    }
+
+    /// <summary>ユウの助走: 敵まで走ったマスのうち、2マス目から1マスごとに攻撃が上がる（攻撃の前の位置で測る）</summary>
+    public static int RunUpBonus(PieceInstance attacker, PieceInstance target)
+    {
+        if (attacker.data.pieceType != PieceType.Yuu) return 0;
+        Vector2Int d = target.boardPosition - attacker.boardPosition;
+        int distance = Mathf.Max(Mathf.Abs(d.x), Mathf.Abs(d.y));
+        return Mathf.Max(0, distance - 1) * BalanceTuning.YuuRunUpPerSquare;
+    }
+
+    /// <summary>
+    /// 能力による攻撃（なこの突撃・深海・艦娘・魔王の雷撃・髑髏の爆発）のダメージ。
+    /// 能力ごとの基本の値に、出どころの駒の攻撃の上乗せ（局による強化・僕・軍将・全軍強化、けいに下げられた分）を足す。最低1。
+    /// withStageBonus=false なら局による強化の分は足さない（魔王の雷撃）
+    /// </summary>
+    public static int AbilityDamage(PieceInstance source, int baseDamage, bool withStageBonus = true)
+    {
+        if (source == null) return baseDamage;
+        int bonus = source.bonusATK - (withStageBonus ? 0 : source.stageBonusATK);
+        return Mathf.Max(1, baseDamage + bonus);
     }
 
     // ================================================================
@@ -84,6 +108,8 @@ public static class CombatResolver
         GameManager gm = GameManager.Instance;
         if (gm != null && gm.ShouldPromote(piece, from))
             yield return gm.PromoteRoutine(piece);
+        else if (AbilitySystem.Instance != null)
+            AbilitySystem.Instance.CheckKai2(piece, from);   // 改のまま敵陣を出た艦娘は改二
         if (!piece.isAlive) yield break;
 
         // 李白の裏返し能力（移動後に発動）
@@ -97,14 +123,30 @@ public static class CombatResolver
         if (BattleEffects.Instance != null)
             BattleEffects.Instance.PlaySlash(target.boardPosition, attacker.boardPosition);
 
+        int runUp = RunUpBonus(attacker, target);
         int damage = CalcDamage(attacker, target);
         target.currentHP -= damage;
         RefreshHP(target);
+        // 小錦がいじめられると周りが同情して奮起する
+        if (target.data.pieceType == PieceType.Konishiki && AbilitySystem.Instance != null)
+            AbilitySystem.Instance.Sympathize(target);
+        if (attacker.data.pieceType == PieceType.Yuu)
+        {
+            if (runUp > 0)
+            {
+                FloatingText.Spawn(attacker.boardPosition, "助走+" + runUp, YuuOrange, 2.8f);
+                if (BattleEffects.Instance != null) BattleEffects.Instance.PlayDashStreak(attacker.boardPosition, target.boardPosition, YuuOrange, 0.25f);
+            }
+            SpeechBubble.SayMaybe(attacker, PieceLines.YuuAttack, 0.5f);
+        }
 
-        if (target.currentHP <= 0)
+        bool saved = AbilitySystem.Instance != null && AbilitySystem.Instance.OnShipHit(target);
+        if (target.currentHP <= 0 && !saved)
         {
             FloatingText.Spawn(target.boardPosition, "撃破", Palette.GoldLight, 3.6f);
             Log(Name(attacker) + " が " + Name(target) + " を撃破！");
+            // きぷは弱い武器で倒して煽る
+            if (attacker.data.pieceType == PieceType.Kipu && !attacker.isPromoted) SpeechBubble.Say(attacker, PieceLines.KipuTaunt);
             GameSim.SetAttacker(attacker);
             KillPiece(target);
             GameSim.SetAttacker(null);
@@ -123,6 +165,7 @@ public static class CombatResolver
     }
 
     private static readonly Color DamageColor = new Color(1f, 0.5f, 0.4f);
+    private static readonly Color YuuOrange = new Color(1f, 0.6f, 0.25f);
     private static readonly Color PiercingColor = new Color(0.85f, 0.6f, 1f);
     public static readonly Color HealColor = new Color(0.5f, 0.95f, 0.55f);
 
@@ -136,7 +179,8 @@ public static class CombatResolver
         RefreshHP(target);
         FloatingText.Spawn(target.boardPosition, damage > 0 ? "-" + damage : "0", damage > 0 ? (piercing ? PiercingColor : DamageColor) : Palette.TextSub);
 
-        if (target.currentHP <= 0)
+        bool saved = AbilitySystem.Instance != null && AbilitySystem.Instance.OnShipHit(target);
+        if (target.currentHP <= 0 && !saved)
         {
             KillPiece(target);
             return true;
@@ -198,7 +242,7 @@ public static class CombatResolver
         bm.RemovePiece(pos);
 
         if (checkLinkedDeaths && AbilitySystem.Instance != null)
-            AbilitySystem.Instance.CheckLinkedDeaths(groupId);
+            AbilitySystem.Instance.CheckLinkedDeaths(groupId, target);
     }
 
     /// <summary>撃破ではない形で盤から去らせる（艦隊の帰投・沈没など）。死亡時能力や撃破数には数えない</summary>

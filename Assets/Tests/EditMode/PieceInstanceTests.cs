@@ -91,4 +91,81 @@ public class PieceInstanceTests
         target.bonusDEF = 5;
         Assert.AreEqual(0, CombatResolver.CalcDamage(attacker, target));
     }
+
+    [Test]
+    public void AbilityDamage_AddsAttackBonus_AndIsAtLeastOne()
+    {
+        var piece = new PieceInstance(data, Team.Player, Vector2Int.zero);
+        Assert.AreEqual(2, CombatResolver.AbilityDamage(piece, 2));
+        piece.bonusATK = 3;
+        Assert.AreEqual(5, CombatResolver.AbilityDamage(piece, 2));
+        piece.bonusATK = -2;
+        Assert.AreEqual(1, CombatResolver.AbilityDamage(piece, 2));
+    }
+
+    [Test]
+    public void YuuRunUp_AddsOnePerSquareFromTheSecond()
+    {
+        var yuuData = ScriptableObject.CreateInstance<PieceData>();
+        yuuData.pieceType = PieceType.Yuu;
+        yuuData.baseATK = 2;
+        yuuData.baseHP = 4;
+        yuuData.canPromote = true;
+        yuuData.promotedATK = 2;
+        yuuData.promotedHP = 4;
+        try
+        {
+            var yuu = new PieceInstance(yuuData, Team.Player, new Vector2Int(0, 0));
+            var near = new PieceInstance(data, Team.Enemy, new Vector2Int(1, 1));   // 防御1
+            var two = new PieceInstance(data, Team.Enemy, new Vector2Int(0, 2));
+            var five = new PieceInstance(data, Team.Enemy, new Vector2Int(5, 0));
+            Assert.AreEqual(1, CombatResolver.CalcDamage(yuu, near), "隣は助走なし");
+            Assert.AreEqual(2, CombatResolver.CalcDamage(yuu, two), "2マス先は攻撃+1");
+            Assert.AreEqual(5, CombatResolver.CalcDamage(yuu, five), "5マス先は攻撃+4");
+            yuu.Promote();
+            Assert.AreEqual(5, CombatResolver.CalcDamage(yuu, five), "成っても1マスごと+1");
+        }
+        finally
+        {
+            Object.DestroyImmediate(yuuData);
+        }
+    }
+
+    [Test]
+    public void AbilityDamage_CanLeaveOutStageBonus()
+    {
+        var piece = new PieceInstance(data, Team.Enemy, Vector2Int.zero);
+        piece.stageBonusATK = 3;
+        piece.bonusATK = 4;   // 局による強化3 + 軍将1
+        Assert.AreEqual(5, CombatResolver.AbilityDamage(piece, 1));
+        Assert.AreEqual(2, CombatResolver.AbilityDamage(piece, 1, false));
+    }
+
+    [Test]
+    public void Lower_AttackAndDefenseStopAtZero()
+    {
+        var piece = new PieceInstance(data, Team.Enemy, Vector2Int.zero);
+        piece.Lower(StatKind.DEF);
+        Assert.AreEqual(0, piece.DEF);
+        Assert.IsFalse(piece.CanLower(StatKind.DEF));
+        piece.Lower(StatKind.DEF);
+        Assert.AreEqual(0, piece.DEF);
+        piece.Lower(StatKind.ATK);
+        Assert.AreEqual(1, piece.ATK);
+    }
+
+    [Test]
+    public void Lower_HpLowersMaxAndCurrent_ButNeverToZero()
+    {
+        var piece = new PieceInstance(data, Team.Enemy, Vector2Int.zero);
+        piece.Lower(StatKind.HP);
+        Assert.AreEqual(2, piece.currentHP);
+        Assert.AreEqual(2, piece.MaxHP);
+        piece.Lower(StatKind.HP);
+        Assert.AreEqual(1, piece.currentHP);
+        Assert.IsFalse(piece.CanLower(StatKind.HP));
+        piece.Lower(StatKind.HP);
+        Assert.AreEqual(1, piece.currentHP);
+        Assert.AreEqual(1, piece.MaxHP);
+    }
 }

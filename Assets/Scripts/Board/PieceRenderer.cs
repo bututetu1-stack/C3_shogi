@@ -17,11 +17,13 @@ public class PieceRenderer : MonoBehaviour
     public const int OrderBadgeText = 13;
 
     private static readonly Vector3 ShadowOffset = new Vector3(0.035f, -0.055f, 0f);
+    private static readonly Color StunnedTint = new Color(0.6f, 0.72f, 0.9f);
 
     private PieceInstance pieceInstance;
     private bool isEnemyPiece;
     private Rarity appliedRarity;
     private bool appliedPromoted;
+    private bool appliedKai2;
     private string appliedName;
 
     private Transform visual;
@@ -52,6 +54,8 @@ public class PieceRenderer : MonoBehaviour
     public Transform ShadowHolder { get { return shadowHolder; } }
     public Transform Stats { get { return stats; } }
     public SpriteRenderer Body { get { return bodyRenderer; } }
+    /// <summary>ふだんの本体の色（冷笑されて動けない駒は青白く沈ませる）</summary>
+    public Color BodyRestColor { get { return pieceInstance != null && pieceInstance.stunned ? StunnedTint : Color.white; } }
     public float BaseScale { get; private set; }
     /// <summary>海に浮かぶ駒（艦娘・深海）はゆらゆら揺らす</summary>
     public bool IsFloating { get; private set; }
@@ -119,6 +123,7 @@ public class PieceRenderer : MonoBehaviour
             case PieceType.Chuka:
             case PieceType.Dopa: return 0.72f;
             case PieceType.Maou:
+            case PieceType.ShinkaiHime:
             case PieceType.Ryuujin:
             case PieceType.Raitei: return 0.92f;
             default: return 0.86f;
@@ -193,6 +198,7 @@ public class PieceRenderer : MonoBehaviour
     {
         if (pieceInstance == null) return;
         RefreshBody(false);
+        bodyRenderer.color = BodyRestColor;
 
         SetBadge(atkBadge, pieceInstance.ATK);
         SetBadge(defBadge, pieceInstance.DEF);
@@ -220,13 +226,15 @@ public class PieceRenderer : MonoBehaviour
         Rarity rarity = pieceInstance.CurrentRarity;
         bool promoted = pieceInstance.isPromoted;
         string name = pieceInstance.DisplayName ?? "";
-        if (!force && rarity == appliedRarity && promoted == appliedPromoted && name == appliedName) return;
+        bool kai2 = pieceInstance.kai2;
+        if (!force && rarity == appliedRarity && promoted == appliedPromoted && kai2 == appliedKai2 && name == appliedName) return;
 
         appliedRarity = rarity;
         appliedPromoted = promoted;
+        appliedKai2 = kai2;
         appliedName = name;
 
-        PieceLook look = PieceSkin.For(pieceInstance.data, promoted);
+        PieceLook look = PieceSkin.For(pieceInstance.data, promoted, kai2);
         bodyRenderer.sprite = look.body;
         labelTop.color = look.ink;
         labelBottom.color = look.ink;

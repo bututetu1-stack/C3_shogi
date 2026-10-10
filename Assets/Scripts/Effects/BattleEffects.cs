@@ -817,6 +817,34 @@ public class BattleEffects : MonoBehaviour
         StartCoroutine(Glow(b, new Color(color.r, color.g, color.b, 0.6f), 0.15f, 0.5f, 0.2f));
     }
 
+    private SpriteRenderer nightOverlay;
+
+    /// <summary>夜戦のあいだ盤を紺色に沈める（駒や印はその上に出る）。off で元に戻す</summary>
+    public void SetNight(bool on)
+    {
+        if (!on)
+        {
+            if (nightOverlay != null) Destroy(nightOverlay.gameObject);
+            nightOverlay = null;
+            return;
+        }
+        if (GameSim.Headless || nightOverlay != null || BoardManager.Instance == null) return;
+        int size = BoardManager.Instance.CurrentBoardSize;
+        float c = (size - 1) / 2f;
+        nightOverlay = CreateSprite(SpriteFactory.Pixel, new Vector3(c, c, 0f), new Color(0.03f, 0.05f, 0.16f, 0.65f), size + 0.3f, PieceRenderer.OrderShadow - 2);
+        nightOverlay.gameObject.name = "NightOverlay";
+    }
+
+    /// <summary>光の粒が相手へ飛び、相手の上で細かい破片が散る（けいのバグ修正は緑、きぷの冷笑は水色）</summary>
+    public void PlayStream(Vector2Int from, Vector2Int to, Color color)
+    {
+        Vector3 a = World(from), b = World(to);
+        Color mote = new Color(color.r, color.g, color.b, 0.95f);
+        for (int i = 0; i < 5; i++)
+            StartCoroutine(Mote(a, b, mote, 0.35f, i * 0.04f, 0.2f));
+        StartCoroutine(Burst(b, 12, mote, color * 0.55f, 0.8f, 2.2f, 0.06f, 0.5f, 0f, SpriteFactory.Pixel));
+    }
+
     /// <summary>ヲツの鍋振り（鍋から炎と火の粉が上がる）</summary>
     public void PlayWokFlame(Vector2Int pos)
     {

@@ -276,38 +276,47 @@ public class StageManager : MonoBehaviour
 
     private void ApplyStageScaling(BoardManager bm, int stage)
     {
-        int hpBonus = stage / BalanceTuning.EnemyHpDivisor;
-        int atkBonus = stage / BalanceTuning.EnemyAtkDivisor;
-        int c3Bonus = (stage - 1) / BalanceTuning.EnemyC3HpDivisor + BalanceTuning.EnemyC3ExtraHP;   // 後半ほど敵C3も打たれ強くなる
         foreach (var enemy in bm.GetTeamPieces(Team.Enemy))
+            ScaleEnemy(enemy, stage);
+    }
+
+    /// <summary>敵の駒1体に局による強化を付ける（対局の途中で出てくる深海・歩にも同じものを付ける）</summary>
+    public static void ScaleEnemy(PieceInstance enemy, int stage)
+    {
+        if (enemy.data.pieceType == PieceType.C3)
         {
-            if (enemy.data.pieceType == PieceType.C3)
-            {
-                enemy.AddMaxHP(c3Bonus);
-                CombatResolver.RefreshStats(enemy);
-                continue;
-            }
-            enemy.AddMaxHP(hpBonus);
-            enemy.bonusATK += atkBonus;
-            CombatResolver.RefreshStats(enemy);
+            // 後半ほど敵C3も打たれ強くなる
+            enemy.AddMaxHP((stage - 1) / BalanceTuning.EnemyC3HpDivisor + BalanceTuning.EnemyC3ExtraHP);
         }
+        else
+        {
+            enemy.AddMaxHP(stage / BalanceTuning.EnemyHpDivisor);
+            enemy.stageBonusATK = EnemyStageAtk(stage);
+            enemy.bonusATK += enemy.stageBonusATK;
+        }
+        CombatResolver.RefreshStats(enemy);
+    }
+
+    /// <summary>局による敵の攻撃の上乗せ（艦娘の「提督の練度」も同じ値）</summary>
+    public static int EnemyStageAtk(int stage)
+    {
+        return Mathf.Max(0, stage - BalanceTuning.EnemyAtkDelay) / BalanceTuning.EnemyAtkDivisor;
     }
 
     /// <summary>プレイヤー駒にステージに応じた小規模強化を付与</summary>
     public void ApplyPlayerScaling()
     {
-        BoardManager bm = BoardManager.Instance;
-        int hpBonus = (currentStage - 1) / BalanceTuning.PlayerHpDivisor;
-        int defBonus = (currentStage - 1) / BalanceTuning.PlayerDefDivisor;
-        foreach (var p in bm.GetTeamPieces(Team.Player))
-        {
-            // 全員にHP強化（C3含む）
-            p.AddMaxHP(hpBonus);
-            // C3以外にDEF強化
-            if (p.data.pieceType != PieceType.C3)
-                p.bonusDEF += defBonus;
-            CombatResolver.RefreshStats(p);
-        }
+        foreach (var p in BoardManager.Instance.GetTeamPieces(Team.Player))
+            ScalePlayer(p, currentStage);
+    }
+
+    /// <summary>自軍の駒1体に局による強化を付ける（全員に体力、C3以外に防御。対局の途中で出てくる艦娘にも付ける）</summary>
+    public static void ScalePlayer(PieceInstance p, int stage)
+    {
+        p.AddMaxHP((stage - 1) / BalanceTuning.PlayerHpDivisor);
+        if (p.data.pieceType != PieceType.C3)
+            p.bonusDEF += (stage - 1) / BalanceTuning.PlayerDefDivisor;
+        CombatResolver.RefreshStats(p);
     }
 
     public void AdvanceStage() { currentStage++; }

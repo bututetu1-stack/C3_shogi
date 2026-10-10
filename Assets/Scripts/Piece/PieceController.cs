@@ -226,11 +226,11 @@ public class PieceController : MonoBehaviour
             float t = elapsed / duration;
             float m = magnitude * (1f - t);
             shakeOffset = new Vector3(Random.Range(-m, m), Random.Range(-m, m), 0f);
-            if (body != null) body.color = Color.Lerp(new Color(1f, 0.55f, 0.5f), Color.white, Ease.OutCubic(t));
+            if (body != null) body.color = Color.Lerp(new Color(1f, 0.55f, 0.5f), pieceRenderer.BodyRestColor, Ease.OutCubic(t));
             yield return null;
         }
         shakeOffset = Vector3.zero;
-        if (body != null) body.color = Color.white;
+        if (body != null) body.color = pieceRenderer.BodyRestColor;
         isShaking = false;
     }
 

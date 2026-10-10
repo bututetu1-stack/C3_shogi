@@ -31,7 +31,45 @@ public enum PieceType
     Fujin,      // 風神 (敵専用)
     Dokuro,     // 髑髏 (敵専用)
     Ryuujin,    // 龍神 (敵専用)
-    Maou        // 魔王 (敵専用)
+    Maou,       // 魔王 (敵専用)
+    Kei,        // けい（成ると異端）
+    Yuu,        // ユウ
+    Kipu,       // きぷ（成るとへる）
+    // 艦娘の艦種（提督の着任時に建造で決まる。成ると改、改のまま敵陣を出ると改二）
+    KanmusuDD,  // 駆逐
+    KanmusuCL,  // 軽巡
+    KanmusuCA,  // 重巡
+    KanmusuBB,  // 戦艦
+    KanmusuCV,  // 空母
+    KanmusuSS,  // 潜水
+    // 深海のランク（ノーマルは Shinkai）
+    ShinkaiElite,
+    ShinkaiFlagship,
+    ShinkaiHime // 姫級
+}
+
+/// <summary>駒の種類のまとまり</summary>
+public static class PieceTypes
+{
+    /// <summary>艦娘（艦種なしの Kanmusu も含む）</summary>
+    public static bool IsKanmusu(PieceType type)
+    {
+        return type == PieceType.Kanmusu || (type >= PieceType.KanmusuDD && type <= PieceType.KanmusuSS);
+    }
+
+    /// <summary>深海（ノーマル・elite・flagship・姫級）</summary>
+    public static bool IsShinkai(PieceType type)
+    {
+        return type == PieceType.Shinkai || (type >= PieceType.ShinkaiElite && type <= PieceType.ShinkaiHime);
+    }
+}
+
+/// <summary>駒の数値の種類（攻撃・防御・体力）</summary>
+public enum StatKind
+{
+    ATK,
+    DEF,
+    HP
 }
 
 public enum Team

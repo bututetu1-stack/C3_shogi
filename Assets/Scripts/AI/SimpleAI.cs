@@ -440,12 +440,12 @@ public class SimpleAI : MonoBehaviour
             piece.isPromoted = true;
             int hpDiff = piece.data.promotedHP - piece.data.baseHP;
             if (hpDiff > 0) piece.currentHP += hpDiff;
-            if (piece.data.diesOnPromotion) SimKill(piece, 0);
+            if (piece.data.diesOnPromotion || AbilitySystem.SinksOnPromotion(piece)) SimKill(piece, 0);
         }
         return mark;
     }
 
-    /// <summary>探索中の撃破。髑髏なら周囲（C3以外）に貫通1ダメージ</summary>
+    /// <summary>探索中の撃破。髑髏なら周囲（C3以外）に貫通1ダメージ（攻撃の上乗せぶん増える）</summary>
     private void SimKill(PieceInstance victim, int chain)
     {
         BoardManager bm = BoardManager.Instance;
@@ -454,6 +454,7 @@ public class SimpleAI : MonoBehaviour
         victim.isAlive = false;
 
         if (victim.data.pieceType != PieceType.Dokuro || chain > 4) return;
+        int blast = CombatResolver.AbilityDamage(victim, 1);
         Vector2Int c = victim.boardPosition;
         for (int dx = -1; dx <= 1; dx++)
         {
@@ -463,7 +464,7 @@ public class SimpleAI : MonoBehaviour
                 PieceInstance n = bm.GetPieceAt(new Vector2Int(c.x + dx, c.y + dy));
                 if (n == null || !n.isAlive || n.data.pieceType == PieceType.C3) continue;
                 Save(n);
-                n.currentHP -= 1;
+                n.currentHP -= blast;
                 if (n.currentHP <= 0) SimKill(n, chain + 1);
             }
         }
