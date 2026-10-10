@@ -99,6 +99,10 @@ public static class PieceLines
             case PieceType.Kei: return new CutIn("けい 異端化", "倫理観と人の心とその他諸々を失った", 0x0B2618, 0x5CFF9A);
             case PieceType.Yuu: return new CutIn("ユウ 加速", "防御力とさらなる機動力を手に入れた", 0x3A1608, 0xFF9A3C);
             case PieceType.Kipu: return new CutIn("へる 降臨", "冷笑を極めた（25連冷笑コンボ）", 0x14202E, 0x9ED8FF);
+            case PieceType.Mitsuharu: return new CutIn("光晴 高飛び", "とうとう念願の海外旅行へ", 0x1A2A44, 0x7FC8FF);
+            case PieceType.Niko: return new CutIn("ニコ 本気", "タスクをもっと投げても良くなった", 0x2E1E3A, 0xFFB86B);
+            case PieceType.Shimesaba: return new CutIn("〆鯖 最終兵器", "世界が終わる", 0x121216, 0xE0E8F0);
+            case PieceType.Kawasemi: return new CutIn("翡翠 最強PC", "一体何が起きるのか", 0x0E2A26, 0x5CE0C8);
             default: return null;
         }
     }

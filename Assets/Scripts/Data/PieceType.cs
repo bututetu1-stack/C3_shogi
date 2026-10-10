@@ -45,7 +45,12 @@ public enum PieceType
     // 深海のランク（ノーマルは Shinkai）
     ShinkaiElite,
     ShinkaiFlagship,
-    ShinkaiHime // 姫級
+    ShinkaiHime, // 姫級
+    // 2026-10-11 に加わった部員
+    Mitsuharu,  // 光晴（成ると盤外へ高飛び）
+    Niko,       // ニコ
+    Shimesaba,  // 〆鯖
+    Kawasemi    // 翡翠（かわせみ）
 }
 
 /// <summary>駒の種類のまとまり</summary>

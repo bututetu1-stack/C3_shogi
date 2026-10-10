@@ -20,7 +20,8 @@ public class PieceCatalogUI : MonoBehaviour
     {
         new Group("部員",
             PieceType.Nako, PieceType.Monotetsu, PieceType.Monin, PieceType.Boku, PieceType.Wotsu, PieceType.Kei,
-            PieceType.Kipu, PieceType.Rihaku, PieceType.SN, PieceType.Konishiki, PieceType.Yuu, PieceType.Chuka, PieceType.Dopa),
+            PieceType.Kipu, PieceType.Rihaku, PieceType.SN, PieceType.Konishiki, PieceType.Yuu,
+            PieceType.Mitsuharu, PieceType.Niko, PieceType.Shimesaba, PieceType.Kawasemi, PieceType.Chuka, PieceType.Dopa),
         new Group("提督の艦隊",
             PieceType.KanmusuDD, PieceType.KanmusuCL, PieceType.KanmusuCA, PieceType.KanmusuBB, PieceType.KanmusuCV, PieceType.KanmusuSS,
             PieceType.Shinkai, PieceType.ShinkaiElite, PieceType.ShinkaiFlagship, PieceType.ShinkaiHime),
