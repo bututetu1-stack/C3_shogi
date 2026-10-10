@@ -653,7 +653,7 @@ public partial class AbilitySystem
     {
         foreach (var shinkai in AliveShinkai())
         {
-            if (!shinkai.isAlive) continue;
+            if (!shinkai.isAlive || shinkai.isSealed) continue;
             var source = GameSim.BeginSource(shinkai);
             yield return ShinkaiAttack(shinkai);
             GameSim.EndSource(source);

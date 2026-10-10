@@ -25,6 +25,18 @@ public class PieceData : ScriptableObject
     public int promotedHP;
     public MoveDirection[] promotedMoveDirections;
 
+    [Header("Awakening")]
+    public bool canAwaken;                          // 練度★3で、対局中に覚醒できる
+    public string awakenedName;                     // 覚醒した姿の名前（横綱など）
+    [TextArea(2, 4)]
+    public string awakenedDescription;
+    public string awakenCaption;                    // 覚醒のカットインの副題
+    public Color awakenColor = new Color(1f, 0.8f, 0.35f);   // 覚醒の光とカットインの色
+    public int awakenedATK;                         // 覚醒で足す値
+    public int awakenedDEF;
+    public int awakenedHP;
+    public MoveDirection[] awakenedMoveDirections;  // 覚醒した後の動き（空なら今の動き）
+
     [Header("Veteran")]
     public string veteranName;                      // 作戦完了で生還したあとのフルネーム（物鉄・改）
     [TextArea(2, 4)]

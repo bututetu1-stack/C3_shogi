@@ -20,7 +20,7 @@ public static class PieceSkin
     public static readonly Color AbyssInk = Palette.Hex(0x86E8DC);
 
     /// <summary>kai2: 艦娘の改二・生還した物鉄（金の光をまとう）</summary>
-    public static PieceLook For(PieceData data, bool promoted, bool kai2 = false)
+    public static PieceLook For(PieceData data, bool promoted, bool kai2 = false, bool awakened = false)
     {
         promoted = promoted && data.canPromote;
         Rarity rarity = (promoted && data.hasPromotedRarity) ? data.promotedRarity : data.rarity;
@@ -99,6 +99,14 @@ public static class PieceSkin
             if (data.pieceType == PieceType.ShinkaiElite) SetAura(ref look, Palette.ATK, false);
             else if (data.pieceType == PieceType.ShinkaiFlagship) SetAura(ref look, Palette.Gold, false);
             else if (data.pieceType == PieceType.ShinkaiHime) SetAura(ref look, new Color(0.7f, 0.35f, 1f), false);
+        }
+
+        if (awakened)
+        {
+            // 覚醒: 黒紫の漆に金文字、部員ごとの色の光（挑発の駒は脈打つ輪のまま）
+            look.body = SpriteFactory.SpecialBody("awakened");
+            look.ink = Palette.GoldLight;
+            SetAura(ref look, data.awakenColor, data.isTauntPiece);
         }
 
         // 錨を画像に差し替えたときは、画像の色をそのまま使う（濃さだけ残す）

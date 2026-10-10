@@ -145,6 +145,7 @@ public class RunRoster
         if (m == null) return;
         m.kills++;
         AddXp(m, BalanceTuning.XpPerKill, killer);
+        CountActivity(m, killer);
     }
 
     /// <summary>部員の能力が決まった（活躍）。1局に BalanceTuning.FeatXpMaxPerStage まで練度になる</summary>
@@ -152,9 +153,23 @@ public class RunRoster
     {
         if (piece == null || piece.team != Team.Player) return;
         RunMember m = Get(piece.data.pieceType);
-        if (m == null || m.featXpThisStage >= BalanceTuning.FeatXpMaxPerStage) return;
-        m.featXpThisStage += BalanceTuning.XpPerFeat;
-        AddXp(m, BalanceTuning.XpPerFeat, piece);
+        if (m == null) return;
+        if (m.featXpThisStage < BalanceTuning.FeatXpMaxPerStage)
+        {
+            m.featXpThisStage += BalanceTuning.XpPerFeat;
+            AddXp(m, BalanceTuning.XpPerFeat, piece);
+        }
+        CountActivity(m, piece);
+    }
+
+    /// <summary>覚醒の条件: ★3の部員が、その局で活躍を重ねる（練度の上限とは別に数える）</summary>
+    private static void CountActivity(RunMember m, PieceInstance piece)
+    {
+        if (piece == null || !piece.isAlive || piece.awakened || !piece.data.canAwaken || m.stars < 3) return;
+        piece.awakenCharge++;
+        if (piece.awakenCharge < BalanceTuning.AwakenActivities) return;
+        if (GameManager.Instance != null) GameManager.Instance.Awaken(piece);
+        else Awakening.Apply(piece);
     }
 
     /// <summary>局に勝った: 盤に残っている部員の練度を上げる</summary>

@@ -18,12 +18,14 @@ public class PieceRenderer : MonoBehaviour
 
     private static readonly Vector3 ShadowOffset = new Vector3(0.035f, -0.055f, 0f);
     private static readonly Color StunnedTint = new Color(0.6f, 0.72f, 0.9f);
+    private static readonly Color SealedTint = new Color(0.72f, 1f, 0.78f);
 
     private PieceInstance pieceInstance;
     private bool isEnemyPiece;
     private Rarity appliedRarity;
     private bool appliedPromoted;
     private bool appliedKai2;
+    private bool appliedAwakened;
     private string appliedName;
 
     private Transform visual;
@@ -64,7 +66,15 @@ public class PieceRenderer : MonoBehaviour
     public Transform Stats { get { return stats; } }
     public SpriteRenderer Body { get { return bodyRenderer; } }
     /// <summary>ふだんの本体の色（冷笑されて動けない駒は青白く沈ませる）</summary>
-    public Color BodyRestColor { get { return pieceInstance != null && pieceInstance.stunned ? StunnedTint : Color.white; } }
+    public Color BodyRestColor
+    {
+        get
+        {
+            if (pieceInstance == null) return Color.white;
+            if (pieceInstance.stunned) return StunnedTint;
+            return pieceInstance.isSealed ? SealedTint : Color.white;
+        }
+    }
     public float BaseScale { get; private set; }
     /// <summary>海に浮かぶ駒（艦娘・深海）はゆらゆら揺らす</summary>
     public bool IsFloating { get; private set; }
@@ -255,14 +265,16 @@ public class PieceRenderer : MonoBehaviour
         bool promoted = pieceInstance.isPromoted;
         string name = pieceInstance.DisplayName ?? "";
         bool kai2 = pieceInstance.kai2 || pieceInstance.IsVeteran;
-        if (!force && rarity == appliedRarity && promoted == appliedPromoted && kai2 == appliedKai2 && name == appliedName) return;
+        bool awakened = pieceInstance.awakened;
+        if (!force && rarity == appliedRarity && promoted == appliedPromoted && kai2 == appliedKai2 && awakened == appliedAwakened && name == appliedName) return;
+        appliedAwakened = awakened;
 
         appliedRarity = rarity;
         appliedPromoted = promoted;
         appliedKai2 = kai2;
         appliedName = name;
 
-        PieceLook look = PieceSkin.For(pieceInstance.data, promoted, kai2);
+        PieceLook look = PieceSkin.For(pieceInstance.data, promoted, kai2, awakened);
         bodyRenderer.sprite = look.body;
         labelTop.color = look.ink;
         labelBottom.color = look.ink;

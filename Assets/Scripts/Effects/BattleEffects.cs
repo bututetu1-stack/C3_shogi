@@ -485,6 +485,57 @@ public class BattleEffects : MonoBehaviour
         }
     }
 
+    /// <summary>覚醒: 光の柱が立ち、部員の色の光と火の粉が弾ける</summary>
+    public void PlayAwakenEffect(Vector2Int pos, Color color)
+    {
+        Play(Clip("Awaken"), promoteClip);
+        Vector3 p = World(pos);
+        Sprite pillar = EffectArt.Get("AwakenPillar");
+        if (pillar != null) StartCoroutine(SplashFx(pillar, p, 2.4f, 1.3f, 1.1f));
+        else StartCoroutine(PillarRoutine(p, color));
+        StartCoroutine(Glow(p, new Color(color.r, color.g, color.b, 0.9f), 0.6f, 2.6f, 0.6f));
+        StartCoroutine(RingWave(p, color, 0.5f, 2.8f, 0.6f));
+        StartCoroutine(RingWave(p, Color.white, 0.3f, 1.8f, 0.45f));
+        StartCoroutine(Burst(p, 22, color, Color.white, 1.5f, 4.5f, 0.1f, 0.9f, 2.5f));
+        ShakeCamera(0.25f, 0.1f);
+    }
+
+    /// <summary>画像がないときの光の柱（縦に伸びて消える）</summary>
+    private IEnumerator PillarRoutine(Vector3 pos, Color color)
+    {
+        var sr = CreateSprite(SpriteFactory.SoftCircle, pos, new Color(color.r, color.g, color.b, 0f), 1f, OrderGlow + 2);
+        const float life = 1.0f;
+        float elapsed = 0f;
+        while (elapsed < life)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / life;
+            float h = 4f * Ease.OutCubic(Mathf.Clamp01(t / 0.4f));
+            sr.transform.localScale = new Vector3(0.9f * (1f - 0.4f * t), Mathf.Max(0.01f, h), 1f);
+            sr.transform.position = pos + new Vector3(0f, h * 0.35f, 0f);
+            sr.color = new Color(Mathf.Lerp(1f, color.r, t), Mathf.Lerp(1f, color.g, t), Mathf.Lerp(1f, color.b, t), 0.85f * (1f - t));
+            yield return null;
+        }
+        Destroy(sr.gameObject);
+    }
+
+    /// <summary>小錦「横綱」の押し出し: 土俵の円が浮かび、塩が舞い、相手に衝撃が走る</summary>
+    public void PlayYokozunaEffect(Vector2Int from, Vector2Int target)
+    {
+        Play(Clip("Push"), hitClip);
+        Vector3 a = World(from), b = World(target);
+        Color red = new Color(0.95f, 0.35f, 0.25f);
+        if (!ArtFx("Dohyo", a, 1.3f, 1.7f, 0.8f, 0f))
+        {
+            StartCoroutine(RingWave(a, Palette.GoldLight, 1.2f, 1.6f, 0.7f));
+            StartCoroutine(RingWave(a, red, 1.0f, 1.4f, 0.6f));
+        }
+        StartCoroutine(Burst(a, 14, Color.white, new Color(0.9f, 0.9f, 0.85f), 1f, 2.6f, 0.05f, 0.7f, -3f, SpriteFactory.Pixel));   // 塩
+        StartCoroutine(Glow(b, new Color(1f, 0.8f, 0.5f, 0.9f), 0.4f, 1.5f, 0.3f));
+        StartCoroutine(RingWave(b, red, 0.3f, 1.4f, 0.3f));
+        ShakeCamera(0.2f, 0.1f);
+    }
+
     /// <summary>MVP: 勲章が浮かび、桜の花びらが舞う</summary>
     public void PlayMvp(Vector2Int pos)
     {

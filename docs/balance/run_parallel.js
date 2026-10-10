@@ -43,8 +43,11 @@ const PIECES = ['Monin', 'Boku', 'Wotsu', 'Nako', 'Rihaku', 'SN', 'Konishiki', '
 let jobs = [{ name: 'base', runs: opt.base, args: [] }];
 for (const p of PIECES) jobs.push({ name: 'force_' + p, runs: opt.pieceRuns, args: ['-force', p] });
 jobs.push({ name: 'force_Teitoku', runs: opt.pieceRuns, args: ['-force', 'Monotetsu', '-teitoku'] });
+// 覚醒した姿の強さ（第一局から仲間にして、各局の初めから覚醒させる）。--jobs awaken_Konishiki のように名前で選ぶ
+for (const p of PIECES) jobs.push({ name: 'awaken_' + p, runs: opt.pieceRuns, args: ['-force', p, '-awaken'] });
 if (opt.jobs) jobs = jobs.filter(j => opt.jobs.includes(j.name));
 else if (!opt.full) jobs = jobs.filter(j => j.name === 'base');
+else jobs = jobs.filter(j => !j.name.startsWith('awaken_'));
 
 // ---- 準備 ----
 if (!fs.existsSync(exe)) { console.error('ビルドがありません: ' + exe + '\nUnity のメニュー「C3将棋 > 自動プレイ用のビルドを作る」で作ってください'); process.exit(1); }

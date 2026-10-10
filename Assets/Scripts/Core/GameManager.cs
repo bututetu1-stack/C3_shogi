@@ -643,6 +643,32 @@ public class GameManager : MonoBehaviour
     // その他
     // ================================================================
 
+    /// <summary>
+    /// 覚醒: 練度★3の部員が、その局で活躍を重ねたとき（自動プレイの強制では局の初め）。
+    /// 数値を上げて見た目を変え、カットインを出す（対局は止めずに重ねて流す）
+    /// </summary>
+    public void Awaken(PieceInstance p, bool cutIn = true)
+    {
+        if (!Awakening.Apply(p)) return;
+        GameSim.RecordAwakening(p, MoveCount);
+        if (BoardManager.Instance == null) return;
+        CombatResolver.RefreshStats(p);
+        if (GameSim.Headless) return;
+
+        PieceController pc = BoardManager.Instance.GetPieceController(p.boardPosition);
+        if (pc != null) pc.PlayPromote();
+        Color color = p.data.awakenColor;
+        if (BattleEffects.Instance != null) BattleEffects.Instance.PlayAwakenEffect(p.boardPosition, color);
+        FloatingText.Spawn(p.boardPosition, "覚醒", color, 4.2f, 0.25f);
+        if (BattleLogUI.Instance != null)
+            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName(p.data.displayName, p.team) + " が覚醒した！「" + p.data.awakenedName + "」");
+        if (cutIn)
+        {
+            Color band = Color.Lerp(color, new Color(0.04f, 0.03f, 0.06f), 0.78f);
+            StartCoroutine(CutInUI.PlayPiece(p.data, p.isPromoted, p.data.awakenedName, p.data.awakenCaption, band, color, 1.4f));
+        }
+    }
+
     public void RegisterKill()
     {
         TotalKills++;
