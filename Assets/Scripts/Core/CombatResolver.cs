@@ -129,11 +129,15 @@ public static class CombatResolver
         RefreshHP(target);
         // 小錦がいじめられると周りが同情して奮起する
         if (target.data.pieceType == PieceType.Konishiki && AbilitySystem.Instance != null)
+        {
             AbilitySystem.Instance.Sympathize(target);
+            RunRoster.Feat(target);
+        }
         if (attacker.data.pieceType == PieceType.Yuu)
         {
             if (runUp > 0)
             {
+                RunRoster.Feat(attacker);
                 FloatingText.Spawn(attacker.boardPosition, "助走+" + runUp, YuuOrange, 2.8f);
                 if (BattleEffects.Instance != null) BattleEffects.Instance.PlayDashStreak(attacker.boardPosition, target.boardPosition, YuuOrange, 0.25f);
             }
@@ -240,7 +244,10 @@ public static class CombatResolver
             else BattleEffects.Instance.PlayDefeatEffect(pos);
         }
         if (target.team == Team.Enemy && GameManager.Instance != null)
+        {
             GameManager.Instance.RegisterKill();
+            GameManager.Instance.Roster.OnKill(GameSim.CurrentKiller, target);
+        }
         GameSim.RecordKill(target);
 
         if (atSea)

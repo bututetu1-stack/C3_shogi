@@ -24,6 +24,7 @@ public class SimStageRecord
     public string[] lossBy;         // losses と同じ順の、倒した敵
     public string[] promotions;     // 成った自軍の駒
     public string[] fleet;          // 艦隊の出来事（着任・夜戦・S/A勝利・轟沈と、着任からの手数）
+    public string[] growth;         // 局のあとの部員の練度（"なこ:★2:9"）
     public int playerC3HP;
     public int enemyLeft;           // 決着時に残っていた敵（C3を除く）
 }
@@ -168,6 +169,7 @@ public static class BalanceSimulator
             rec.lossBy = GameSim.StageLossKillers.ToArray();
             rec.promotions = GameSim.StagePromotions.ToArray();
             rec.fleet = GameSim.StageFleet.ToArray();
+            rec.growth = gm.Roster.Summary(t => { PieceData d = bm.GetPieceDataByType(t); return d != null ? d.displayName : t.ToString(); });
             PieceInstance c3 = bm.FindC3(Team.Player);
             rec.playerC3HP = c3 != null ? c3.currentHP : 0;
             rec.enemyLeft = bm.GetTeamPieces(Team.Enemy).Count(p => p.data.pieceType != PieceType.C3);
@@ -190,7 +192,9 @@ public static class BalanceSimulator
     private static string OptionName(DraftOption option)
     {
         if (option == null) return "";
-        return option.piece != null ? option.piece.displayName : "強化:" + option.Title;
+        if (option.piece != null) return option.piece.displayName;
+        if (option.train != null) return "鍛:" + option.train.displayName;
+        return "強化:" + option.Title;
     }
 
     /// <summary>C3・歩・召喚物を除いた自軍の駒の名前</summary>

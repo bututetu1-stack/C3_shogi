@@ -89,7 +89,7 @@ public class PieceSelectionUI : MonoBehaviour
         row.style.justifyContent = Justify.Center;
         row.style.marginBottom = 14;
         foreach (var option in choices)
-            row.Add(option.IsUpgrade ? CreateUpgradeCard(option) : CreatePieceCard(option));
+            row.Add(option.IsTrain ? CreateTrainCard(option) : option.IsUpgrade ? CreateUpgradeCard(option) : CreatePieceCard(option));
         scroll.Add(row);
 
         // 画面下部: 選んだカードの説明
@@ -187,6 +187,43 @@ public class PieceSelectionUI : MonoBehaviour
         return card;
     }
 
+    /// <summary>鍛える札（部員の駒と、練度がどこまで上がるか）</summary>
+    private VisualElement CreateTrainCard(DraftOption option)
+    {
+        PieceData member = option.train;
+        var card = NewCard();
+        card.Add(UIFactory.PieceIcon(member, false, 104));
+
+        var name = UIFactory.Label(option.Title, 26, Palette.Text, "c3-mincho");
+        name.style.marginTop = 10;
+        card.Add(name);
+
+        var chip = UIFactory.Chip("練度 +" + BalanceTuning.TrainXp, Palette.GoldLight);
+        chip.style.marginTop = 6;
+        card.Add(chip);
+
+        RunMember m = GameManager.Instance != null ? GameManager.Instance.Roster.Get(member.pieceType) : null;
+        if (m != null)
+        {
+            int after = RunRoster.StarsFor(m.rarity, m.xp + BalanceTuning.TrainXp);
+            var stars = UIFactory.Label(StarText(m.stars) + (after > m.stars ? "  →  " + StarText(after) : ""), 18, Palette.GoldLight, "c3-bold");
+            stars.style.marginTop = 6;
+            card.Add(stars);
+        }
+
+        card.RegisterCallback<ClickEvent>(evt => SelectCard(option));
+        cards.Add(card);
+        return card;
+    }
+
+    /// <summary>★の並び（★★☆）</summary>
+    public static string StarText(int stars)
+    {
+        string s = "";
+        for (int i = 0; i < 3; i++) s += i < stars ? "★" : "☆";
+        return s;
+    }
+
     private static VisualElement NewCard()
     {
         var card = new VisualElement();
@@ -205,7 +242,8 @@ public class PieceSelectionUI : MonoBehaviour
         for (int i = 0; i < cards.Count; i++)
             cards[i].EnableInClassList("c3-card--selected", i < currentChoices.Count && currentChoices[i] == option);
 
-        if (option.IsUpgrade) RenderUpgradeDetail(option);
+        if (option.IsTrain) RenderTrainDetail(option);
+        else if (option.IsUpgrade) RenderUpgradeDetail(option);
         else RenderPieceDetail(option.piece, false);
         confirmButton.SetEnabled(true);
     }
@@ -247,6 +285,37 @@ public class PieceSelectionUI : MonoBehaviour
             note.style.marginTop = 8;
             detailPanel.Add(note);
         }
+    }
+
+    private void RenderTrainDetail(DraftOption option)
+    {
+        detailPanel.Clear();
+        detailPanel.style.flexDirection = FlexDirection.Column;
+        detailPanel.style.justifyContent = Justify.FlexStart;
+
+        var head = new VisualElement();
+        head.style.flexDirection = FlexDirection.Row;
+        head.style.alignItems = Align.Center;
+        head.style.marginBottom = 12;
+        head.Add(UIFactory.Label(option.Title, 30, Palette.Text, "c3-mincho"));
+        var chip = UIFactory.Chip("部員を鍛える", Palette.GoldLight);
+        chip.style.marginLeft = 12;
+        head.Add(chip);
+        detailPanel.Add(head);
+
+        RunMember m = GameManager.Instance != null ? GameManager.Instance.Roster.Get(option.train.pieceType) : null;
+        if (m != null)
+        {
+            int afterXp = m.xp + BalanceTuning.TrainXp;
+            int afterStars = RunRoster.StarsFor(m.rarity, afterXp);
+            string now = "いま: " + StarText(m.stars) + "  練度 " + RunRoster.XpText(m);
+            string then = "鍛えると: " + StarText(afterStars) + "  練度 " + afterXp
+                + (afterStars > m.stars ? "（★" + afterStars + "：" + RunRoster.StarEffectText(afterStars) + "）" : "");
+            var progress = UIFactory.Paragraph(now + "\n" + then, 21, Palette.GoldLight);
+            progress.style.marginBottom = 8;
+            detailPanel.Add(progress);
+        }
+        detailPanel.Add(UIFactory.Paragraph(option.Description, 19, Palette.Text));
     }
 
     /// <summary>強化カードの種類の札（S勝利で増えた1枚は「S勝利のごほうび」）</summary>
