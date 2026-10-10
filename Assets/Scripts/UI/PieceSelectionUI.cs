@@ -321,10 +321,13 @@ public class PieceSelectionUI : MonoBehaviour
         right.style.alignItems = Align.Center;
         right.style.flexShrink = 0;
         right.Add(UIFactory.Label(promoted ? "動き（成り）" : "動き", 20, Palette.Gold, "c3-bold"));
-        var grid = UIFactory.MoveGrid(UIFactory.MovesOf(piece, promoted), false, 22f);
+        MoveDirection[] moves = UIFactory.MovesOf(piece, promoted);
+        var grid = UIFactory.MoveGrid(moves, false, 22f);
         grid.style.marginTop = 10;
         right.Add(grid);
-        right.Add(UIFactory.MoveLegend());
+        Label immovable = UIFactory.ImmovableNote(moves);
+        if (immovable != null) right.Add(immovable);
+        else right.Add(UIFactory.MoveLegend());
         detailPanel.Add(right);
     }
 

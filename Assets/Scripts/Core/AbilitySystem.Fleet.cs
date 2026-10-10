@@ -368,7 +368,7 @@ public partial class AbilitySystem
     /// <summary>艦娘の攻撃のダメージ（改+1、中破−1、夜戦は駆逐・軽巡・潜水が2倍。攻撃の上乗せも足す）</summary>
     private static int ShipDamage(PieceInstance ship, int baseDamage, Fleet fleet)
     {
-        int damage = CombatResolver.AbilityDamage(ship, baseDamage) + (ship.isPromoted ? 1 : 0);
+        int damage = CombatResolver.AbilityDamage(ship, baseDamage) + (ship.isPromoted ? 1 : 0) + BalanceTuning.FleetDamageBonus;
         if (IsDamaged(ship)) damage -= 1;
         PieceType type = ship.data.pieceType;
         if (fleet != null && fleet.night && (type == PieceType.KanmusuDD || type == PieceType.KanmusuCL || type == PieceType.KanmusuSS))

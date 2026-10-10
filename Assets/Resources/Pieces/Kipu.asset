@@ -19,7 +19,7 @@ MonoBehaviour:
   baseATK: 2
   baseDEF: 1
   baseHP: 2
-  rarity: 1
+  rarity: 2
   moveDirections:
   - direction: {x: 0, y: 1}
     maxDistance: 1

@@ -141,8 +141,11 @@ public class PieceDetailUI : MonoBehaviour
         var moveTitle = UIFactory.Label(promoted ? "動き（成り）" : "動き", 18, Palette.Gold, "c3-bold");
         moveTitle.style.marginBottom = 8;
         content.Add(moveTitle);
-        content.Add(UIFactory.MoveGrid(UIFactory.MovesOf(d, promoted), piece.team == Team.Enemy, 24f));
-        content.Add(UIFactory.MoveLegend());
+        MoveDirection[] moves = UIFactory.MovesOf(d, promoted);
+        content.Add(UIFactory.MoveGrid(moves, piece.team == Team.Enemy, 24f));
+        Label immovable = UIFactory.ImmovableNote(moves);
+        if (immovable != null) content.Add(immovable);
+        else content.Add(UIFactory.MoveLegend());
 
         if (d.canPromote)
         {

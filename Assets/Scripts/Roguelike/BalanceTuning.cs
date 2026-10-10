@@ -59,4 +59,6 @@ public static class BalanceTuning
     public static int FleetNightAfterMoves = 20;
     /// <summary>提督の隣にいる艦娘が、自軍の手番の開始時に回復する量（入渠）</summary>
     public static int FleetDockHeal = 1;
+    /// <summary>艦娘の攻撃（雷撃・砲撃・空爆）のダメージに足す値</summary>
+    public static int FleetDamageBonus = 0;
 }
