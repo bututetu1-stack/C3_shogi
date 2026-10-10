@@ -57,7 +57,10 @@ const newest = d => {
   }
   return t;
 };
-const built = fs.statSync(path.join(root, 'Builds', 'Sim', 'C3Sim_Data')).mtimeMs;
+// フォルダの日時は作り直しても変わらないので、中のファイル（コードの dll・データ）の日時で見る
+const dataDir = path.join(root, 'Builds', 'Sim', 'C3Sim_Data');
+const built = Math.max(fs.statSync(exe).mtimeMs, ...['Managed/Shogi.dll', 'resources.assets', 'sharedassets0.assets']
+  .map(n => path.join(dataDir, n)).filter(p => fs.existsSync(p)).map(p => fs.statSync(p).mtimeMs));
 if (['Assets/Scripts', 'Assets/Data', 'Assets/ScriptableObjects'].some(d => newest(path.join(root, d)) > built))
   console.warn('注意: ビルドのあとにコードか駒のデータが変わっています。作り直さないと古い内容で回ります');
 
