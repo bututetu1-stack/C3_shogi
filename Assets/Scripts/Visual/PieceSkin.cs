@@ -19,7 +19,8 @@ public static class PieceSkin
     public static readonly Color NavalInk = Palette.Hex(0x1E3358);
     public static readonly Color AbyssInk = Palette.Hex(0x86E8DC);
 
-    public static PieceLook For(PieceData data, bool promoted)
+    /// <summary>kai2: 艦娘の改二（金の光をまとう）</summary>
+    public static PieceLook For(PieceData data, bool promoted, bool kai2 = false)
     {
         promoted = promoted && data.canPromote;
         Rarity rarity = (promoted && data.hasPromotedRarity) ? data.promotedRarity : data.rarity;
@@ -50,19 +51,6 @@ public static class PieceSkin
                 }
                 break;
 
-            case PieceType.Kanmusu:
-                look.body = SpriteFactory.SpecialBody("steel");
-                look.ink = NavalInk;
-                look.emblem = SpriteFactory.Anchor;
-                look.emblemColor = new Color(NavalInk.r, NavalInk.g, NavalInk.b, 0.8f);
-                look.floating = true;
-                break;
-
-            case PieceType.Shinkai:
-                look.body = SpriteFactory.SpecialBody("abyss");
-                look.ink = AbyssInk;
-                look.floating = true;
-                break;
 
 
             case PieceType.Konishiki:
@@ -83,6 +71,27 @@ public static class PieceSkin
             case PieceType.Maou: SetAura(ref look, new Color(0.62f, 0.3f, 0.95f), false); break;
             case PieceType.Raitei: SetAura(ref look, new Color(1f, 0.88f, 0.35f), false); break;
             case PieceType.Ryuujin: SetAura(ref look, new Color(0.4f, 0.85f, 1f), false); break;
+        }
+
+        if (PieceTypes.IsKanmusu(data.pieceType))
+        {
+            // 艦娘: 鋼の駒に紺の文字と錨。改は赤文字、改二は金の光
+            look.body = SpriteFactory.SpecialBody("steel");
+            look.ink = promoted ? Palette.Hex(0xB0302A) : NavalInk;
+            look.emblem = SpriteFactory.Anchor;
+            look.emblemColor = new Color(NavalInk.r, NavalInk.g, NavalInk.b, 0.8f);
+            look.floating = true;
+            if (kai2) SetAura(ref look, Palette.Gold, false);
+        }
+        else if (PieceTypes.IsShinkai(data.pieceType))
+        {
+            // 深海: 深淵の駒。elite は赤、flagship は金、姫級は紫の光
+            look.body = SpriteFactory.SpecialBody("abyss");
+            look.ink = AbyssInk;
+            look.floating = true;
+            if (data.pieceType == PieceType.ShinkaiElite) SetAura(ref look, Palette.ATK, false);
+            else if (data.pieceType == PieceType.ShinkaiFlagship) SetAura(ref look, Palette.Gold, false);
+            else if (data.pieceType == PieceType.ShinkaiHime) SetAura(ref look, new Color(0.7f, 0.35f, 1f), false);
         }
 
         // 錨を画像に差し替えたときは、画像の色をそのまま使う（濃さだけ残す）

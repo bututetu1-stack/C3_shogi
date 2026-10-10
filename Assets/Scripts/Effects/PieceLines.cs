@@ -36,6 +36,26 @@ public static class PieceLines
     public static readonly string[] KeiBug = { "それはバグやろ！" };
     public static readonly string[] ItanBug = { "バグ多すぎやろ！" };
 
+    // 艦隊（艦これ風の短い言い回し）
+    public static readonly string[] FleetSortie = { "抜錨します！", "艦隊、出撃！" };
+    public static readonly string[] ShipDamaged = { "被弾！？ まだ、沈みません！" };
+    public static readonly string[] ShipSaved = { "まだ……沈みません！" };
+    public static readonly string[] ShipKai2 = { "改装、完了しました！" };
+
+    /// <summary>艦娘が攻撃するときのひとこと（艦種ごと）</summary>
+    public static string[] ShipAttack(PieceType type)
+    {
+        switch (type)
+        {
+            case PieceType.KanmusuDD: return new[] { "魚雷、いきます！" };
+            case PieceType.KanmusuCL: return new[] { "砲雷撃戦、始めます！" };
+            case PieceType.KanmusuBB: return new[] { "全主砲、斉射！" };
+            case PieceType.KanmusuCV: return new[] { "攻撃隊、発艦！" };
+            case PieceType.KanmusuSS: return new[] { "魚雷、発射！" };
+            default: return new[] { "主砲、撃てー！" };
+        }
+    }
+
     // ユウ: 攻撃するとき（ときどき）
     public static readonly string[] YuuAttack = { "お前やりませんねスギぃ！", "おい、創作しろよ" };
 

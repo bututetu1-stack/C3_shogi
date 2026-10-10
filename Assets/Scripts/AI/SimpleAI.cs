@@ -440,7 +440,7 @@ public class SimpleAI : MonoBehaviour
             piece.isPromoted = true;
             int hpDiff = piece.data.promotedHP - piece.data.baseHP;
             if (hpDiff > 0) piece.currentHP += hpDiff;
-            if (piece.data.diesOnPromotion) SimKill(piece, 0);
+            if (piece.data.diesOnPromotion || AbilitySystem.SinksOnPromotion(piece)) SimKill(piece, 0);
         }
         return mark;
     }

@@ -291,10 +291,16 @@ public class StageManager : MonoBehaviour
         else
         {
             enemy.AddMaxHP(stage / BalanceTuning.EnemyHpDivisor);
-            enemy.stageBonusATK = Mathf.Max(0, stage - BalanceTuning.EnemyAtkDelay) / BalanceTuning.EnemyAtkDivisor;
+            enemy.stageBonusATK = EnemyStageAtk(stage);
             enemy.bonusATK += enemy.stageBonusATK;
         }
         CombatResolver.RefreshStats(enemy);
+    }
+
+    /// <summary>局による敵の攻撃の上乗せ（艦娘の「提督の練度」も同じ値）</summary>
+    public static int EnemyStageAtk(int stage)
+    {
+        return Mathf.Max(0, stage - BalanceTuning.EnemyAtkDelay) / BalanceTuning.EnemyAtkDivisor;
     }
 
     /// <summary>プレイヤー駒にステージに応じた小規模強化を付与</summary>

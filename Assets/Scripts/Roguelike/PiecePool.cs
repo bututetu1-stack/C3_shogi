@@ -8,7 +8,8 @@ public enum UpgradeKind
     AllATK,   // C3以外の全員の攻撃+1
     AllDEF,   // C3以外の全員の防御+1
     AllHP,    // C3以外の全員の体力+2
-    C3HP      // C3の体力+4
+    C3HP,     // C3の体力+4
+    DamageControl  // 応急修理要員（艦娘が沈むとき1回だけ全快。物鉄を仲間にしているときだけ出る）
 }
 
 /// <summary>仲間選択の1枚のカード</summary>
@@ -33,6 +34,7 @@ public class DraftOption
                 case UpgradeKind.AllDEF: return "鉄壁の構え";
                 case UpgradeKind.AllHP: return "部室の差し入れ";
                 case UpgradeKind.C3HP: return "部の結束";
+                case UpgradeKind.DamageControl: return "応急修理要員";
                 default: return "";
             }
         }
@@ -49,6 +51,7 @@ public class DraftOption
                 case UpgradeKind.AllDEF: return "C3以外の味方全員の防御力が +1 される。この効果は最後まで続く。";
                 case UpgradeKind.AllHP: return "C3以外の味方全員の体力が +2 される。この効果は最後まで続く。";
                 case UpgradeKind.C3HP: return "C3の体力が +4 される。この効果は最後まで続く。";
+                case UpgradeKind.DamageControl: return "提督の艦娘が沈むとき、1回だけ体力が全快して踏みとどまる。使うまで最後まで残る。";
                 default: return "";
             }
         }
@@ -65,6 +68,7 @@ public class DraftOption
                 case UpgradeKind.AllDEF: return "防";
                 case UpgradeKind.AllHP: return "体";
                 case UpgradeKind.C3HP: return "C3";
+                case UpgradeKind.DamageControl: return "修";
                 default: return "";
             }
         }
@@ -79,6 +83,7 @@ public class DraftOption
                 case UpgradeKind.AllATK: return Palette.ATK;
                 case UpgradeKind.AllDEF: return Palette.DEF;
                 case UpgradeKind.AllHP: return Palette.HP;
+                case UpgradeKind.DamageControl: return CutInUI.SeaLight;
                 default: return Palette.Gold;
             }
         }
@@ -172,7 +177,7 @@ public static class PiecePool
         }
 
         // 足りない分は強化カードで埋める（同じ強化は並ばない）
-        var upgrades = new List<UpgradeKind> { UpgradeKind.AllATK, UpgradeKind.AllDEF, UpgradeKind.AllHP, UpgradeKind.C3HP };
+        var upgrades = UpgradeKinds(owned);
         while (result.Count < count && upgrades.Count > 0)
         {
             int idx = Random.Range(0, upgrades.Count);
@@ -180,5 +185,22 @@ public static class PiecePool
             upgrades.RemoveAt(idx);
         }
         return result;
+    }
+
+    /// <summary>出せる強化カード（応急修理要員は物鉄を仲間にしているときだけ）</summary>
+    private static List<UpgradeKind> UpgradeKinds(List<PieceData> owned)
+    {
+        var kinds = new List<UpgradeKind> { UpgradeKind.AllATK, UpgradeKind.AllDEF, UpgradeKind.AllHP, UpgradeKind.C3HP };
+        if (owned != null && owned.Exists(p => p != null && p.pieceType == PieceType.Monotetsu))
+            kinds.Add(UpgradeKind.DamageControl);
+        return kinds;
+    }
+
+    /// <summary>選択肢に、まだ並んでいない強化カードを1枚足す（艦隊のS勝利のごほうび）</summary>
+    public static void AddExtraUpgrade(List<DraftOption> options, List<PieceData> owned)
+    {
+        var kinds = UpgradeKinds(owned);
+        kinds.RemoveAll(k => options.Exists(o => o.IsUpgrade && o.upgrade == k));
+        if (kinds.Count > 0) options.Add(DraftOption.Upgrade(kinds[Random.Range(0, kinds.Count)]));
     }
 }

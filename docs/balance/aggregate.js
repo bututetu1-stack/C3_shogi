@@ -27,7 +27,8 @@ for (const v of variants) {
   const kills = stages.reduce((a, x) => a + (x.kills || []).filter(k => k === nm).length, 0);
   const lost = stages.reduce((a, x) => a + (x.losses || []).filter(k => k === nm).length, 0);
   const promos = stages.reduce((a, x) => a + (x.promotions || []).filter(k => k === nm).length, 0);
-  const kanmusuKills = stages.reduce((a, x) => a + (x.kills || []).filter(k => k === '艦娘').length, 0);
+  const fleetNames = ['艦娘', '駆逐', '軽巡', '重巡', '戦艦', '空母', '潜水'];
+  const kanmusuKills = stages.reduce((a, x) => a + (x.kills || []).filter(k => fleetNames.includes(k)).length, 0);
   const st = {};
   for (let s = 1; s <= 15; s++) { const r = stages.filter(x => x.stage === s); if (r.length) st[s] = [r.filter(isWin).length, r.length]; }
   out.variants.push({ v, name: nm, n: runs.length, avgWon: mean(runs.map(wonStages)), diff: mean(diffs), diffSE: se(diffs), cleared: runs.filter(r => r.cleared).length,

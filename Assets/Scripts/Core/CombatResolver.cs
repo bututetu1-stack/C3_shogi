@@ -7,9 +7,11 @@ using System.Collections;
 /// </summary>
 public static class CombatResolver
 {
-    /// <summary>通常攻撃のダメージ = 攻撃（＋ユウの助走）− 防御。0未満にはならない</summary>
+    /// <summary>通常攻撃のダメージ = 攻撃（＋ユウの助走）− 防御。0未満にはならない。潜水艦には0</summary>
     public static int CalcDamage(PieceInstance attacker, PieceInstance target)
     {
+        // 潜水艦は通常の攻撃を受けない（能力の攻撃は受ける）
+        if (target.data.pieceType == PieceType.KanmusuSS) return 0;
         return Mathf.Max(0, attacker.ATK + RunUpBonus(attacker, target) - target.DEF);
     }
 
@@ -106,6 +108,8 @@ public static class CombatResolver
         GameManager gm = GameManager.Instance;
         if (gm != null && gm.ShouldPromote(piece, from))
             yield return gm.PromoteRoutine(piece);
+        else if (AbilitySystem.Instance != null)
+            AbilitySystem.Instance.CheckKai2(piece, from);   // 改のまま敵陣を出た艦娘は改二
         if (!piece.isAlive) yield break;
 
         // 李白の裏返し能力（移動後に発動）
@@ -136,7 +140,8 @@ public static class CombatResolver
             SpeechBubble.SayMaybe(attacker, PieceLines.YuuAttack, 0.5f);
         }
 
-        if (target.currentHP <= 0)
+        bool saved = AbilitySystem.Instance != null && AbilitySystem.Instance.OnShipHit(target);
+        if (target.currentHP <= 0 && !saved)
         {
             FloatingText.Spawn(target.boardPosition, "撃破", Palette.GoldLight, 3.6f);
             Log(Name(attacker) + " が " + Name(target) + " を撃破！");
@@ -174,7 +179,8 @@ public static class CombatResolver
         RefreshHP(target);
         FloatingText.Spawn(target.boardPosition, damage > 0 ? "-" + damage : "0", damage > 0 ? (piercing ? PiercingColor : DamageColor) : Palette.TextSub);
 
-        if (target.currentHP <= 0)
+        bool saved = AbilitySystem.Instance != null && AbilitySystem.Instance.OnShipHit(target);
+        if (target.currentHP <= 0 && !saved)
         {
             KillPiece(target);
             return true;
@@ -236,7 +242,7 @@ public static class CombatResolver
         bm.RemovePiece(pos);
 
         if (checkLinkedDeaths && AbilitySystem.Instance != null)
-            AbilitySystem.Instance.CheckLinkedDeaths(groupId);
+            AbilitySystem.Instance.CheckLinkedDeaths(groupId, target);
     }
 
     /// <summary>撃破ではない形で盤から去らせる（艦隊の帰投・沈没など）。死亡時能力や撃破数には数えない</summary>

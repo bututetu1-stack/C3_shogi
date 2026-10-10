@@ -30,7 +30,7 @@ public class FleetLinkRenderer : MonoBehaviour
                 Vector3 a = PositionOf(bm, teitoku);
                 foreach (var ship in players)
                 {
-                    if (ship.data.pieceType != PieceType.Kanmusu || ship.linkedGroupId != teitoku.linkedGroupId) continue;
+                    if (!PieceTypes.IsKanmusu(ship.data.pieceType) || ship.linkedGroupId != teitoku.linkedGroupId) continue;
                     used = DrawLink(a, PositionOf(bm, ship), used);
                 }
             }

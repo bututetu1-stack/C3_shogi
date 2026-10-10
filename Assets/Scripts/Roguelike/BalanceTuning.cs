@@ -51,8 +51,12 @@ public static class BalanceTuning
     /// <summary>きぷが冷笑する敵の数（へるは周りの敵すべて）</summary>
     public static int KipuSneerTargets = 2;
 
-    /// <summary>艦娘の空爆が巻き込む敵の数</summary>
-    public static int AirRaidSplashTargets = 2;
-    /// <summary>艦娘の砲撃の巻き込みダメージ</summary>
-    public static int BombardmentSplashDamage = 1;
+    // ---- 提督の艦隊 ----
+
+    /// <summary>着任のときに建造する艦娘の数（艦種は重複なし）</summary>
+    public static int FleetShips = 2;
+    /// <summary>着任から何手（両軍の手の合計）で夜戦に入るか</summary>
+    public static int FleetNightAfterMoves = 20;
+    /// <summary>提督の隣にいる艦娘が、自軍の手番の開始時に回復する量（入渠）</summary>
+    public static int FleetDockHeal = 1;
 }
