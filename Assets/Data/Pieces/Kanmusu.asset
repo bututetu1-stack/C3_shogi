@@ -15,35 +15,35 @@ MonoBehaviour:
   pieceType: 14
   displayName: "\u8266\u5A18"
   pieceName: "\u8266\u5A18"
-  description: "\u300C\u63D0\u7763\u300D\u3068\u3068\u3082\u306B\u73FE\u308C\u305F\u8B0E\u591A\u304D\u52E2\u529B\u3002\u624B\u756A\u7D42\u4E86\u6642\u3001\u30E9\u30F3\u30C0\u30E0\u306A1\u679A\u306E\u300C\u6DF1\u6D77\u300D\u306B\u5411\u304B\u3063\u3066\u7A7A\u7206\u3001\u96F7\u6483\u3001\u7832\u6483\u306E\u3044\u305A\u308C\u304B\u3092\u30E9\u30F3\u30C0\u30E0\u306B\u884C\u3046\u3002"
+  description: "\u300C\u63D0\u7763\u300D\u3068\u3068\u3082\u306B\u73FE\u308C\u305F\u8B0E\u591A\u304D\u52E2\u529B\u3002\u624B\u756A\u7D42\u4E86\u6642\u3001\u30E9\u30F3\u30C0\u30E0\u306A1\u679A\u306E\u300C\u6DF1\u6D77\u300D\u306B\u5411\u304B\u3063\u3066\u7A7A\u7206\u3001\u96F7\u6483\u3001\u7832\u6483\u306E\u3044\u305A\u308C\u304B\u3092\u30E9\u30F3\u30C0\u30E0\u306B\u884C\u3046\u3002\u653B\u6483\u306E\u30C0\u30E1\u30FC\u30B8\u306F\u3001\u653B\u6483\u529B\u304C\u4E0A\u304C\u3063\u305F\u5206\u3060\u3051\u5897\u3048\u308B\u3002"
   baseATK: 4
   baseDEF: 5
   baseHP: 3
   rarity: 2
   moveDirections:
-  - direction: {x: 0, y: 1}
-    maxDistance: 1
-    canJump: 0
-  - direction: {x: 0, y: -1}
-    maxDistance: 1
-    canJump: 0
-  - direction: {x: 1, y: 0}
-    maxDistance: 1
+  - direction: {x: -1, y: -1}
+    maxDistance: 3
     canJump: 0
   - direction: {x: -1, y: 0}
-    maxDistance: 1
-    canJump: 0
-  - direction: {x: 1, y: 1}
-    maxDistance: 1
+    maxDistance: 3
     canJump: 0
   - direction: {x: -1, y: 1}
-    maxDistance: 1
+    maxDistance: 3
+    canJump: 0
+  - direction: {x: 0, y: -1}
+    maxDistance: 3
+    canJump: 0
+  - direction: {x: 0, y: 1}
+    maxDistance: 3
     canJump: 0
   - direction: {x: 1, y: -1}
-    maxDistance: 1
+    maxDistance: 3
     canJump: 0
-  - direction: {x: -1, y: -1}
-    maxDistance: 1
+  - direction: {x: 1, y: 0}
+    maxDistance: 3
+    canJump: 0
+  - direction: {x: 1, y: 1}
+    maxDistance: 3
     canJump: 0
   canPromote: 0
   promotedDisplayName: 

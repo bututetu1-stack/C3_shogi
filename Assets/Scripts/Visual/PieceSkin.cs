@@ -75,6 +75,11 @@ public static class PieceSkin
                 SetAura(ref look, new Color(1f, 0.45f, 0.75f), false);
                 break;
 
+            case PieceType.Kei:
+                // 異端: 足元に端末の緑の光
+                if (promoted) SetAura(ref look, new Color(0.36f, 1f, 0.6f), false);
+                break;
+
             case PieceType.Maou: SetAura(ref look, new Color(0.62f, 0.3f, 0.95f), false); break;
             case PieceType.Raitei: SetAura(ref look, new Color(1f, 0.88f, 0.35f), false); break;
             case PieceType.Ryuujin: SetAura(ref look, new Color(0.4f, 0.85f, 1f), false); break;

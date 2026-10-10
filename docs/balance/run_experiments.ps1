@@ -16,7 +16,7 @@ New-Item -ItemType Directory -Force $out, $work | Out-Null
 Remove-Item "$work\*.cs" -ErrorAction SilentlyContinue
 
 $jobs = @(@{ name = 'base'; runs = $BaseRuns; opts = 'null' })
-foreach ($p in 'Monin','Boku','Wotsu','Nako','Rihaku','SN','Konishiki','Monotetsu','Lance','Knight','Silver','Gold','Bishop','Rook') {
+foreach ($p in 'Monin','Boku','Wotsu','Nako','Rihaku','SN','Konishiki','Kei','Monotetsu','Lance','Knight','Silver','Gold','Bishop','Rook') {
   $jobs += @{ name = "force_$p"; runs = $PieceRuns; opts = "new SimOptions { forcePick = PieceType.$p }" }
 }
 $jobs += @{ name = 'force_Teitoku'; runs = $PieceRuns; opts = 'new SimOptions { forcePick = PieceType.Monotetsu, promoteAtStart = true }' }

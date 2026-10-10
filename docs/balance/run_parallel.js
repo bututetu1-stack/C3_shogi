@@ -63,7 +63,7 @@ if (opt.preset) {
 }
 
 // ---- 実験の一覧（run_experiments.ps1 と同じ名前） ----
-const PIECES = ['Monin', 'Boku', 'Wotsu', 'Nako', 'Rihaku', 'SN', 'Konishiki', 'Monotetsu', 'Lance', 'Knight', 'Silver', 'Gold', 'Bishop', 'Rook'];
+const PIECES = ['Monin', 'Boku', 'Wotsu', 'Nako', 'Rihaku', 'SN', 'Konishiki', 'Kei', 'Monotetsu', 'Lance', 'Knight', 'Silver', 'Gold', 'Bishop', 'Rook'];
 let jobs = [{ name: 'base', runs: opt.base, args: [] }];
 for (const p of PIECES) jobs.push({ name: 'force_' + p, runs: opt.pieceRuns, args: ['-force', p] });
 jobs.push({ name: 'force_Teitoku', runs: opt.pieceRuns, args: ['-force', 'Monotetsu', '-teitoku'] });

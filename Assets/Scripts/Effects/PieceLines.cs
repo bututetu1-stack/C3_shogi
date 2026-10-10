@@ -32,6 +32,10 @@ public static class PieceLines
     // 物鉄: 成る前に倒されたとき
     public static readonly string[] MonotetsuDown = { "南無三" };
 
+    // けい・異端: 周りの敵の数値を下げるとき
+    public static readonly string[] KeiBug = { "それはバグやろ！" };
+    public static readonly string[] ItanBug = { "バグ多すぎやろ！" };
+
     // 敵
     public static readonly string[] GundaishouRally = { "かかれ！" };
     public static readonly string[] YomigaeruSummon = { "黄泉より来たれ" };
@@ -65,6 +69,7 @@ public static class PieceLines
             case PieceType.Rihaku: return new CutIn("李白 成る", "相変わらず趣味が悪い", 0x2E2250, 0xB894FF);
             case PieceType.SN: return new CutIn("SN 過労", "過労により死亡した", 0x2A2A2E, 0x9AA0AA);
             case PieceType.Konishiki: return new CutIn("小錦 風邪", "風邪をひいて力尽きた……", 0x1E3550, 0x9FD4FF);
+            case PieceType.Kei: return new CutIn("けい 異端化", "倫理観と人の心とその他諸々を失った", 0x0B2618, 0x5CFF9A);
             default: return null;
         }
     }
@@ -92,6 +97,7 @@ public static class PieceLines
             case PieceType.Nako: return new[] { "もっとドパを……" };
             case PieceType.SN: return new[] { "（過労）" };
             case PieceType.Konishiki: return new[] { "ハックション！" };
+            case PieceType.Kei: return new[] { "（人の心を失った）" };
             default: return null;
         }
     }

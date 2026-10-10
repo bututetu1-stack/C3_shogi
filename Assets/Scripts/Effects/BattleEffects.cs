@@ -817,6 +817,16 @@ public class BattleEffects : MonoBehaviour
         StartCoroutine(Glow(b, new Color(color.r, color.g, color.b, 0.6f), 0.15f, 0.5f, 0.2f));
     }
 
+    /// <summary>けいのバグ修正（緑の光の粒が相手へ飛び、相手の上で細かい破片が散る）</summary>
+    public void PlayBugFix(Vector2Int from, Vector2Int to)
+    {
+        Vector3 a = World(from), b = World(to);
+        Color green = new Color(0.36f, 1f, 0.6f, 0.95f);
+        for (int i = 0; i < 5; i++)
+            StartCoroutine(Mote(a, b, green, 0.35f, i * 0.04f, 0.2f));
+        StartCoroutine(Burst(b, 12, green, new Color(0.1f, 0.55f, 0.3f), 0.8f, 2.2f, 0.06f, 0.5f, 0f, SpriteFactory.Pixel));
+    }
+
     /// <summary>ヲツの鍋振り（鍋から炎と火の粉が上がる）</summary>
     public void PlayWokFlame(Vector2Int pos)
     {

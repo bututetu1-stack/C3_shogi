@@ -211,18 +211,40 @@ public class GameManager : MonoBehaviour
     private void ApplyRunBonuses()
     {
         foreach (var p in boardManager.GetTeamPieces(Team.Player))
+            ApplyRunBonus(p);
+    }
+
+    private void ApplyRunBonus(PieceInstance p)
+    {
+        if (p.data.pieceType == PieceType.C3)
         {
-            if (p.data.pieceType == PieceType.C3)
-            {
-                p.AddMaxHP(RunBonusC3HP);
-            }
-            else
-            {
-                p.bonusATK += RunBonusATK;
-                p.bonusDEF += RunBonusDEF;
-                p.AddMaxHP(RunBonusHP);
-            }
-            CombatResolver.RefreshStats(p);
+            p.AddMaxHP(RunBonusC3HP);
+        }
+        else
+        {
+            p.bonusATK += RunBonusATK;
+            p.bonusDEF += RunBonusDEF;
+            p.AddMaxHP(RunBonusHP);
+        }
+        CombatResolver.RefreshStats(p);
+    }
+
+    /// <summary>
+    /// 対局の途中で出てきた駒（艦娘・深海・黄泉の歩）に、その局のほかの駒と同じ強化を付ける。
+    /// 能力による攻撃も、この攻撃の上乗せのぶん増える
+    /// </summary>
+    public void ApplySummonBonuses(PieceInstance p)
+    {
+        if (p == null) return;
+        int stage = stageManager != null ? stageManager.currentStage : 1;
+        if (p.team == Team.Enemy)
+        {
+            StageManager.ScaleEnemy(p, stage);
+        }
+        else
+        {
+            StageManager.ScalePlayer(p, stage);
+            ApplyRunBonus(p);
         }
     }
 

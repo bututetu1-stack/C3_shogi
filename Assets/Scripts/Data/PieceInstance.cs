@@ -82,6 +82,33 @@ public class PieceInstance
         currentHP += amount;
     }
 
+    /// <summary>けいの「バグ修正」で下げられるか（攻撃・防御は0未満にならず、体力は0にならない）</summary>
+    public bool CanLower(StatKind stat)
+    {
+        switch (stat)
+        {
+            case StatKind.ATK: return ATK > 0;
+            case StatKind.DEF: return DEF > 0;
+            default: return currentHP > 1;
+        }
+    }
+
+    /// <summary>数値を1下げる（その局のあいだ残る）。体力は最大と現在を両方下げ、どちらも1は残す</summary>
+    public void Lower(StatKind stat)
+    {
+        if (!CanLower(stat)) return;
+        switch (stat)
+        {
+            case StatKind.ATK: bonusATK--; break;
+            case StatKind.DEF: bonusDEF--; break;
+            default:
+                currentHP--;
+                if (MaxHP > 1) bonusMaxHP--;
+                if (currentHP > MaxHP) currentHP = MaxHP;
+                break;
+        }
+    }
+
     public void Promote()
     {
         if (!data.canPromote || isPromoted) return;

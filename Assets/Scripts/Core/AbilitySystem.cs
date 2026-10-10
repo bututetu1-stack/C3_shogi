@@ -129,6 +129,7 @@ public class AbilitySystem : MonoBehaviour
                     if (pawnData != null)
                     {
                         bm.SpawnPiece(pawnData, Team.Enemy, spawnPos);
+                        GameManager.Instance.ApplySummonBonuses(bm.GetPieceAt(spawnPos));
                         if (BattleEffects.Instance != null) BattleEffects.Instance.PlaySoulFire(spawnPos);
                         SpeechBubble.Say(yomi, PieceLines.YomigaeruSummon);
                         if (yomigaeruSpawnCount.ContainsKey(yomi))
@@ -164,11 +165,12 @@ public class AbilitySystem : MonoBehaviour
                 {
                     var source = GameSim.BeginSource(maou);
                     PieceInstance victim = targets[Random.Range(0, targets.Count)];
+                    int lightning = CombatResolver.AbilityDamage(maou, 1);
                     if (BattleLogUI.Instance != null)
-                        BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("魔王", Team.Enemy) + " の雷撃！" + BattleLogUI.ColorName(victim.DisplayName, victim.team) + " に貫通1ダメージ");
+                        BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("魔王", Team.Enemy) + " の雷撃！" + BattleLogUI.ColorName(victim.DisplayName, victim.team) + " に貫通" + lightning + "ダメージ");
                     if (BattleEffects.Instance != null) BattleEffects.Instance.PlayLightningEffect(victim.boardPosition);
                     yield return new WaitForSeconds(0.2f);
-                    CombatResolver.ApplyDamage(victim, 1, true);
+                    CombatResolver.ApplyDamage(victim, lightning, true);
                     GameSim.EndSource(source);
                     yield return new WaitForSeconds(0.4f);
                 }
@@ -271,8 +273,73 @@ public class AbilitySystem : MonoBehaviour
             yield return ExecuteKanmusuAbilities();
         }
 
+        // けい・異端のバグ修正
+        yield return ExecuteKeiAbilities(team);
+
         // 僕バフ処理
         yield return ProcessBokuBuffs(team);
+    }
+
+    // ============================================================
+    // けい／異端のバグ修正（自分の手番の終わりに、周囲1マスの敵の数値を1下げる。成ると2つ）
+    // ============================================================
+    private static readonly StatKind[] AllStats = { StatKind.ATK, StatKind.DEF, StatKind.HP };
+
+    private IEnumerator ExecuteKeiAbilities(Team team)
+    {
+        var keiList = new List<PieceInstance>();
+        foreach (var p in BoardManager.Instance.GetTeamPieces(team))
+        {
+            if (p.data.pieceType == PieceType.Kei && p.isAlive)
+                keiList.Add(p);
+        }
+        foreach (var kei in keiList)
+        {
+            if (!kei.isAlive) continue;
+            yield return ExecuteKeiAbility(kei);
+        }
+    }
+
+    private IEnumerator ExecuteKeiAbility(PieceInstance kei)
+    {
+        BoardManager bm = BoardManager.Instance;
+        Vector2Int center = kei.boardPosition;
+
+        // 下げられる「敵の駒と数値」の組を集める（攻撃・防御は0未満にせず、体力は0にしない。C3は能力の影響を受けない）
+        var choices = new List<KeyValuePair<PieceInstance, StatKind>>();
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                if (dx == 0 && dy == 0) continue;
+                PieceInstance target = bm.GetPieceAt(new Vector2Int(center.x + dx, center.y + dy));
+                if (target == null || target.team == kei.team || !target.isAlive || target.data.pieceType == PieceType.C3) continue;
+                foreach (StatKind stat in AllStats)
+                    if (target.CanLower(stat)) choices.Add(new KeyValuePair<PieceInstance, StatKind>(target, stat));
+            }
+        }
+        if (choices.Count == 0) yield break;
+
+        SpeechBubble.Say(kei, kei.isPromoted ? PieceLines.ItanBug : PieceLines.KeiBug);
+        int count = kei.isPromoted ? 2 : 1;
+        for (int i = 0; i < count && choices.Count > 0; i++)
+        {
+            int idx = Random.Range(0, choices.Count);
+            PieceInstance target = choices[idx].Key;
+            StatKind stat = choices[idx].Value;
+            choices.RemoveAt(idx);
+
+            if (BattleEffects.Instance != null) BattleEffects.Instance.PlayBugFix(kei.boardPosition, target.boardPosition);
+            target.Lower(stat);
+            CombatResolver.RefreshStats(target);
+
+            string label = stat == StatKind.ATK ? "攻撃" : stat == StatKind.DEF ? "防御" : "体力";
+            Color color = stat == StatKind.ATK ? Palette.ATK : stat == StatKind.DEF ? Palette.DEF : Palette.HP;
+            FloatingText.Spawn(target.boardPosition, label.Substring(0, 1) + "-1", color);
+            if (BattleLogUI.Instance != null)
+                BattleLogUI.Instance.AddLog(BattleLogUI.ColorName(kei.DisplayName, kei.team) + " が " + BattleLogUI.ColorName(target.DisplayName, target.team) + " の" + label + "を1下げた");
+            yield return new WaitForSeconds(0.3f);
+        }
     }
 
     // ============================================================
@@ -413,6 +480,7 @@ public class AbilitySystem : MonoBehaviour
                 yield return new WaitForSeconds(0.18f);
                 PieceInstance shinkai = bm.Spawn(shinkaiData, Team.Enemy, spawnPos.Value);
                 if (shinkai == null) continue;
+                GameManager.Instance.ApplySummonBonuses(shinkai);
                 shinkai.linkedGroupId = groupId;
                 risen++;
                 yield return new WaitForSeconds(0.2f);
@@ -433,6 +501,7 @@ public class AbilitySystem : MonoBehaviour
                 if (fx != null) fx.PlaySortieEffect(spawnPos.Value);
                 PieceInstance kanmusu = bm.Spawn(kanmusuData, Team.Player, spawnPos.Value);
                 if (kanmusu == null) continue;
+                GameManager.Instance.ApplySummonBonuses(kanmusu);
                 kanmusu.linkedGroupId = groupId;
                 FloatingText.Spawn(spawnPos.Value, "出撃！", CutInUI.SeaLight, 3.6f);
                 launched++;
@@ -531,7 +600,7 @@ public class AbilitySystem : MonoBehaviour
 
         if (targets.Count == 0) yield break;
 
-        // ランダム1枚に通常2ダメージ
+        // ランダム1枚に通常2ダメージ（攻撃の上乗せぶん増える）
         PieceInstance victim = targets[Random.Range(0, targets.Count)];
         if (BattleLogUI.Instance != null)
             BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("深海", shinkai.team) + "が " + BattleLogUI.ColorName(victim.DisplayName, victim.team) + " を海へ引きずり込む");
@@ -539,7 +608,7 @@ public class AbilitySystem : MonoBehaviour
             BattleEffects.Instance.PlayAbyssStrike(shinkai.boardPosition, victim.boardPosition);
         yield return new WaitForSeconds(0.3f);
         var source = GameSim.BeginSource(shinkai);
-        CombatResolver.ApplyDamage(victim, 2, false);
+        CombatResolver.ApplyDamage(victim, CombatResolver.AbilityDamage(shinkai, 2), false);
         GameSim.EndSource(source);
         yield return new WaitForSeconds(0.25f);
     }
@@ -624,15 +693,15 @@ public class AbilitySystem : MonoBehaviour
 
         yield return new WaitForSeconds(BattleEffects.AirRaidImpactTime);
 
-        // 深海に防御貫通1ダメージ
-        CombatResolver.ApplyDamage(shinkai, 1, true);
+        // 深海に防御貫通1ダメージ（艦娘の攻撃の上乗せぶん増える。巻き込みも同じ）
+        CombatResolver.ApplyDamage(shinkai, CombatResolver.AbilityDamage(kanmusu, 1), true);
 
         // 深海の周囲2マス以内のランダムな敵駒（BalanceTuning.AirRaidSplashTargets 枚）に1ダメージ
         var nearby = GetEnemiesInRange(targetPos, 2, Team.Enemy, shinkai);
         ShuffleList(nearby);
         int splashCount = Mathf.Min(BalanceTuning.AirRaidSplashTargets, nearby.Count);
         for (int i = 0; i < splashCount; i++)
-            CombatResolver.ApplyDamage(nearby[i], 1, false);
+            CombatResolver.ApplyDamage(nearby[i], CombatResolver.AbilityDamage(kanmusu, 1), false);
 
         if (BattleLogUI.Instance != null)
             BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("艦娘", kanmusu.team) + "が空爆！");
@@ -668,18 +737,20 @@ public class AbilitySystem : MonoBehaviour
 
         if (lineEnemies.Count > 0)
         {
-            // 直線上の最も近い敵駒1体に3ダメージ
+            // 直線上の最も近い敵駒1体に3ダメージ（攻撃の上乗せぶん増える）
             PieceInstance nearest = lineEnemies[0];
+            int torpedo = CombatResolver.AbilityDamage(kanmusu, 3);
             if (BattleLogUI.Instance != null)
-                BattleLogUI.Instance.AddLog("雷撃！" + BattleLogUI.ColorName(nearest.DisplayName, nearest.team) + " に3ダメージ");
-            CombatResolver.ApplyDamage(nearest, 3, false);
+                BattleLogUI.Instance.AddLog("雷撃！" + BattleLogUI.ColorName(nearest.DisplayName, nearest.team) + " に" + torpedo + "ダメージ");
+            CombatResolver.ApplyDamage(nearest, torpedo, false);
         }
         else
         {
-            // 直線上に敵駒がいない: 深海に防御貫通2ダメージ
+            // 直線上に敵駒がいない: 深海に防御貫通2ダメージ（攻撃の上乗せぶん増える）
+            int torpedo = CombatResolver.AbilityDamage(kanmusu, 2);
             if (BattleLogUI.Instance != null)
-                BattleLogUI.Instance.AddLog("雷撃！" + BattleLogUI.ColorName("深海", Team.Enemy) + "に防御貫通2ダメージ");
-            CombatResolver.ApplyDamage(shinkai, 2, true);
+                BattleLogUI.Instance.AddLog("雷撃！" + BattleLogUI.ColorName("深海", Team.Enemy) + "に防御貫通" + torpedo + "ダメージ");
+            CombatResolver.ApplyDamage(shinkai, torpedo, true);
         }
 
         yield return new WaitForSeconds(0.2f);
@@ -697,15 +768,15 @@ public class AbilitySystem : MonoBehaviour
 
         yield return new WaitForSeconds(BattleEffects.BombardmentImpactTime);
 
-        // 深海に防御貫通4ダメージ
-        CombatResolver.ApplyDamage(shinkai, 4, true);
+        // 深海に防御貫通4ダメージ（艦娘の攻撃の上乗せぶん増える。巻き込みも同じ）
+        CombatResolver.ApplyDamage(shinkai, CombatResolver.AbilityDamage(kanmusu, 4), true);
 
         // 深海の周囲1マス以内のランダムな敵駒2枚に BalanceTuning.BombardmentSplashDamage ダメージ
         var nearby = GetEnemiesInRange(targetPos, 1, Team.Enemy, shinkai);
         ShuffleList(nearby);
         int splashCount = Mathf.Min(2, nearby.Count);
         for (int i = 0; i < splashCount; i++)
-            CombatResolver.ApplyDamage(nearby[i], BalanceTuning.BombardmentSplashDamage, false);
+            CombatResolver.ApplyDamage(nearby[i], CombatResolver.AbilityDamage(kanmusu, BalanceTuning.BombardmentSplashDamage), false);
 
         if (BattleLogUI.Instance != null)
             BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("艦娘", kanmusu.team) + "が砲撃！");
@@ -809,7 +880,8 @@ public class AbilitySystem : MonoBehaviour
             else if (nakoPC != null)
                 nakoPC.MoveTo(nakoPos);
 
-            // パス上の敵駒に2ダメージ（スライド到着後）。C3は能力の影響を受けない
+            // パス上の敵駒に2ダメージ（スライド到着後。攻撃の上乗せぶん増える）。C3は能力の影響を受けない
+            int dash = CombatResolver.AbilityDamage(nako, 2);
             foreach (var pos in path)
             {
                 PieceInstance target = bm.GetPieceAt(pos);
@@ -817,8 +889,8 @@ public class AbilitySystem : MonoBehaviour
                     && target.data.pieceType != PieceType.C3)
                 {
                     if (BattleLogUI.Instance != null)
-                        BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("なこ", nako.team) + "の突撃！" + BattleLogUI.ColorName(target.DisplayName, target.team) + " に2ダメージ");
-                    CombatResolver.ApplyDamage(target, 2, false);
+                        BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("なこ", nako.team) + "の突撃！" + BattleLogUI.ColorName(target.DisplayName, target.team) + " に" + dash + "ダメージ");
+                    CombatResolver.ApplyDamage(target, dash, false);
                     yield return new WaitForSeconds(0.15f);
                 }
             }
@@ -1222,12 +1294,13 @@ public class AbilitySystem : MonoBehaviour
 
         BoardManager bm = BoardManager.Instance;
 
+        int blast = CombatResolver.AbilityDamage(piece, 1);
         if (BattleEffects.Instance != null)
             BattleEffects.Instance.PlayExplosionEffect(deathPos);
         if (BattleLogUI.Instance != null)
-            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("髑髏", piece.team) + " が爆発！隣接駒に貫通1ダメージ");
+            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("髑髏", piece.team) + " が爆発！隣接駒に貫通" + blast + "ダメージ");
 
-        // 隣接全セルに貫通1ダメージ（C3は能力の影響を受けない）
+        // 隣接全セルに貫通1ダメージ（攻撃の上乗せぶん増える。C3は能力の影響を受けない）
         var victims = new List<PieceInstance>();
         for (int dx = -1; dx <= 1; dx++)
         {
@@ -1244,7 +1317,7 @@ public class AbilitySystem : MonoBehaviour
 
         var source = GameSim.BeginSource(piece);
         foreach (var victim in victims)
-            CombatResolver.ApplyDamage(victim, 1, true);
+            CombatResolver.ApplyDamage(victim, blast, true);
         GameSim.EndSource(source);
 
         explodingPositions.Remove(deathPos);

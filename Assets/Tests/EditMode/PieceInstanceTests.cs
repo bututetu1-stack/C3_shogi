@@ -91,4 +91,43 @@ public class PieceInstanceTests
         target.bonusDEF = 5;
         Assert.AreEqual(0, CombatResolver.CalcDamage(attacker, target));
     }
+
+    [Test]
+    public void AbilityDamage_AddsAttackBonus_AndIsAtLeastOne()
+    {
+        var piece = new PieceInstance(data, Team.Player, Vector2Int.zero);
+        Assert.AreEqual(2, CombatResolver.AbilityDamage(piece, 2));
+        piece.bonusATK = 3;
+        Assert.AreEqual(5, CombatResolver.AbilityDamage(piece, 2));
+        piece.bonusATK = -2;
+        Assert.AreEqual(1, CombatResolver.AbilityDamage(piece, 2));
+    }
+
+    [Test]
+    public void Lower_AttackAndDefenseStopAtZero()
+    {
+        var piece = new PieceInstance(data, Team.Enemy, Vector2Int.zero);
+        piece.Lower(StatKind.DEF);
+        Assert.AreEqual(0, piece.DEF);
+        Assert.IsFalse(piece.CanLower(StatKind.DEF));
+        piece.Lower(StatKind.DEF);
+        Assert.AreEqual(0, piece.DEF);
+        piece.Lower(StatKind.ATK);
+        Assert.AreEqual(1, piece.ATK);
+    }
+
+    [Test]
+    public void Lower_HpLowersMaxAndCurrent_ButNeverToZero()
+    {
+        var piece = new PieceInstance(data, Team.Enemy, Vector2Int.zero);
+        piece.Lower(StatKind.HP);
+        Assert.AreEqual(2, piece.currentHP);
+        Assert.AreEqual(2, piece.MaxHP);
+        piece.Lower(StatKind.HP);
+        Assert.AreEqual(1, piece.currentHP);
+        Assert.IsFalse(piece.CanLower(StatKind.HP));
+        piece.Lower(StatKind.HP);
+        Assert.AreEqual(1, piece.currentHP);
+        Assert.AreEqual(1, piece.MaxHP);
+    }
 }
