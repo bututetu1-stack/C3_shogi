@@ -195,7 +195,7 @@ public partial class AbilitySystem
             var source = GameSim.BeginSource(carrier);
             foreach (var s in abyss)
             {
-                if (fx != null) fx.PlayAirRaidEffect(carrier.boardPosition, s.boardPosition);
+                if (fx != null) fx.PlayAirRaidEffect(carrier.boardPosition, s.boardPosition, true);
                 FleetHit(carrier, s, ShipDamage(carrier, BalanceTuning.CarrierOpeningDamage, fleet));
             }
             GameSim.EndSource(source);

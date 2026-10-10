@@ -75,6 +75,9 @@ public class BattleEffects : MonoBehaviour
     private const float BgmBaseVolume = 0.35f;
     // 艦載機の音は小さめの素材なので、ほかの効果音より大きく鳴らす
     private const float PlaneGain = 1.6f;
+    /// <summary>1回だけの空爆（空母の手番の終わり・航空支援）のプロペラ音の長さと大きさ</summary>
+    private const float PlaneSoloLength = 3.6f;
+    private const float PlaneSoloGain = 2.0f;
 
     private void ApplyVolumes()
     {
@@ -717,9 +720,11 @@ public class BattleEffects : MonoBehaviour
 
     // --- 艦娘の攻撃 ---
 
-    public void PlayAirRaidEffect(Vector2Int from, Vector2Int to)
+    /// <summary>空爆。brief は開幕航空戦のように何機も続けて飛ぶとき（音が重なるので短く）。1回だけのときはプロペラ音を長めにはっきり鳴らす</summary>
+    public void PlayAirRaidEffect(Vector2Int from, Vector2Int to, bool brief = false)
     {
-        PlayLimited(Clip("Plane"), 2.2f, airRaidClip, PlaneGain);
+        if (brief) PlayLimited(Clip("Plane"), 2.2f, airRaidClip, PlaneGain);
+        else PlayLimited(Clip("Plane"), PlaneSoloLength, airRaidClip, PlaneSoloGain);
         StartCoroutine(AirRaidRoutine(World(from), World(to)));
     }
 
