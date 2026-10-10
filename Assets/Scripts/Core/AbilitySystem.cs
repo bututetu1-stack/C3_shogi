@@ -439,7 +439,9 @@ public partial class AbilitySystem : MonoBehaviour
             if (BattleLogUI.Instance != null)
                 BattleLogUI.Instance.AddLog(BattleLogUI.ColorName(kei.DisplayName, kei.team) + " が " + BattleLogUI.ColorName(target.DisplayName, target.team) + " の能力を封印した");
         }
-        if (any) yield return new WaitForSeconds(0.3f);
+        if (!any) yield break;
+        if (BattleEffects.Instance != null) BattleEffects.Instance.PlayAwakenBurst("CodeRing", kei.boardPosition, kei.data.awakenColor);
+        yield return new WaitForSeconds(0.3f);
     }
 
     // ============================================================
