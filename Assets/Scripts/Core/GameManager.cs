@@ -24,7 +24,7 @@ public class GameManager : MonoBehaviour
     // 1ステージで引き直せる回数
     private const int RerollsPerStage = 1;
 
-    /// <summary>その局の前に選べる仲間・強化の枚数（盤が広がる第三局・第五局は2枚）</summary>
+    /// <summary>その局の前に選べる仲間・強化の枚数（BalanceTuning.TwoPickStages の局は2枚）</summary>
     public static int PicksForStage(int stage)
     {
         return Array.IndexOf(BalanceTuning.TwoPickStages, stage) >= 0 ? 2 : 1;

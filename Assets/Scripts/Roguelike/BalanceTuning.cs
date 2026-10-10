@@ -4,8 +4,8 @@
 /// </summary>
 public static class BalanceTuning
 {
-    /// <summary>敵の攻撃の上乗せ = 局 ÷ この値（7なら第七局から+1、第十四局から+2）</summary>
-    public static int EnemyAtkDivisor = 7;
+    /// <summary>敵の攻撃の上乗せ = 局 ÷ この値（5なら第五局から+1、第十局から+2、第十五局で+3）</summary>
+    public static int EnemyAtkDivisor = 5;
     /// <summary>敵の体力の上乗せ = 局 ÷ この値</summary>
     public static int EnemyHpDivisor = 3;
     /// <summary>敵C3の体力の上乗せ = (局−1) ÷ この値</summary>
@@ -18,8 +18,8 @@ public static class BalanceTuning
     /// <summary>自軍の防御の上乗せ = (局−1) ÷ この値（C3は除く）</summary>
     public static int PlayerDefDivisor = 5;
 
-    /// <summary>仲間を2枚選べる局（盤が広がる局）</summary>
-    public static int[] TwoPickStages = { 3, 5 };
+    /// <summary>仲間を2枚選べる局（盤が9×9になり、駒の数が一気に増える第五局）</summary>
+    public static int[] TwoPickStages = { 5 };
 
     /// <summary>仲間にした素の将棋駒の体力の上乗せ</summary>
     public static int RecruitBonusHP = 1;

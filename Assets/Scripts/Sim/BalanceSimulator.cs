@@ -115,7 +115,7 @@ public static class BalanceSimulator
         {
             var rec = new SimStageRecord { stage = sm.currentStage, pick = "" };
 
-            // 仲間選択（候補からランダム。第三局・第五局は2枚）
+            // 仲間選択（候補からランダム。2枚選べる局は2回）
             int picks = GameManager.PicksForStage(sm.currentStage);
             for (int k = 0; k < picks; k++)
             {

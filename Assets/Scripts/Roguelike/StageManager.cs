@@ -220,7 +220,7 @@ public class StageManager : MonoBehaviour
                 list.Add(new Placement(PieceType.Tengu, 0, top - 1));
                 list.Add(new Placement(PieceType.Gundaishou, 1, top - 1));
                 list.Add(new Placement(PieceType.Ryuujin, c, top - 1));
-                list.Add(new Placement(PieceType.Raitei, c + 1, top - 1));
+                list.Add(new Placement(PieceType.Kishou, c + 1, top - 1));   // 雷帝は第十・十三・十五局だけにして、第十四局の壁を下げる
                 list.Add(new Placement(PieceType.Gundaishou, size - 2, top - 1));
                 list.Add(new Placement(PieceType.Tengu, size - 1, top - 1));
                 break;

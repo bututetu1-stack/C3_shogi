@@ -627,7 +627,7 @@ public class AbilitySystem : MonoBehaviour
         // 深海に防御貫通1ダメージ
         CombatResolver.ApplyDamage(shinkai, 1, true);
 
-        // 深海の周囲2マス以内のランダムな敵駒3枚に1ダメージ
+        // 深海の周囲2マス以内のランダムな敵駒（BalanceTuning.AirRaidSplashTargets 枚）に1ダメージ
         var nearby = GetEnemiesInRange(targetPos, 2, Team.Enemy, shinkai);
         ShuffleList(nearby);
         int splashCount = Mathf.Min(BalanceTuning.AirRaidSplashTargets, nearby.Count);
@@ -700,7 +700,7 @@ public class AbilitySystem : MonoBehaviour
         // 深海に防御貫通4ダメージ
         CombatResolver.ApplyDamage(shinkai, 4, true);
 
-        // 深海の周囲1マス以内のランダムな敵駒2枚に2ダメージ
+        // 深海の周囲1マス以内のランダムな敵駒2枚に BalanceTuning.BombardmentSplashDamage ダメージ
         var nearby = GetEnemiesInRange(targetPos, 1, Team.Enemy, shinkai);
         ShuffleList(nearby);
         int splashCount = Mathf.Min(2, nearby.Count);
