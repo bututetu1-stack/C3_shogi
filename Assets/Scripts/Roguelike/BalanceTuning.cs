@@ -1,5 +1,5 @@
 /// <summary>
-/// 局の流れまわりのバランスの数値。駒ごとの数値は PieceData のアセットにある。
+/// 局の流れと駒の能力まわりのバランスの数値。駒ごとの攻撃・防御・体力・動きは PieceData のアセットにある。
 /// 自動プレイの実験では、ここを一時的に書き換えて調整前後を比べる（書き換えたら元に戻す）
 /// </summary>
 public static class BalanceTuning
@@ -25,4 +25,19 @@ public static class BalanceTuning
     public static int RecruitBonusHP = 1;
     /// <summary>仲間にした飛車・角の攻撃の上乗せ</summary>
     public static int RecruitBonusATK = 1;
+
+    // ---- 駒の能力（駒の攻撃・防御・体力・動きは PieceData のアセット） ----
+
+    /// <summary>ヲツが手番の開始時に作る中華の数（成る前／成った後）</summary>
+    public static int WotsuChukaCount = 2;
+    public static int WotsuPromotedChukaCount = 3;
+    /// <summary>中華を味方のそばに置く（false なら盤のどこか）</summary>
+    public static bool ChukaNearAllies = true;
+    /// <summary>中華が周りの味方を回復する量</summary>
+    public static int ChukaHeal = 2;
+
+    /// <summary>艦娘の空爆が巻き込む敵の数</summary>
+    public static int AirRaidSplashTargets = 2;
+    /// <summary>艦娘の砲撃の巻き込みダメージ</summary>
+    public static int BombardmentSplashDamage = 1;
 }

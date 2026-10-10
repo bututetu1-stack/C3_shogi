@@ -16,11 +16,6 @@ public class AbilitySystem : MonoBehaviour
 
     // 軍将のATKバフの上限（1駒あたり）
     private const int MaxGundaishouStacks = 3;
-    // 中華が周りの味方を回復する量
-    private const int ChukaHeal = 2;
-    // 艦娘の空爆が巻き込む敵の数、砲撃の巻き込みダメージ
-    private const int AirRaidSplashTargets = 2;
-    private const int BombardmentSplashDamage = 1;
 
     void Awake()
     {
@@ -56,7 +51,7 @@ public class AbilitySystem : MonoBehaviour
         }
         foreach (var wotsu in wotsuList)
         {
-            int count = wotsu.isPromoted ? 3 : 2;
+            int count = wotsu.isPromoted ? BalanceTuning.WotsuPromotedChukaCount : BalanceTuning.WotsuChukaCount;
             yield return SpawnChuka(wotsu, count);
         }
 
@@ -199,7 +194,7 @@ public class AbilitySystem : MonoBehaviour
         foreach (var chuka in chukaList)
         {
             if (!chuka.isAlive) continue;
-            HealAdjacentAllies(chuka, ChukaHeal);
+            HealAdjacentAllies(chuka, BalanceTuning.ChukaHeal);
             // 食べられて湯気とともに消える
             if (BattleEffects.Instance != null) BattleEffects.Instance.PlaySteam(chuka.boardPosition);
             CombatResolver.RemoveWithExit(chuka, PieceController.ExitStyle.Eaten);
@@ -635,7 +630,7 @@ public class AbilitySystem : MonoBehaviour
         // 深海の周囲2マス以内のランダムな敵駒3枚に1ダメージ
         var nearby = GetEnemiesInRange(targetPos, 2, Team.Enemy, shinkai);
         ShuffleList(nearby);
-        int splashCount = Mathf.Min(AirRaidSplashTargets, nearby.Count);
+        int splashCount = Mathf.Min(BalanceTuning.AirRaidSplashTargets, nearby.Count);
         for (int i = 0; i < splashCount; i++)
             CombatResolver.ApplyDamage(nearby[i], 1, false);
 
@@ -710,7 +705,7 @@ public class AbilitySystem : MonoBehaviour
         ShuffleList(nearby);
         int splashCount = Mathf.Min(2, nearby.Count);
         for (int i = 0; i < splashCount; i++)
-            CombatResolver.ApplyDamage(nearby[i], BombardmentSplashDamage, false);
+            CombatResolver.ApplyDamage(nearby[i], BalanceTuning.BombardmentSplashDamage, false);
 
         if (BattleLogUI.Instance != null)
             BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("艦娘", kanmusu.team) + "が砲撃！");
@@ -953,9 +948,19 @@ public class AbilitySystem : MonoBehaviour
         if (BattleEffects.Instance != null) BattleEffects.Instance.PlayWokFlame(cook.boardPosition);
         yield return new WaitForSeconds(0.2f);
 
+        // 味方のそばに置かないときは、盤の空きマスから重ならないように選ぶ
+        List<Vector2Int> anywhere = BalanceTuning.ChukaNearAllies ? null : EmptySquares();
         for (int i = 0; i < count; i++)
         {
-            Vector2Int? picked = PickChukaSpot(team);
+            Vector2Int? picked;
+            if (anywhere != null)
+            {
+                if (anywhere.Count == 0) break;
+                int idx = Random.Range(0, anywhere.Count);
+                picked = anywhere[idx];
+                anywhere.RemoveAt(idx);
+            }
+            else picked = PickChukaSpot(team);
             if (!picked.HasValue) break;
             Vector2Int spawnPos = picked.Value;
 
@@ -1016,6 +1021,22 @@ public class AbilitySystem : MonoBehaviour
             if (roll < 0) return spots[i];
         }
         return spots[spots.Count - 1];
+    }
+
+    /// <summary>盤の空きマス（左の列から順に）</summary>
+    private static List<Vector2Int> EmptySquares()
+    {
+        BoardManager bm = BoardManager.Instance;
+        var list = new List<Vector2Int>();
+        for (int x = 0; x < bm.CurrentBoardSize; x++)
+        {
+            for (int y = 0; y < bm.CurrentBoardSize; y++)
+            {
+                Vector2Int pos = new Vector2Int(x, y);
+                if (bm.IsEmpty(pos)) list.Add(pos);
+            }
+        }
+        return list;
     }
 
     private void HealAdjacentAllies(PieceInstance chuka, int amount)
