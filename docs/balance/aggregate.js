@@ -14,8 +14,8 @@ const mean = a => a.reduce((s, v) => s + v, 0) / Math.max(1, a.length);
 const se = a => { const m = mean(a); return Math.sqrt(a.reduce((s, v) => s + (v - m) ** 2, 0) / Math.max(1, a.length - 1) / Math.max(1, a.length)); };
 const out = { base: { n: base.length, avgWon: mean(base.map(wonStages)), cleared: base.filter(r => r.cleared).length,
   avgWonFirst100: mean(base.filter(r => r.seed <= 100).map(wonStages)) } };
-const variants = ['Monin','Boku','Wotsu','Nako','Rihaku','SN','Konishiki','Kei','Yuu','Kipu','Monotetsu','Teitoku','Lance','Knight','Silver','Gold','Bishop','Rook'];
-const nameOf = { Monin:'門人', Boku:'僕', Wotsu:'ヲツ', Nako:'なこ', Rihaku:'李白', SN:'SN', Konishiki:'小錦', Kei:'けい', Yuu:'ユウ', Kipu:'きぷ', Monotetsu:'物鉄', Teitoku:'物鉄', Lance:'香車', Knight:'桂馬', Silver:'銀将', Gold:'金将', Bishop:'角行', Rook:'飛車' };
+const variants = ['Monin','Boku','Wotsu','Nako','Rihaku','SN','Konishiki','Kei','Yuu','Kipu','Mitsuharu','Niko','Shimesaba','Kawasemi','Monotetsu','Teitoku','Lance','Knight','Silver','Gold','Bishop','Rook'];
+const nameOf = { Monin:'門人', Boku:'僕', Wotsu:'ヲツ', Nako:'なこ', Rihaku:'李白', SN:'SN', Konishiki:'小錦', Kei:'けい', Yuu:'ユウ', Kipu:'きぷ', Mitsuharu:'光晴', Niko:'ニコ', Shimesaba:'〆鯖', Kawasemi:'翡翠', Monotetsu:'物鉄', Teitoku:'物鉄', Lance:'香車', Knight:'桂馬', Silver:'銀将', Gold:'金将', Bishop:'角行', Rook:'飛車' };
 out.variants = [];
 // force_X: 第一局から仲間にする。awaken_X: さらに各局の初めから覚醒させる
 for (const prefix of ['force_', 'awaken_']) for (const v of variants) {

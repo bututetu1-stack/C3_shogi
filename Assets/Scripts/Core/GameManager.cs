@@ -51,6 +51,8 @@ public class GameManager : MonoBehaviour
     // プレイヤーが持っている駒データのリスト(ステージ間で引き継ぎ)
     private readonly List<PieceData> playerOwnedPieces = new List<PieceData>();
     public IList<PieceData> OwnedPieces { get { return playerOwnedPieces.AsReadOnly(); } }
+    /// <summary>光晴の裏帳簿の裏金（周のあいだ残る）</summary>
+    public int SecretFund;
     /// <summary>部員の練度と★（周のあいだ残る）</summary>
     public RunRoster Roster { get; } = new RunRoster();
 
@@ -113,6 +115,7 @@ public class GameManager : MonoBehaviour
         Roster.Clear();
         RunBonusATK = RunBonusDEF = RunBonusHP = RunBonusC3HP = 0;
         RunDamageControl = 0;
+        SecretFund = 0;
         bonusUpgradeStage = 0;
         pendingExtraPicks = pendingExtraRerolls = pendingEnemyHp = pendingEnemyAtk = 0;
         TotalKills = TotalMoves = StagesCleared = 0;
@@ -392,6 +395,7 @@ public class GameManager : MonoBehaviour
             members = new List<RunMember>(Roster.Members).ToArray(),
             runATK = RunBonusATK, runDEF = RunBonusDEF, runHP = RunBonusHP, runC3HP = RunBonusC3HP,
             damageControl = RunDamageControl,
+            secretFund = SecretFund,
             bonusUpgradeStage = bonusUpgradeStage,
             enemyHp = phase == "battle" ? pendingEnemyHp : 0,
             enemyAtk = phase == "battle" ? pendingEnemyAtk : 0,
@@ -415,6 +419,7 @@ public class GameManager : MonoBehaviour
         Roster.Restore(data.members);
         RunBonusATK = data.runATK; RunBonusDEF = data.runDEF; RunBonusHP = data.runHP; RunBonusC3HP = data.runC3HP;
         RunDamageControl = data.damageControl;
+        SecretFund = data.secretFund;
         bonusUpgradeStage = data.bonusUpgradeStage;
         pendingEnemyHp = data.phase == "battle" ? data.enemyHp : 0;
         pendingEnemyAtk = data.phase == "battle" ? data.enemyAtk : 0;
@@ -627,7 +632,10 @@ public class GameManager : MonoBehaviour
     {
         TotalMoves += MoveCount;
         StagesCleared++;
-        Roster.OnStageWon(boardManager.GetTeamPieces(Team.Player));
+        var survivors = boardManager.GetTeamPieces(Team.Player);
+        if (AbilitySystem.Instance != null)
+            foreach (var p in AbilitySystem.Instance.AbroadPieces) { p.isAlive = true; survivors.Add(p); }   // 盤外の光晴も生き残った扱い
+        Roster.OnStageWon(survivors);
 
         if (GameSim.Headless)
         {
@@ -763,6 +771,15 @@ public class GameManager : MonoBehaviour
         CombatResolver.PlayFlip(piece);
         FloatingText.Spawn(piece.boardPosition, "成", Palette.GoldLight, 4f);
         SpeechBubble.Say(piece, PieceLines.OnPromote(piece.data.pieceType));
+
+        // 光晴は裏金を持って海外へ（盤外から支援する）、〆鯖は最終兵器の起動
+        if (piece.data.pieceType == PieceType.Mitsuharu && AbilitySystem.Instance != null)
+        {
+            AbilitySystem.Instance.SendAbroad(piece);
+            return;
+        }
+        if (piece.data.pieceType == PieceType.Shimesaba && AbilitySystem.Instance != null)
+            AbilitySystem.Instance.StartDoomsday(piece);
 
         // 過労死チェック（SN・小錦）
         if (piece.data.diesOnPromotion)

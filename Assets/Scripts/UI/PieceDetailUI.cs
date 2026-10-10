@@ -70,7 +70,7 @@ public class PieceDetailUI : MonoBehaviour
     {
         RunMember m = piece.team == Team.Player && GameManager.Instance != null ? GameManager.Instance.Roster.Get(piece.data.pieceType) : null;
         return piece.currentHP + "|" + piece.ATK + "|" + piece.DEF + "|" + piece.MaxHP + "|" + (piece.isPromoted ? "1" : "0") + (piece.IsVeteran ? "v" : "")
-            + (m != null ? "|" + m.xp : "") + "|" + piece.awakenCharge + (piece.awakened ? "a" : "") + (piece.isSealed ? "s" : "");
+            + (m != null ? "|" + m.xp : "") + "|" + piece.awakenCharge + (piece.awakened ? "a" : "") + (piece.isSealed ? "s" : "") + "|" + AbilitySystem.StatusLine(piece);
     }
 
     // ------------------------------------------------------------
@@ -146,6 +146,13 @@ public class PieceDetailUI : MonoBehaviour
                 a.style.marginTop = 6;
                 content.Add(a);
             }
+        }
+        string status = AbilitySystem.StatusLine(piece);
+        if (status != null)
+        {
+            var statusLabel = UIFactory.Label(status, 18, Palette.GoldLight, "c3-bold");
+            statusLabel.style.marginTop = 6;
+            content.Add(statusLabel);
         }
         if (piece.isSealed)
         {

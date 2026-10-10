@@ -504,10 +504,11 @@ public class BattleEffects : MonoBehaviour
     }
 
     /// <summary>覚醒した部員の能力の決め所（画像 name があればそれ、なければ色の光と火の粉）</summary>
-    public void PlayAwakenBurst(string name, Vector2Int pos, Color color)
+    /// <summary>覚醒した部員の能力の瞬間（画像があればそれ、なければ光）。upright は向きのある画像（扇・地球など）を回さない</summary>
+    public void PlayAwakenBurst(string name, Vector2Int pos, Color color, bool upright = false)
     {
         Vector3 p = World(pos);
-        if (!ArtFx(name, p, 0.6f, 1.6f, 0.55f))
+        if (!ArtFx(name, p, 0.6f, 1.6f, 0.55f, upright ? 0f : float.NaN))
             StartCoroutine(Glow(p, new Color(color.r, color.g, color.b, 0.85f), 0.4f, 1.6f, 0.45f));
         StartCoroutine(RingWave(p, color, 0.3f, 1.5f, 0.4f));
         StartCoroutine(Burst(p, 12, color, Color.white, 1.2f, 3f, 0.08f, 0.55f, 1f, SpriteFactory.Pixel));
@@ -521,6 +522,86 @@ public class BattleEffects : MonoBehaviour
         if (trail != null) StartCoroutine(StretchFx(trail, p + new Vector3(-1.2f, 0f, 0f), p + new Vector3(0.6f, 0f, 0f), 0.5f));
         StartCoroutine(Glow(p, new Color(color.r, color.g, color.b, 0.9f), 0.4f, 1.8f, 0.5f));
         StartCoroutine(RingWave(p, Color.white, 0.3f, 1.6f, 0.4f));
+    }
+
+    /// <summary>光晴の高飛び: 飛行機が駒の上から空へ去っていく</summary>
+    public void PlayTakeoff(Vector2Int pos)
+    {
+        PlayLimited(Clip("Plane"), 2.2f, airRaidClip, PlaneGain);
+        Vector3 p = World(pos);
+        StartCoroutine(TakeoffRoutine(p));
+        StartCoroutine(Glow(p, new Color(1f, 0.85f, 0.45f, 0.8f), 0.4f, 1.6f, 0.5f));
+        StartCoroutine(Burst(p, 10, new Color(1f, 0.85f, 0.4f), Color.white, 1f, 2.6f, 0.07f, 0.5f, 0f, SpriteFactory.Pixel));
+    }
+
+    private IEnumerator TakeoffRoutine(Vector3 from)
+    {
+        bool art = EffectArt.Has("Plane");
+        var plane = CreateSprite(EffectArt.GetOr("Plane", SpriteFactory.Plane), from, art ? Color.white : new Color(0.9f, 0.95f, 1f), 0.5f, OrderParticle + 2);
+        Vector3 to = from + new Vector3(2.2f, 5.5f, 0f);
+        plane.transform.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(to.y - from.y, to.x - from.x) * Mathf.Rad2Deg - 90f);
+        const float life = 1.3f;
+        float elapsed = 0f;
+        while (elapsed < life)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / life;
+            plane.transform.position = Vector3.Lerp(from, to, Ease.InCubic(t));
+            plane.transform.localScale = Vector3.one * Mathf.Lerp(0.5f, 0.3f, t);
+            Color c = plane.color;
+            c.a = t > 0.7f ? (1f - t) / 0.3f : 1f;
+            plane.color = c;
+            yield return null;
+        }
+        Destroy(plane.gameObject);
+    }
+
+    /// <summary>海外の光晴からのお土産: 金の光が空から降りてくる</summary>
+    public void PlaySouvenir(Vector2Int to)
+    {
+        Vector3 p = World(to);
+        PlayStream(to + new Vector2Int(0, 4), to, new Color(1f, 0.82f, 0.35f));
+        ArtFx("Souvenir", p + new Vector3(0f, 0.15f, 0f), 0.35f, 0.75f, 0.7f, 0f);
+        StartCoroutine(Glow(p, new Color(1f, 0.85f, 0.45f, 0.85f), 0.3f, 1.3f, 0.5f));
+        StartCoroutine(Burst(p, 8, new Color(1f, 0.82f, 0.35f), Color.white, 0.8f, 2f, 0.06f, 0.45f, 0f, SpriteFactory.Pixel));
+    }
+
+    /// <summary>〆鯖の「世界が終わる」: 盤が白く飛び、〆鯖から衝撃波が広がる</summary>
+    public void PlayWorldEnd(Vector2Int from)
+    {
+        Play(bombardmentClip, defeatClip);
+        Vector3 p = World(from);
+        StartCoroutine(RingWave(p, Color.white, 0.5f, 9f, 0.8f));
+        StartCoroutine(Glow(p, new Color(1f, 1f, 1f, 0.95f), 1f, 6f, 0.7f));
+        if (BoardManager.Instance == null) return;
+        int size = BoardManager.Instance.CurrentBoardSize;
+        float c = (size - 1) / 2f;
+        StartCoroutine(BoardFlash(new Vector3(c, c, 0f), size + 0.3f, new Color(1f, 1f, 1f, 0.85f), 0.9f));
+    }
+
+    private IEnumerator BoardFlash(Vector3 center, float size, Color color, float life)
+    {
+        var sr = CreateSprite(SpriteFactory.Pixel, center, color, size, OrderParticle + 3);
+        float elapsed = 0f;
+        while (elapsed < life)
+        {
+            elapsed += Time.deltaTime;
+            Color c = color;
+            c.a = color.a * (1f - elapsed / life);
+            sr.color = c;
+            yield return null;
+        }
+        Destroy(sr.gameObject);
+    }
+
+    /// <summary>翡翠の最強PC: 当たりは翡翠色、はずれは赤く光る</summary>
+    public void PlayPcEvent(Vector2Int pos, bool good)
+    {
+        Vector3 p = World(pos);
+        Color color = good ? new Color(0.36f, 0.88f, 0.78f) : new Color(1f, 0.45f, 0.35f);
+        StartCoroutine(Glow(p, new Color(color.r, color.g, color.b, 0.85f), 0.4f, good ? 2.4f : 1.4f, 0.5f));
+        StartCoroutine(RingWave(p, color, 0.4f, good ? 2.6f : 1.4f, 0.45f));
+        if (good) StartCoroutine(Burst(p, 12, color, Color.white, 1.2f, 3f, 0.07f, 0.5f, 0f, SpriteFactory.Pixel));
     }
 
     /// <summary>後光（先代部長の引退・覚醒した僕）</summary>

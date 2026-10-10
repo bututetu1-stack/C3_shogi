@@ -39,7 +39,7 @@ for (let i = 0; i < argv.length; i++) {
 if (opt.full && !argv.includes('--base')) opt.base = 300;
 
 // ---- 実験の一覧（run_experiments.ps1 と同じ名前。仲間の候補に出る部員だけ） ----
-const PIECES = ['Monin', 'Boku', 'Wotsu', 'Nako', 'Rihaku', 'SN', 'Konishiki', 'Kei', 'Yuu', 'Kipu', 'Monotetsu'];
+const PIECES = ['Monin', 'Boku', 'Wotsu', 'Nako', 'Rihaku', 'SN', 'Konishiki', 'Kei', 'Yuu', 'Kipu', 'Monotetsu', 'Mitsuharu', 'Niko', 'Shimesaba', 'Kawasemi'];
 let jobs = [{ name: 'base', runs: opt.base, args: [] }];
 for (const p of PIECES) jobs.push({ name: 'force_' + p, runs: opt.pieceRuns, args: ['-force', p] });
 jobs.push({ name: 'force_Teitoku', runs: opt.pieceRuns, args: ['-force', 'Monotetsu', '-teitoku'] });

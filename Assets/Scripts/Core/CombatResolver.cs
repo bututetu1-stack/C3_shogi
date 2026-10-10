@@ -7,12 +7,13 @@ using System.Collections;
 /// </summary>
 public static class CombatResolver
 {
-    /// <summary>通常攻撃のダメージ = 攻撃（＋ユウの助走）− 防御。0未満にはならない。潜水艦には0</summary>
+    /// <summary>通常攻撃のダメージ = 攻撃（＋ユウの助走）− 防御。0未満にはならない。潜水艦には0。〆鯖の正論パンチは防御を無視する</summary>
     public static int CalcDamage(PieceInstance attacker, PieceInstance target)
     {
         // 潜水艦は通常の攻撃を受けない（能力の攻撃は受ける）
         if (target.data.pieceType == PieceType.KanmusuSS) return 0;
-        return Mathf.Max(0, attacker.ATK + RunUpBonus(attacker, target) - target.DEF);
+        int def = attacker.data.pieceType == PieceType.Shimesaba && !attacker.isSealed ? 0 : target.DEF;
+        return Mathf.Max(0, attacker.ATK + RunUpBonus(attacker, target) - def);
     }
 
     /// <summary>ユウの助走: 敵まで走ったマスのうち、2マス目から1マスごとに攻撃が上がる（攻撃の前の位置で測る）</summary>
@@ -76,6 +77,10 @@ public static class CombatResolver
 
         // 髑髏の爆発などで攻撃側が倒れた場合はここで終了
         if (!piece.isAlive || !bm.IsEmpty(to)) yield break;
+
+        // 翡翠の「誘うと来てくれる」の回数
+        if (piece.data.pieceType == PieceType.Kawasemi && !move.isAttack && AbilitySystem.Instance != null)
+            AbilitySystem.Instance.OnKawasemiMove(piece, to);
 
         // SN は残像を残して駆け抜ける
         if (piece.data.losesHPOnMove)
@@ -181,6 +186,8 @@ public static class CombatResolver
             if (BattleEffects.Instance != null) BattleEffects.Instance.PlayGuard(target.boardPosition);
             SpeechBubble.SayMaybe(target, PieceLines.KonishikiBullied, 0.5f);
         }
+        // 〆鯖のレスバ（言い返す）
+        if (AbilitySystem.Instance != null) AbilitySystem.Instance.OnAttackedAndSurvived(attacker, target);
         return false;
     }
 
@@ -309,6 +316,8 @@ public static class CombatResolver
             GameManager.Instance.Roster.OnKill(GameSim.CurrentKiller, target);
         }
         GameSim.RecordKill(target);
+        // 光晴の裏金・翡翠のパーツ
+        if (AbilitySystem.Instance != null) AbilitySystem.Instance.OnPieceKilled(target, pos);
 
         if (atSea)
         {

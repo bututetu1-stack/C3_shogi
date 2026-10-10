@@ -19,6 +19,12 @@ public static class MoveValidator
     /// <summary>合法手を results に詰める（results は先にクリアされる。AI用にアロケーションを避ける版）</summary>
     public static void GetValidMoves(PieceInstance piece, List<MoveResult> results)
     {
+        GetValidMoves(piece, results, true);
+    }
+
+    /// <summary>includeInvite=false なら翡翠の「誘うと来てくれる」を含めない（ふだんの動きだけ）</summary>
+    public static void GetValidMoves(PieceInstance piece, List<MoveResult> results, bool includeInvite)
+    {
         results.Clear();
         if (piece == null || !piece.isAlive) return;
         if (piece.stunned) return;   // 冷笑されて、この手番は動けない
@@ -56,6 +62,9 @@ public static class MoveValidator
                 if (!dir.canJump && targetPiece != null) break;
             }
         }
+
+        // 翡翠: 誘うと来てくれる（味方の部員の隣へ）
+        if (includeInvite && piece.data.pieceType == PieceType.Kawasemi && !piece.isSealed) AbilitySystem.AddInviteMoves(piece, results);
 
         ApplyTaunt(results, bm);
         if (BalanceTuning.KonishikiGrapple) ApplyGrapple(piece, results, bm);

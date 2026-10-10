@@ -112,6 +112,54 @@ public static class BalanceTuning
     /// <summary>覚醒した僕が1体を強化できる量の上限</summary>
     public static int BokuAwakenedCap = 1;
 
+    // ---- 2026-10-11 に加わった部員 ----
+
+    /// <summary>光晴: 盤にいるあいだ、味方が敵を倒すたびにたまる裏金と上限（周をまたいで残る）</summary>
+    public static int MitsuharuFundPerKill = 1;
+    /// <summary>光晴（会計の権力）: 盤にいるあいだ、自軍の手番の初めにたまる裏金</summary>
+    public static int MitsuharuFundPerTurn = 1;
+    /// <summary>光晴（高飛び）: 裏金1でお土産を送る味方の数</summary>
+    public static int MitsuharuSouvenirTargets = 2;
+    public static int MitsuharuFundMax = 10;
+    /// <summary>光晴: 裏金がこれだけたまると、自軍の手番の初めに自分から海外へ旅立つ（敵陣に入っても成る）</summary>
+    public static int MitsuharuTripCost = 5;
+    /// <summary>光晴（高飛び）のお土産: 傷ついた味方への回復（元気なら攻撃+1）</summary>
+    public static int MitsuharuSouvenirHeal = 2;
+    /// <summary>覚醒した光晴（世界一周）: お土産を送る味方の数</summary>
+    public static int MitsuharuAwakenedTargets = 4;
+    /// <summary>光晴: 裏金が尽きたら帰国して、成る前の姿で自陣に戻る</summary>
+    public static bool MitsuharuReturnsWhenBroke = true;
+    /// <summary>ニコ: 山札の上限（成る前／成った後）</summary>
+    public static int NikoCapacity = 3;
+    public static int NikoPromotedCapacity = 5;
+    /// <summary>覚醒したニコ（神ゲー完成）: 1手番に多く処理する枚数と、札の効果の上乗せ</summary>
+    public static int NikoAwakenedExtraTasks = 1;
+    public static int NikoAwakenedCardBonus = 1;
+    /// <summary>ニコの札（なこ・門人・〆鯖）のダメージの元の値</summary>
+    public static int NikoStrikeDamage = 2;
+    /// <summary>ニコの札（僕・小錦・ユウ）と翡翠のオーバークロックで1体が上がる量の上限</summary>
+    public static int NikoBuffCap = 2;
+    /// <summary>〆鯖のレスバ（攻撃されて生き残ったとき言い返す）のダメージの元の値（防御無視）</summary>
+    public static int ShimesabaRetort = 1;
+    /// <summary>〆鯖（成った後）: 世界が終わるまでの手番と、そのときのダメージの元の値（盤上の敵すべて・防御無視）</summary>
+    public static int ShimesabaCountdown = 3;
+    public static int ShimesabaEndDamage = 3;
+    /// <summary>覚醒した〆鯖（完全論破）: レスバの上乗せと、成っているときの世界が終わるまでの手番（成っていなければ世界は終わらない）</summary>
+    public static int ShimesabaAwakenedRetortBonus = 1;
+    public static int ShimesabaAwakenedCountdown = 2;
+    /// <summary>翡翠: 「誘うと来てくれる」を1局に使える回数（負なら何度でも）</summary>
+    public static int KawasemiInvites = 1;
+    /// <summary>翡翠: パーツを拾う範囲と上限</summary>
+    public static int KawasemiScavengeRange = 2;
+    public static int KawasemiPartsMax = 10;
+    /// <summary>翡翠（最強PC）の当たりの確率 = 元 + パーツ1つごと（上限あり）</summary>
+    public static float KawasemiGoodBase = 0.5f;
+    public static float KawasemiGoodPerPart = 0.05f;
+    public static float KawasemiGoodMax = 0.9f;
+    /// <summary>最強PC: ベンチマークのダメージ・水冷の回復</summary>
+    public static int KawasemiBenchDamage = 2;
+    public static int KawasemiCoolHeal = 2;
+
     // ---- 局の合間のできごと（部の時間） ----
 
     /// <summary>できごとがあるか（false なら勝ったらすぐ仲間選び）</summary>

@@ -34,6 +34,7 @@ public partial class AbilitySystem : MonoBehaviour
         yomigaeruSpawnCount.Clear();
         explodingPositions.Clear();
         ResetFleets();
+        ResetNewMembers();
     }
 
     // ============================================================
@@ -45,6 +46,9 @@ public partial class AbilitySystem : MonoBehaviour
 
         // 艦隊の入渠（提督の隣の艦娘が回復）
         if (team == Team.Player) DockShips();
+
+        // 盤外の光晴からのお土産
+        yield return SendSouvenirs(team);
 
         List<PieceInstance> pieces = bm.GetTeamPieces(team);
 
@@ -305,6 +309,11 @@ public partial class AbilitySystem : MonoBehaviour
         yield return ExecuteKeiAbilities(team);
         yield return ExecuteKipuAbilities(team);
         yield return ExecuteYokozuna(team);
+
+        // ニコのタスク処理、〆鯖の世界が終わる、翡翠の最強PC
+        yield return ExecuteNikoAbilities(team);
+        yield return ExecuteDoomsday(team);
+        yield return ExecuteKawasemiPC(team);
 
         // 僕バフ処理
         yield return ProcessBokuBuffs(team);
@@ -640,6 +649,7 @@ public partial class AbilitySystem : MonoBehaviour
     public void OnAwakened(PieceInstance p)
     {
         if (p == null) return;
+        OnNewMemberAwakened(p);
         if (p.data.pieceType == PieceType.Ryuujin)
         {
             CombatResolver.Heal(p, p.MaxHP / 2);

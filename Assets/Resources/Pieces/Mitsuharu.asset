@@ -1,0 +1,97 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01e8fb0f6e3e9d54297b027b2b9c6457, type: 3}
+  m_Name: Mitsuharu
+  m_EditorClassIdentifier: Shogi::PieceData
+  pieceType: 44
+  displayName: "\u5149\u6674"
+  pieceName: "\u5149\u6674"
+  description: "\u6620\u753B\u3092\u898B\u308B\u306E\u304C\u5927\u597D\u304D\u306A\u7537\u3002\u6700\u8FD1\u306F\u30E9\u30D6\u30B3\u30E1\u306B\u98E2\u3048\u3066\u3044\u308B\u3089\u3057\u3044\u3002\u4F1A\u8A08\u306E\u6A29\u529B\u3092\u4F7F\u3063\u3066\u3001C3\u88CF\u5E33\u7C3F\u3092\u4ED8\u3051\u3066\u3044\u308B\u3068\u3082\u3063\u3071\u3089\u306E\u5642\u3002\u3044\u305A\u308C\u88CF\u5E33\u7C3F\u306E\u91D1\u3092\u4F7F\u3063\u3066\u6D77\u5916\u65C5\u884C\u306B\u884C\u304F\u306E\u304C\u5922\u3089\u3057\u3044\u3002\u88CF\u5E33\u7C3F:
+    \u76E4\u306B\u3044\u308B\u3042\u3044\u3060\u3001\u624B\u756A\u3054\u3068\u3068\u5473\u65B9\u304C\u6575\u3092\u5012\u3059\u305F\u3073\u306B\u88CF\u91D1\u304C1\u305F\u307E\u308B\uFF08\u5468\u3092\u307E\u305F\u3044\u306710\u307E\u3067\uFF09\u3002\u88CF\u91D1\u304C5\u305F\u307E\u308B\u3068\u3001\u81EA\u5206\u306E\u624B\u756A\u306E\u521D\u3081\u306B\u5FF5\u9858\u306E\u6D77\u5916\u65C5\u884C\u3078\u65C5\u7ACB\u3064\uFF08\u6210\u308B\uFF09\u3002"
+  baseATK: 1
+  baseDEF: 1
+  baseHP: 3
+  rarity: 4
+  moveDirections:
+  - direction: {x: 0, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 1, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: -1, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 1, y: -1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: -1, y: -1}
+    maxDistance: 1
+    canJump: 0
+  canPromote: 1
+  promotedDisplayName: "\u5149\u6674"
+  promotedName: "\u5149\u6674"
+  promotedDescription: "\u6620\u753B\u3092\u898B\u308B\u306E\u304C\u5927\u597D\u304D\u306A\u7537\u3002\u6700\u8FD1\u306F\u30E9\u30D6\u30B3\u30E1\u306B\u98E2\u3048\u3066\u3044\u308B\u3089\u3057\u3044\u3002\u4F1A\u8A08\u306E\u6A29\u529B\u3092\u4F7F\u3063\u3066\u3001C3\u88CF\u5E33\u7C3F\u3092\u4ED8\u3051\u3066\u3044\u305F\u3002\u3068\u3046\u3068\u3046\u5FF5\u9858\u306E\u6D77\u5916\u65C5\u884C\u3078\u3068\u65C5\u7ACB\u3063\u305F\u3002\u76E4\u5916\u304B\u3089\u4E00\u751F\u61F8\u547D\u306B\u6226\u3046\u90E8\u54E1\u3092\u773A\u3081\u3066\u7B11\u3063\u3066\u3044\u308B\u3002\u5351\u602F\u306A\u3084\u3064\u3060\u3002\u9AD8\u98DB\u3073:
+    \u6210\u308B\u3068\u76E4\u5916\u3078\u65C5\u7ACB\u3064\uFF08\u653B\u6483\u3055\u308C\u306A\u3044\uFF09\u3002\u81EA\u8ECD\u306E\u624B\u756A\u306E\u521D\u3081\u306B\u88CF\u91D1\u30921\u4F7F\u3063\u3066\u3001\u5473\u65B92\u4F53\u306B\u304A\u571F\u7523\u3092\u9001\u308B\uFF08\u50B7\u3064\u3044\u3066\u3044\u308C\u3070\u4F53\u529B+2\u3001\u5143\u6C17\u306A\u3089\u653B\u6483+1\uFF09\u3002\u88CF\u91D1\u304C\u5C3D\u304D\u308B\u3068\u5E30\u56FD\u3057\u3066\u3001\u6210\u308B\u524D\u306E\u59FF\u3067\u81EA\u9663\u306B\u623B\u308B\u3002"
+  promotedATK: 1
+  promotedDEF: 1
+  promotedHP: 3
+  promotedMoveDirections:
+  - direction: {x: 0, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 0, y: -1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 1, y: 0}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: -1, y: 0}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 1, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 1, y: -1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: -1, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: -1, y: -1}
+    maxDistance: 1
+    canJump: 0
+  canAwaken: 1
+  awakenedName: "\u4E16\u754C\u4E00\u5468"
+  awakenedDescription: "\u899A\u9192\u3057\u305F\u5149\u6674\u3002\u88CF\u5E33\u7C3F\u306E\u91D1\u3067\u3001\u3068\u3046\u3068\u3046\u4E16\u754C\u4E00\u5468\u306B\u51FA\u767A\u3057\u305F\u3002\u899A\u9192\u3059\u308B\u3068\u3059\u3050\u306B\u76E4\u5916\u3078\u65C5\u7ACB\u3061\uFF08\u88CF\u91D1\u304C\u8DB3\u308A\u306A\u304F\u3066\u3082\uFF09\u3001\u304A\u571F\u7523\u304C\u5473\u65B94\u4F53\u306B\u5C4A\u304F\u3002\u4F53\u529B+1\u3002"
+  awakenCaption: "\u88CF\u5E33\u7C3F\u306E\u91D1\u3067\u3001\u3044\u3056\u4E16\u754C\u3078"
+  awakenColor: {r: 1, g: 0.78, b: 0.4, a: 1}
+  awakenedATK: 0
+  awakenedDEF: 0
+  awakenedHP: 1
+  awakenedMoveDirections: []
+  veteranName: 
+  veteranDescription: 
+  veteranMoveDirections: []
+  hasPromotedRarity: 0
+  promotedRarity: 0
+  isAutoMove: 0
+  isManualControllable: 1
+  excludeFromDraft: 0
+  isImmovable: 0
+  immuneToFlip: 0
+  losesHPOnMove: 0
+  diesOnPromotion: 0
+  isImmovableWhenPromoted: 0
+  isTauntPiece: 0
+  portrait: {fileID: 0}
+  promotedPortrait: {fileID: 0}
