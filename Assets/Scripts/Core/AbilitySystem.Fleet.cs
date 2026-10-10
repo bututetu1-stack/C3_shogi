@@ -242,6 +242,13 @@ public partial class AbilitySystem
                 BattleEffects.Instance.PlayRetreatHorn();
                 BattleEffects.Instance.SetNight(false);
             }
+            if (BalanceTuning.FleetStaysAfterVictory)
+            {
+                // 艦隊はそのまま盤に残って戦い続ける（つながりは残るので、提督が沈めば艦娘も沈む）
+                StartCoroutine(CutInUI.Play("作戦完了", sRank ? "S勝利！ 艦隊、このまま進撃せよ" : "A勝利 艦隊、このまま進撃せよ", null, CutInUI.Navy, 1.3f));
+                fleets.Remove(groupId);
+                return;
+            }
             StartCoroutine(CutInUI.Play("作戦完了", sRank ? "S勝利！ 艦隊、帰投せよ" : "A勝利 艦隊、帰投せよ", null, CutInUI.Navy, 1.3f));
             CombatResolver.RemoveWithExit(teitoku, PieceController.ExitStyle.Retreat);
             foreach (var ship in ships) CombatResolver.RemoveWithExit(ship, PieceController.ExitStyle.Retreat);
@@ -413,7 +420,7 @@ public partial class AbilitySystem
 
         BoardManager bm = BoardManager.Instance;
         BattleEffects fx = BattleEffects.Instance;
-        PieceInstance target = abyss[Random.Range(0, abyss.Count)];
+        PieceInstance target = PickShipTarget(abyss);
         SpeechBubble.SayMaybe(ship, PieceLines.ShipAttack(type), 0.35f);
         PieceController pc = bm.GetPieceController(ship.boardPosition);
         if (pc != null) pc.Lunge(target.boardPosition);
@@ -460,7 +467,7 @@ public partial class AbilitySystem
                     {
                         abyss = AliveShinkai();
                         if (abyss.Count == 0) break;
-                        target = abyss[Random.Range(0, abyss.Count)];
+                        target = PickShipTarget(abyss);
                     }
                     if (fx != null) fx.PlayBombardmentEffect(ship.boardPosition, target.boardPosition);
                     yield return new WaitForSeconds(BattleEffects.BombardmentImpactTime);
@@ -499,6 +506,17 @@ public partial class AbilitySystem
             }
         }
         yield return new WaitForSeconds(0.2f);
+    }
+
+    /// <summary>艦娘が狙う深海（FleetEscortsFirst なら随伴が残っているうちは旗艦を狙わない）</summary>
+    private static PieceInstance PickShipTarget(List<PieceInstance> abyss)
+    {
+        if (BalanceTuning.FleetEscortsFirst)
+        {
+            var escorts = abyss.FindAll(s => !s.isFlagship);
+            if (escorts.Count > 0) return escorts[Random.Range(0, escorts.Count)];
+        }
+        return abyss[Random.Range(0, abyss.Count)];
     }
 
     private static void LogAttack(PieceInstance ship, string kind, PieceInstance target, int damage)

@@ -61,4 +61,8 @@ public static class BalanceTuning
     public static int FleetDockHeal = 1;
     /// <summary>艦娘の攻撃（雷撃・砲撃・空爆）のダメージに足す値</summary>
     public static int FleetDamageBonus = 0;
+    /// <summary>作戦完了のあとも提督と艦娘が盤に残る（false なら帰投して盤を去る）</summary>
+    public static bool FleetStaysAfterVictory = false;
+    /// <summary>艦娘は随伴の深海を先に狙い、旗艦は最後に狙う（作戦が長く続く）</summary>
+    public static bool FleetEscortsFirst = false;
 }
