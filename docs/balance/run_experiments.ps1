@@ -32,7 +32,8 @@ function CallWait($file) {
   $o = isuzu-unity-cli call execute_code --file $file 2>$null | Out-String
   if ($LASTEXITCODE -eq 4) {
     $m = [regex]::Match($o, 'jobs (\S+) --wait')
-    $o = isuzu-unity-cli jobs $m.Groups[1].Value --wait 2>$null | Out-String
+    $o = isuzu-unity-cli jobs $m.Groups[1].Value --wait --timeout 3600 2>$null | Out-String   # 1回分が長くても終わるまで待つ
+    if ($LASTEXITCODE) { throw "待ちきれませんでした: $file`n$o" }
   } elseif ($LASTEXITCODE) { throw "失敗: $file`n$o" }
   $o.Trim()
 }
