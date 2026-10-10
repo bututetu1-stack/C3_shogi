@@ -123,6 +123,9 @@ public static class CombatResolver
         int damage = CalcDamage(attacker, target);
         target.currentHP -= damage;
         RefreshHP(target);
+        // 小錦がいじめられると周りが同情して奮起する
+        if (target.data.pieceType == PieceType.Konishiki && AbilitySystem.Instance != null)
+            AbilitySystem.Instance.Sympathize(target);
         if (attacker.data.pieceType == PieceType.Yuu)
         {
             if (runUp > 0)

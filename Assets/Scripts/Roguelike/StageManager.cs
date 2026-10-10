@@ -291,7 +291,7 @@ public class StageManager : MonoBehaviour
         else
         {
             enemy.AddMaxHP(stage / BalanceTuning.EnemyHpDivisor);
-            enemy.stageBonusATK = stage / BalanceTuning.EnemyAtkDivisor;
+            enemy.stageBonusATK = Mathf.Max(0, stage - BalanceTuning.EnemyAtkDelay) / BalanceTuning.EnemyAtkDivisor;
             enemy.bonusATK += enemy.stageBonusATK;
         }
         CombatResolver.RefreshStats(enemy);

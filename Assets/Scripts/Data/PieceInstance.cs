@@ -17,6 +17,8 @@ public class PieceInstance
     public int gundaishouStacks;    // 軍将バフを受けた回数（上限管理用）
     public int stageBonusATK;       // bonusATK のうち局による強化の分（魔王の雷撃には足さない）
     public bool stunned;            // きぷ・へるに冷笑され、次の自分の手番は動けない
+    public int fullCount;           // 中華で「満腹」になった回数（攻撃+1、上限あり）
+    public int sympathyCount;       // 小錦への「同情」で攻撃が上がった回数（上限あり）
 
     public int ATK { get { return (isPromoted ? data.promotedATK : data.baseATK) + bonusATK; } }
     public int DEF { get { return (isPromoted ? data.promotedDEF : data.baseDEF) + bonusDEF; } }

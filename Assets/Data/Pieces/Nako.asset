@@ -19,7 +19,7 @@ MonoBehaviour:
   baseATK: 2
   baseDEF: 1
   baseHP: 2
-  rarity: 4
+  rarity: 1
   moveDirections: []
   canPromote: 1
   promotedDisplayName: "\u306A\u3053"

@@ -204,7 +204,7 @@ public class AbilitySystem : MonoBehaviour
         foreach (var chuka in chukaList)
         {
             if (!chuka.isAlive) continue;
-            HealAdjacentAllies(chuka, BalanceTuning.ChukaHeal);
+            HealAdjacentAllies(chuka, BalanceTuning.ChukaHeal, true);
             // 食べられて湯気とともに消える
             if (BattleEffects.Instance != null) BattleEffects.Instance.PlaySteam(chuka.boardPosition);
             CombatResolver.RemoveWithExit(chuka, PieceController.ExitStyle.Eaten);
@@ -1192,7 +1192,8 @@ public class AbilitySystem : MonoBehaviour
         return list;
     }
 
-    private void HealAdjacentAllies(PieceInstance chuka, int amount)
+    /// <summary>周りの味方を回復する。feed=true（中華）なら食べた味方は「満腹」で攻撃+1（C3・中華を除く、1体に上限あり）</summary>
+    private void HealAdjacentAllies(PieceInstance chuka, int amount, bool feed = false)
     {
         BoardManager bm = BoardManager.Instance;
         Vector2Int center = chuka.boardPosition;
@@ -1206,10 +1207,44 @@ public class AbilitySystem : MonoBehaviour
                 if (!bm.IsInBounds(pos)) continue;
 
                 PieceInstance target = bm.GetPieceAt(pos);
-                if (target != null && target.team == chuka.team && target != chuka)
-                    CombatResolver.Heal(target, amount);
+                if (target == null || target.team != chuka.team || target == chuka) continue;
+                CombatResolver.Heal(target, amount);
+                if (feed && target.data.pieceType != PieceType.C3 && target.data.pieceType != PieceType.Chuka
+                    && target.fullCount < BalanceTuning.ChukaFullMax)
+                {
+                    target.fullCount++;
+                    target.bonusATK += 1;
+                    CombatResolver.RefreshStats(target);
+                    FloatingText.Spawn(target.boardPosition, "満腹 攻+1", Palette.ATK, 2.8f, 0.3f);
+                }
             }
         }
+    }
+
+    /// <summary>小錦が攻撃されたとき、周りの味方が「同情」して攻撃+1（C3・小錦を除く、1体に上限あり）</summary>
+    public void Sympathize(PieceInstance konishiki)
+    {
+        BoardManager bm = BoardManager.Instance;
+        bool any = false;
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                if (dx == 0 && dy == 0) continue;
+                PieceInstance ally = bm.GetPieceAt(new Vector2Int(konishiki.boardPosition.x + dx, konishiki.boardPosition.y + dy));
+                if (ally == null || ally.team != konishiki.team || !ally.isAlive) continue;
+                if (ally.data.pieceType == PieceType.C3 || ally.data.pieceType == PieceType.Konishiki) continue;
+                if (ally.sympathyCount >= BalanceTuning.KonishikiSympathyMax) continue;
+                ally.sympathyCount++;
+                ally.bonusATK += 1;
+                CombatResolver.RefreshStats(ally);
+                FloatingText.Spawn(ally.boardPosition, "同情 攻+1", Palette.ATK, 2.8f, 0.2f);
+                if (BattleEffects.Instance != null) BattleEffects.Instance.PlayBuffEffect(ally.boardPosition, true);
+                any = true;
+            }
+        }
+        if (any && BattleLogUI.Instance != null)
+            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("小錦", konishiki.team) + " がいじめられて、周りが奮起した（攻撃+1）");
     }
 
     // ============================================================
