@@ -58,6 +58,34 @@ public static class MoveValidator
         }
 
         ApplyTaunt(results, bm);
+        if (BalanceTuning.KonishikiGrapple) ApplyGrapple(piece, results, bm);
+    }
+
+    /// <summary>
+    /// 組み止め: 相手の挑発駒（小錦）の隣にいる駒は、その挑発駒の隣から離れる動きができない
+    /// （その場から攻撃するか、隣のまま回り込むだけ）。小錦を敵の前線に寄せて足止めするための決まり
+    /// </summary>
+    private static void ApplyGrapple(PieceInstance piece, List<MoveResult> results, BoardManager bm)
+    {
+        if (piece.data.pieceType == PieceType.C3) return;
+        Vector2Int from = piece.boardPosition;
+        PieceInstance holder = null;
+        for (int dx = -1; dx <= 1 && holder == null; dx++)
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                if (dx == 0 && dy == 0) continue;
+                PieceInstance n = bm.GetPieceAt(new Vector2Int(from.x + dx, from.y + dy));
+                if (n != null && n.isAlive && n.team != piece.team && n.data.isTauntPiece) { holder = n; break; }
+            }
+        if (holder == null) return;
+
+        for (int i = results.Count - 1; i >= 0; i--)
+        {
+            if (results[i].isAttack) continue;
+            Vector2Int p = results[i].position;
+            if (Mathf.Max(Mathf.Abs(p.x - holder.boardPosition.x), Mathf.Abs(p.y - holder.boardPosition.y)) > 1)
+                results.RemoveAt(i);
+        }
     }
 
     /// <summary>

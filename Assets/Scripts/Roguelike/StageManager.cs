@@ -315,7 +315,10 @@ public class StageManager : MonoBehaviour
     {
         p.AddMaxHP((stage - 1) / BalanceTuning.PlayerHpDivisor);
         if (p.data.pieceType != PieceType.C3)
+        {
             p.bonusDEF += (stage - 1) / BalanceTuning.PlayerDefDivisor;
+            if (BalanceTuning.PlayerAtkDivisor > 0) p.bonusATK += (stage - 1) / BalanceTuning.PlayerAtkDivisor;
+        }
         CombatResolver.RefreshStats(p);
     }
 

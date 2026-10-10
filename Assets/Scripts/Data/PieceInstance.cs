@@ -22,6 +22,7 @@ public class PieceInstance
     public bool isFlagship;         // 深海の旗艦（沈めると作戦完了）
     public bool kai2;               // 艦娘の改二（改のまま敵陣を出た）
     public int fleetDamage;         // 艦娘が深海に与えたダメージ（MVP の判定）
+    public int fleetDamageAll;      // 艦娘が与えたダメージの合計（深海以外も。自動プレイの集計用）
     public bool damageAnnounced;    // 艦娘の中破を知らせた
     public bool promotionSpent;     // この局ではもう成らない（作戦完了で生還した物鉄）
 

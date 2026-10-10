@@ -190,7 +190,7 @@ public partial class AbilitySystem
             foreach (var s in abyss)
             {
                 if (fx != null) fx.PlayAirRaidEffect(carrier.boardPosition, s.boardPosition);
-                FleetHit(carrier, s, ShipDamage(carrier, 1, fleet));
+                FleetHit(carrier, s, ShipDamage(carrier, BalanceTuning.CarrierOpeningDamage, fleet));
             }
             GameSim.EndSource(source);
             yield return new WaitForSeconds(0.4f);
@@ -252,6 +252,7 @@ public partial class AbilitySystem
             }
             int battleMoves = fleet != null && GameManager.Instance != null ? GameManager.Instance.MoveCount - fleet.arrivalMove : -1;
             GameSim.RecordFleet(sRank ? "S" : "A", battleMoves);
+            RecordShipDamage(ships);
             if (sRank || !BalanceTuning.FleetSupportNeedsS)
             {
                 supportShots += BalanceTuning.FleetSupportShots;
@@ -288,6 +289,13 @@ public partial class AbilitySystem
             if (BattleEffects.Instance != null) BattleEffects.Instance.SetNight(false);
             fleets.Remove(groupId);
         }
+    }
+
+    /// <summary>自動プレイの集計用: 艦隊戦が終わったときの、艦種ごとの与ダメージ（"艦:駆逐艦@5"）</summary>
+    private static void RecordShipDamage(List<PieceInstance> ships)
+    {
+        if (!GameSim.Headless) return;
+        foreach (var ship in ships) GameSim.RecordFleet("艦:" + ClassName(ship.data.pieceType), ship.fleetDamageAll);
     }
 
     /// <summary>生還と再配置: 提督は物鉄に戻り、歴戦の物鉄として自陣に残る（この局ではもう着任しない）</summary>
@@ -492,6 +500,7 @@ public partial class AbilitySystem
             }
         }
         if (PieceTypes.IsShinkai(target.data.pieceType)) ship.fleetDamage += Mathf.Min(damage, target.currentHP);
+        ship.fleetDamageAll += Mathf.Min(damage, target.currentHP);
         CombatResolver.ApplyDamage(target, damage, true);
     }
 
@@ -587,12 +596,12 @@ public partial class AbilitySystem
                 if (fx != null) fx.PlayAirRaidEffect(ship.boardPosition, target.boardPosition);
                 yield return new WaitForSeconds(BattleEffects.AirRaidImpactTime);
                 Vector2Int center = target.boardPosition;
-                int bomb = ShipDamage(ship, 1, fleet);
+                int bomb = ShipDamage(ship, BalanceTuning.CarrierStrikeDamage, fleet);
                 LogAttack(ship, "空爆", target, bomb);
                 FleetHit(ship, target, bomb);
                 var nearby = GetEnemiesInRange(center, 2, Team.Enemy, target);
                 ShuffleList(nearby);
-                for (int i = 0; i < Mathf.Min(2, nearby.Count); i++) FleetHit(ship, nearby[i], ShipDamage(ship, 2, fleet));
+                for (int i = 0; i < Mathf.Min(2, nearby.Count); i++) FleetHit(ship, nearby[i], ShipDamage(ship, BalanceTuning.CarrierSplashDamage, fleet));
                 break;
             }
             default:

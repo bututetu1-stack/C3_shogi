@@ -46,7 +46,6 @@ public class BattleEffects : MonoBehaviour
 
         audioSource = gameObject.AddComponent<AudioSource>();
         audioSource.playOnAwake = false;
-        audioSource.volume = 0.5f;
 
         moveClip = Resources.Load<AudioClip>("Audio/Move");
         hitClip = Resources.Load<AudioClip>("Audio/Hit");
@@ -62,7 +61,25 @@ public class BattleEffects : MonoBehaviour
         bgmSource = gameObject.AddComponent<AudioSource>();
         bgmSource.playOnAwake = false;
         bgmSource.loop = true;
-        bgmSource.volume = 0.35f;
+        ApplyVolumes();
+        SoundSettings.Changed += ApplyVolumes;
+    }
+
+    void OnDestroy()
+    {
+        SoundSettings.Changed -= ApplyVolumes;
+    }
+
+    // 設定の音量（0〜1）に掛ける元の大きさ
+    private const float SeBaseVolume = 0.5f;
+    private const float BgmBaseVolume = 0.35f;
+    // 艦載機の音は小さめの素材なので、ほかの効果音より大きく鳴らす
+    private const float PlaneGain = 1.6f;
+
+    private void ApplyVolumes()
+    {
+        if (audioSource != null) audioSource.volume = SeBaseVolume * SoundSettings.Se;
+        if (bgmSource != null) bgmSource.volume = BgmBaseVolume * SoundSettings.Bgm;
     }
 
     /// <summary>BGMを流す（Resources/Audio/BGM_名前 があれば）。同じ曲なら何もしない</summary>
@@ -85,7 +102,7 @@ public class BattleEffects : MonoBehaviour
     private readonly System.Collections.Generic.Dictionary<AudioClip, float> lastPlayed = new System.Collections.Generic.Dictionary<AudioClip, float>();
     private const float MinReplayInterval = 0.06f;
 
-    private void Play(AudioClip clip, AudioClip fallback = null)
+    private void Play(AudioClip clip, AudioClip fallback = null, float gain = 1f)
     {
         AudioClip c = clip != null ? clip : fallback;
         if (c == null) return;
@@ -93,19 +110,19 @@ public class BattleEffects : MonoBehaviour
         float last;
         if (lastPlayed.TryGetValue(c, out last) && now - last < MinReplayInterval) return;
         lastPlayed[c] = now;
-        audioSource.PlayOneShot(c);
+        audioSource.PlayOneShot(c, gain);
     }
 
     // 長い効果音は、音が大きくなるところから必要な長さだけ鳴らして消す（差し替えた音が演出より長くても合う）
     private readonly System.Collections.Generic.Dictionary<AudioClip, float> loudStart = new System.Collections.Generic.Dictionary<AudioClip, float>();
     private readonly System.Collections.Generic.List<AudioSource> sectionSources = new System.Collections.Generic.List<AudioSource>();
 
-    private void PlayLimited(AudioClip clip, float maxLength, AudioClip fallback = null)
+    private void PlayLimited(AudioClip clip, float maxLength, AudioClip fallback = null, float gain = 1f)
     {
         AudioClip c = clip != null ? clip : fallback;
         if (c == null) return;
-        if (c.length <= maxLength + 0.3f) { Play(c); return; }
-        StartCoroutine(PlaySection(c, LoudStart(c), maxLength));
+        if (c.length <= maxLength + 0.3f) { Play(c, null, gain); return; }
+        StartCoroutine(PlaySection(c, LoudStart(c), maxLength, gain));
     }
 
     /// <summary>音量が最大の半分に届く時刻（その少し手前から鳴らす）</summary>
@@ -141,7 +158,7 @@ public class BattleEffects : MonoBehaviour
         return start;
     }
 
-    private IEnumerator PlaySection(AudioClip clip, float start, float length)
+    private IEnumerator PlaySection(AudioClip clip, float start, float length, float gain = 1f)
     {
         AudioSource src = null;
         foreach (AudioSource s in sectionSources)
@@ -154,7 +171,8 @@ public class BattleEffects : MonoBehaviour
         }
         const float fade = 0.4f;
         src.clip = clip;
-        src.volume = audioSource.volume;
+        float volume = Mathf.Min(1f, audioSource.volume * gain);
+        src.volume = volume;
         src.time = Mathf.Min(start, Mathf.Max(0f, clip.length - length));
         src.Play();
         yield return new WaitForSeconds(Mathf.Max(0f, length - fade));
@@ -162,7 +180,7 @@ public class BattleEffects : MonoBehaviour
         while (elapsed < fade && src.isPlaying)
         {
             elapsed += Time.deltaTime;
-            src.volume = audioSource.volume * (1f - elapsed / fade);
+            src.volume = volume * (1f - elapsed / fade);
             yield return null;
         }
         src.Stop();
@@ -620,7 +638,7 @@ public class BattleEffects : MonoBehaviour
 
     public void PlayAirRaidEffect(Vector2Int from, Vector2Int to)
     {
-        PlayLimited(Clip("Plane"), 2.2f, airRaidClip);
+        PlayLimited(Clip("Plane"), 2.2f, airRaidClip, PlaneGain);
         StartCoroutine(AirRaidRoutine(World(from), World(to)));
     }
 

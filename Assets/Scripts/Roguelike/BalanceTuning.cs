@@ -19,6 +19,8 @@ public static class BalanceTuning
     public static int PlayerHpDivisor = 4;
     /// <summary>自軍の防御の上乗せ = (局−1) ÷ この値（C3は除く）</summary>
     public static int PlayerDefDivisor = 5;
+    /// <summary>自軍の攻撃の上乗せ = (局−1) ÷ この値（C3は除く。0なら上乗せしない）</summary>
+    public static int PlayerAtkDivisor = 0;
 
     /// <summary>仲間を2枚選べる局（盤が9×9になり、駒の数が一気に増える第五局）</summary>
     public static int[] TwoPickStages = { 5 };
@@ -42,6 +44,8 @@ public static class BalanceTuning
     public static int ChukaHeal = 3;
     /// <summary>中華を食べた味方の「満腹」（攻撃+1）を1体が受けられる回数（その局のあいだ）</summary>
     public static int ChukaFullMax = 1;
+    /// <summary>組み止め: 小錦の隣にいる敵は小錦の隣から離れられない（挑発を当てにできるデコイにする）</summary>
+    public static bool KonishikiGrapple = true;
     /// <summary>小錦が攻撃されたときの「同情」（周りの味方の攻撃+1）を1体が受けられる回数（その局のあいだ）</summary>
     public static int KonishikiSympathyMax = 2;
 
@@ -55,6 +59,12 @@ public static class BalanceTuning
     public static int KipuSneerTargets = 2;
 
     // ---- 提督の艦隊 ----
+
+    /// <summary>空母の開幕航空戦（着任時に深海すべてへ）のダメージの元の値</summary>
+    public static int CarrierOpeningDamage = 1;
+    /// <summary>空母の空爆で、狙った深海に当てるダメージの元の値（周りの敵2体へは CarrierSplashDamage）</summary>
+    public static int CarrierStrikeDamage = 1;
+    public static int CarrierSplashDamage = 2;
 
     /// <summary>着任のときに建造する艦娘の数（艦種は重複なし）</summary>
     public static int FleetShips = 2;
