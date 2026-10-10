@@ -301,50 +301,68 @@ public partial class AbilitySystem
                 yield return new WaitForSeconds(0.25f);
             }
 
-            // 1手番に1枚（成ると2枚）処理する。山札が空なら仲間の部員から1枚引く
+            // 1手番に1枚（成ると2枚）処理する。山札の古い順に、いまできる札を使う（相手がいないなど、できない札は片付ける）。
+            // 山札が空になったら、仲間の部員の札を引いて、できるものを使う
             for (int i = 0; i < NikoPerTurn(niko) && niko.isAlive; i++)
             {
-                NikoTask task;
-                if (deck.Count > 0) { task = deck[0]; deck.RemoveAt(0); }
-                else
+                bool done = false;
+                while (!done && deck.Count > 0)
                 {
-                    PieceType? drawn = DrawMemberCard(team);
-                    if (!drawn.HasValue) break;
-                    task = new NikoTask { type = drawn.Value, thrower = null };
+                    NikoTask task = deck[0];
+                    deck.RemoveAt(0);
+                    done = TryTask(niko, task);
                 }
-                yield return ProcessTask(niko, task);
+                if (!done)
+                {
+                    foreach (PieceType drawn in DrawMemberCards(team))
+                    {
+                        done = TryTask(niko, new NikoTask { type = drawn, thrower = null });
+                        if (done) break;
+                    }
+                }
+                if (!done)
+                {
+                    if (i == 0 && BattleLogUI.Instance != null)
+                        BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("ニコ", niko.team) + " はいまできるタスクがなかった");
+                    break;
+                }
+                yield return new WaitForSeconds(0.35f);
             }
         }
     }
 
-    /// <summary>暇なとき: 仲間にした部員から1枚引く（ニコ自身は除く）</summary>
-    private static PieceType? DrawMemberCard(Team team)
+    /// <summary>暇なとき: 仲間にした部員の札を、引く順に並べる（ニコ自身は除く。同じ部員は1枚）</summary>
+    private static List<PieceType> DrawMemberCards(Team team)
     {
-        if (team != Team.Player || GameManager.Instance == null) return null;
         var pool = new List<PieceType>();
+        if (team != Team.Player || GameManager.Instance == null) return pool;
         foreach (var d in GameManager.Instance.OwnedPieces)
-            if (d != null && HasCard(d.pieceType)) pool.Add(d.pieceType);
-        if (pool.Count == 0) return null;
-        return pool[Random.Range(0, pool.Count)];
+            if (d != null && HasCard(d.pieceType) && !pool.Contains(d.pieceType)) pool.Add(d.pieceType);
+        for (int i = pool.Count - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            PieceType t = pool[i]; pool[i] = pool[j]; pool[j] = t;
+        }
+        return pool;
     }
 
-    private IEnumerator ProcessTask(PieceInstance niko, NikoTask task)
+    /// <summary>札を1枚使ってみる。できなければ何もせず false（相手がいない・回復する味方がいない・上限に届いている など）</summary>
+    private bool TryTask(PieceInstance niko, NikoTask task)
     {
-        string name = MemberName(task.type);
         GameSim.AbilitySource = niko;
         bool done = DoCard(niko, task);
         GameSim.AbilitySource = null;
+        if (!done) return false;
+
+        string name = MemberName(task.type);
         FloatingText.Spawn(niko.boardPosition, (task.thrower != null ? "処理: " : "ドロー: ") + name, TaskOrange, 3.2f, 0.15f);
-        if (done && niko.awakened && BattleEffects.Instance != null) BattleEffects.Instance.PlayAwakenBurst("CardFan", niko.boardPosition, niko.data.awakenColor, true);
+        if (niko.awakened && BattleEffects.Instance != null) BattleEffects.Instance.PlayAwakenBurst("CardFan", niko.boardPosition, niko.data.awakenColor, true);
         if (BattleLogUI.Instance != null)
-            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("ニコ", niko.team) + (task.thrower != null ? " が" + name + "のタスクを処理" : " が" + name + "の札を引いて使った") + (done ? "" : "（何も起きなかった）"));
-        if (done)
-        {
-            RunRoster.Feat(niko);
-            // いつもありがとうございます: 処理したタスクは投げた部員の活躍になる
-            if (task.thrower != null && task.thrower.isAlive) RunRoster.Feat(task.thrower);
-        }
-        yield return new WaitForSeconds(0.35f);
+            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("ニコ", niko.team) + (task.thrower != null ? " が" + name + "のタスクを処理" : " が" + name + "の札を引いて使った"));
+        RunRoster.Feat(niko);
+        // いつもありがとうございます: 処理したタスクは投げた部員の活躍になる
+        if (task.thrower != null && task.thrower.isAlive) RunRoster.Feat(task.thrower);
+        return true;
     }
 
     private static string MemberName(PieceType t)

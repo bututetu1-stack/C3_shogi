@@ -150,7 +150,7 @@ public class PieceDetailUI : MonoBehaviour
         string status = AbilitySystem.StatusLine(piece);
         if (status != null)
         {
-            var statusLabel = UIFactory.Label(status, 18, Palette.GoldLight, "c3-bold");
+            var statusLabel = UIFactory.Paragraph(status, 18, Palette.GoldLight, "c3-bold");
             statusLabel.style.marginTop = 6;
             content.Add(statusLabel);
         }
@@ -165,6 +165,21 @@ public class PieceDetailUI : MonoBehaviour
         var descLabel = UIFactory.Paragraph(desc, 18, Palette.Text);
         descLabel.style.marginTop = 14;
         content.Add(descLabel);
+        // 覚醒していても、もとの能力（技や札の一覧など）は読めるように続けて出す
+        if (isCurrentForm && piece.awakened && !string.IsNullOrEmpty(d.awakenedDescription))
+        {
+            string baseDesc = piece.isPromoted ? d.promotedDescription
+                : (piece.IsVeteran && !string.IsNullOrEmpty(d.veteranDescription) ? d.veteranDescription : d.description);
+            if (!string.IsNullOrEmpty(baseDesc))
+            {
+                var baseHead = UIFactory.Label("覚醒する前からの能力", 17, Palette.TextSub, "c3-bold");
+                baseHead.style.marginTop = 12;
+                content.Add(baseHead);
+                var baseLabel = UIFactory.Paragraph(baseDesc, 17, Palette.Text);
+                baseLabel.style.marginTop = 4;
+                content.Add(baseLabel);
+            }
+        }
 
         // 説明と動きの図の間はしっかり空ける
         var sep = UIFactory.Separator();
