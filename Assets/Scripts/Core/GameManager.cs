@@ -24,11 +24,18 @@ public class GameManager : MonoBehaviour
     // 1ステージで引き直せる回数
     private const int RerollsPerStage = 1;
 
+    /// <summary>その局の前に選べる仲間・強化の枚数（BalanceTuning.TwoPickStages の局は2枚）</summary>
+    public static int PicksForStage(int stage)
+    {
+        return Array.IndexOf(BalanceTuning.TwoPickStages, stage) >= 0 ? 2 : 1;
+    }
+
     private BoardManager boardManager;
     private PieceSelectionUI pieceSelectionUI;
     private StageManager stageManager;
     private bool isGameOver;
     private int rerollsLeft;
+    private int picksLeft;
     public bool IsTurnProcessing { get { return isTurnProcessing; } }
     private bool isTurnProcessing;
 
@@ -118,8 +125,24 @@ public class GameManager : MonoBehaviour
         {
             var slot = boardManager.FindPlayerDeploySlot();
             if (slot.HasValue)
-                boardManager.SpawnPiece(data, Team.Player, slot.Value);
+                DeployRecruit(data, slot.Value);
         }
+    }
+
+    /// <summary>仲間の駒を自陣に置く（素の将棋駒は仲間としての上乗せ付き）</summary>
+    private PieceInstance DeployRecruit(PieceData data, Vector2Int slot)
+    {
+        PieceInstance piece = boardManager.Spawn(data, Team.Player, slot);
+        if (piece == null) return null;
+        int hp = PiecePool.RecruitBonusHP(data);
+        int atk = PiecePool.RecruitBonusATK(data);
+        if (hp > 0 || atk > 0)
+        {
+            piece.AddMaxHP(hp);
+            piece.bonusATK += atk;
+            CombatResolver.RefreshStats(piece);
+        }
+        return piece;
     }
 
     // ================================================================
@@ -129,9 +152,12 @@ public class GameManager : MonoBehaviour
     private void ShowPieceSelection(bool newStage)
     {
         SetPhase(GamePhase.PieceSelection);
-        if (newStage) rerollsLeft = RerollsPerStage;
-
         int stage = stageManager != null ? stageManager.currentStage : 1;
+        if (newStage)
+        {
+            rerollsLeft = RerollsPerStage;
+            picksLeft = PicksForStage(stage);
+        }
         bool canDeploy = boardManager.FindPlayerDeploySlot().HasValue;
         List<DraftOption> options = PiecePool.DrawOptions(boardManager.allPieceData, 3, playerOwnedPieces, stage, canDeploy);
 
@@ -141,7 +167,8 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        pieceSelectionUI.ShowSelection(options, OnOptionChosen, OnReroll, rerollsLeft);
+        int pickCount = PicksForStage(stage);
+        pieceSelectionUI.ShowSelection(options, OnOptionChosen, OnReroll, rerollsLeft, pickCount - picksLeft + 1, pickCount);
     }
 
     private void OnReroll()
@@ -154,7 +181,9 @@ public class GameManager : MonoBehaviour
     private void OnOptionChosen(DraftOption option)
     {
         ApplyOption(option);
-        StartBattle();
+        picksLeft--;
+        if (picksLeft > 0 && option != null) ShowPieceSelection(false);
+        else StartBattle();
     }
 
     /// <summary>選んだ仲間を自陣に置く、または全軍強化を加える</summary>
@@ -163,7 +192,7 @@ public class GameManager : MonoBehaviour
         if (option != null && option.piece != null)
         {
             Vector2Int? slot = boardManager.FindPlayerDeploySlot();
-            if (slot.HasValue && boardManager.Spawn(option.piece, Team.Player, slot.Value) != null)
+            if (slot.HasValue && DeployRecruit(option.piece, slot.Value) != null)
                 playerOwnedPieces.Add(option.piece);
         }
         else if (option != null)

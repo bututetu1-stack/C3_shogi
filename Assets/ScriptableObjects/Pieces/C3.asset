@@ -18,7 +18,7 @@ MonoBehaviour:
   description: "\u6211\u3089\u304C\u90E8\u3002\u52D5\u3051\u306A\u3044\u304C\u3001\u305D\u306E\u4EE3\u308F\u308A\u306B\u4F53\u529B\u304C\u9AD8\u304F\u3001\u4ED6\u306E\u30B3\u30DE\u306E\u80FD\u529B\u3092\u7121\u52B9\u5316\u3059\u308B"
   baseATK: 0
   baseDEF: 0
-  baseHP: 10
+  baseHP: 6
   rarity: 0
   moveDirections: []
   canPromote: 0

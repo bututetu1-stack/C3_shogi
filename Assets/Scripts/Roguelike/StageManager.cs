@@ -220,7 +220,7 @@ public class StageManager : MonoBehaviour
                 list.Add(new Placement(PieceType.Tengu, 0, top - 1));
                 list.Add(new Placement(PieceType.Gundaishou, 1, top - 1));
                 list.Add(new Placement(PieceType.Ryuujin, c, top - 1));
-                list.Add(new Placement(PieceType.Raitei, c + 1, top - 1));
+                list.Add(new Placement(PieceType.Kishou, c + 1, top - 1));   // 雷帝は第十・十三・十五局だけにして、第十四局の壁を下げる
                 list.Add(new Placement(PieceType.Gundaishou, size - 2, top - 1));
                 list.Add(new Placement(PieceType.Tengu, size - 1, top - 1));
                 break;
@@ -276,9 +276,9 @@ public class StageManager : MonoBehaviour
 
     private void ApplyStageScaling(BoardManager bm, int stage)
     {
-        int hpBonus = stage / 3;
-        int atkBonus = stage / 5;
-        int c3Bonus = (stage - 1) / 2;   // 後半ほど敵C3も打たれ強くなる
+        int hpBonus = stage / BalanceTuning.EnemyHpDivisor;
+        int atkBonus = stage / BalanceTuning.EnemyAtkDivisor;
+        int c3Bonus = (stage - 1) / BalanceTuning.EnemyC3HpDivisor + BalanceTuning.EnemyC3ExtraHP;   // 後半ほど敵C3も打たれ強くなる
         foreach (var enemy in bm.GetTeamPieces(Team.Enemy))
         {
             if (enemy.data.pieceType == PieceType.C3)
@@ -297,8 +297,8 @@ public class StageManager : MonoBehaviour
     public void ApplyPlayerScaling()
     {
         BoardManager bm = BoardManager.Instance;
-        int hpBonus = (currentStage - 1) / 4;
-        int defBonus = (currentStage - 1) / 5;
+        int hpBonus = (currentStage - 1) / BalanceTuning.PlayerHpDivisor;
+        int defBonus = (currentStage - 1) / BalanceTuning.PlayerDefDivisor;
         foreach (var p in bm.GetTeamPieces(Team.Player))
         {
             // 全員にHP強化（C3含む）

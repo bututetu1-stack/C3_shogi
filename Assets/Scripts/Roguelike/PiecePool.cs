@@ -107,9 +107,24 @@ public static class PiecePool
     }
 
     /// <summary>素の将棋駒（香・桂・銀・金・角・飛）は何枚でも仲間にできる</summary>
-    private static bool IsStandardPiece(PieceData data)
+    public static bool IsStandardPiece(PieceData data)
     {
         return data.pieceType >= PieceType.Lance && data.pieceType <= PieceType.Rook;
+    }
+
+    /// <summary>
+    /// 仲間にした素の将棋駒は最初からいる歩兵より鍛えられている: 体力の上乗せ（BalanceTuning）。
+    /// 敵の同じ駒や、最初からいる歩兵には付かない
+    /// </summary>
+    public static int RecruitBonusHP(PieceData data)
+    {
+        return data != null && IsStandardPiece(data) ? BalanceTuning.RecruitBonusHP : 0;
+    }
+
+    /// <summary>仲間にした飛車・角は攻撃にも上乗せ（BalanceTuning）</summary>
+    public static int RecruitBonusATK(PieceData data)
+    {
+        return data != null && (data.pieceType == PieceType.Bishop || data.pieceType == PieceType.Rook) ? BalanceTuning.RecruitBonusATK : 0;
     }
 
     /// <summary>
