@@ -383,6 +383,7 @@ public class GameManager : MonoBehaviour
     private IEnumerator EndTurnSequence()
     {
         isTurnProcessing = true;
+        ClearBonusMove();
 
         // ターン終了時能力（中華回復消滅・深海攻撃・艦娘攻撃）
         if (AbilitySystem.Instance != null)
@@ -653,12 +654,17 @@ public class GameManager : MonoBehaviour
         GameSim.RecordAwakening(p, MoveCount);
         if (BoardManager.Instance == null) return;
         CombatResolver.RefreshStats(p);
-        if (GameSim.Headless) return;
+        if (GameSim.Headless)
+        {
+            if (AbilitySystem.Instance != null) AbilitySystem.Instance.OnAwakened(p);
+            return;
+        }
 
         PieceController pc = BoardManager.Instance.GetPieceController(p.boardPosition);
         if (pc != null) pc.PlayPromote();
         Color color = p.data.awakenColor;
         if (BattleEffects.Instance != null) BattleEffects.Instance.PlayAwakenEffect(p.boardPosition, color);
+        if (AbilitySystem.Instance != null) AbilitySystem.Instance.OnAwakened(p);
         FloatingText.Spawn(p.boardPosition, "覚醒", color, 4.2f, 0.25f);
         if (BattleLogUI.Instance != null)
             BattleLogUI.Instance.AddLog(BattleLogUI.ColorName(p.data.displayName, p.team) + " が覚醒した！「" + p.data.awakenedName + "」");
@@ -667,6 +673,51 @@ public class GameManager : MonoBehaviour
             Color band = Color.Lerp(color, new Color(0.04f, 0.03f, 0.06f), 0.78f);
             StartCoroutine(CutInUI.PlayPiece(p.data, p.isPromoted, p.data.awakenedName, p.data.awakenCaption, band, color, 1.4f));
         }
+    }
+
+    // 再行動（覚醒したユウ「ゾーン」）: この手番にもう一度動ける駒
+    private PieceInstance pendingBonusMove;
+    private bool bonusMoveUsed;
+    /// <summary>いま再行動している駒（入力はこの駒だけ受け付ける）。手番が終わると null</summary>
+    public PieceInstance ActiveBonusPiece { get; private set; }
+
+    /// <summary>この手番にもう一度動けるようにする（1手番に1回まで）</summary>
+    public void GrantBonusMove(PieceInstance p)
+    {
+        if (p == null || bonusMoveUsed) return;
+        bonusMoveUsed = true;
+        pendingBonusMove = p;
+        if (GameSim.Headless) return;
+        FloatingText.Spawn(p.boardPosition, "ゾーン", p.data.awakenColor, 3.8f, 0.2f);
+        if (BattleEffects.Instance != null) BattleEffects.Instance.PlayZoneEffect(p.boardPosition, p.data.awakenColor);
+        if (BattleLogUI.Instance != null)
+            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName(p.DisplayName, p.team) + " はゾーンに入った（もう一度動ける）");
+    }
+
+    /// <summary>再行動の権利を受け取る（動ける駒なら返し、以後その駒だけ動かせる）</summary>
+    public PieceInstance TakeBonusMove()
+    {
+        PieceInstance p = pendingBonusMove;
+        pendingBonusMove = null;
+        if (p == null || !p.isAlive || MoveValidator.GetValidMoves(p).Count == 0) return null;
+        ActiveBonusPiece = p;
+        return p;
+    }
+
+    private void ClearBonusMove()
+    {
+        pendingBonusMove = null;
+        ActiveBonusPiece = null;
+        bonusMoveUsed = false;
+    }
+
+    /// <summary>SN が退場するとき（先代部長の引退。強さは変えず、演出だけ）</summary>
+    public void PlaySnRetire(PieceInstance sn)
+    {
+        if (GameSim.Headless || sn == null) return;
+        if (BattleEffects.Instance != null) BattleEffects.Instance.PlayHaloEffect(sn.boardPosition);
+        Color gold = Palette.GoldLight;
+        StartCoroutine(CutInUI.PlayPiece(sn.data, false, "先代部長 引退", "C3部の礎を築いた人", Color.Lerp(gold, new Color(0.05f, 0.04f, 0.03f), 0.8f), gold, 1.3f));
     }
 
     public void RegisterKill()

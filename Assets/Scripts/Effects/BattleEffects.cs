@@ -500,6 +500,36 @@ public class BattleEffects : MonoBehaviour
         ShakeCamera(0.25f, 0.1f);
     }
 
+    /// <summary>覚醒した部員の能力の決め所（画像 name があればそれ、なければ色の光と火の粉）</summary>
+    public void PlayAwakenBurst(string name, Vector2Int pos, Color color)
+    {
+        Vector3 p = World(pos);
+        if (!ArtFx(name, p, 0.6f, 1.6f, 0.55f))
+            StartCoroutine(Glow(p, new Color(color.r, color.g, color.b, 0.85f), 0.4f, 1.6f, 0.45f));
+        StartCoroutine(RingWave(p, color, 0.3f, 1.5f, 0.4f));
+        StartCoroutine(Burst(p, 12, color, Color.white, 1.2f, 3f, 0.08f, 0.55f, 1f, SpriteFactory.Pixel));
+    }
+
+    /// <summary>ゾーン（ユウの再行動）: 光の残像線が走る</summary>
+    public void PlayZoneEffect(Vector2Int pos, Color color)
+    {
+        Vector3 p = World(pos);
+        Sprite trail = EffectArt.Get("LightTrail");
+        if (trail != null) StartCoroutine(StretchFx(trail, p + new Vector3(-1.2f, 0f, 0f), p + new Vector3(0.6f, 0f, 0f), 0.5f));
+        StartCoroutine(Glow(p, new Color(color.r, color.g, color.b, 0.9f), 0.4f, 1.8f, 0.5f));
+        StartCoroutine(RingWave(p, Color.white, 0.3f, 1.6f, 0.4f));
+    }
+
+    /// <summary>後光（先代部長の引退・覚醒した僕）</summary>
+    public void PlayHaloEffect(Vector2Int pos)
+    {
+        Vector3 p = World(pos);
+        if (!ArtFx("Halo", p + new Vector3(0f, 0.1f, 0f), 0.8f, 1.9f, 1.2f, 0f))
+            StartCoroutine(Glow(p, new Color(1f, 0.85f, 0.45f, 0.9f), 0.5f, 2.2f, 1.0f));
+        StartCoroutine(RingWave(p, Palette.GoldLight, 0.4f, 2.0f, 0.8f));
+        StartCoroutine(Burst(p, 14, Palette.GoldLight, Color.white, 0.5f, 1.4f, 0.08f, 1.0f, 2f));
+    }
+
     /// <summary>画像がないときの光の柱（縦に伸びて消える）</summary>
     private IEnumerator PillarRoutine(Vector3 pos, Color color)
     {

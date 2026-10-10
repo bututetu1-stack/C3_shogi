@@ -77,6 +77,18 @@ MonoBehaviour:
   - direction: {x: -1, y: -1}
     maxDistance: 1
     canJump: 0
+  canAwaken: 1
+  awakenedName: "\u30BE\u30FC\u30F3"
+  awakenedDescription: "\u899A\u9192\u3057\u305F\u30E6\u30A6\u3002\u52A9\u8D70\u3092\u3064\u3051\u3066\u6575\u3092\u5012\u3059\u3068\u3001\u3082\u3046\u4E00\u5EA6\u52D5\u3051\u308B\uFF081\u624B\u756A\u306B1\u56DE\uFF09\u3002\u9632\u5FA1+1\u3002"
+  awakenCaption: "\u8AB0\u306B\u3082\u8FFD\u3044\u3064\u3051\u306A\u3044"
+  awakenColor: {r: 1, g: 0.65, b: 0.25, a: 1}
+  awakenedATK: 0
+  awakenedDEF: 1
+  awakenedHP: 0
+  awakenedMoveDirections: []
+  veteranName: 
+  veteranDescription: 
+  veteranMoveDirections: []
   hasPromotedRarity: 0
   promotedRarity: 0
   isAutoMove: 0

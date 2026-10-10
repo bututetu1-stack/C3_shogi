@@ -57,7 +57,8 @@ public partial class AbilitySystem : MonoBehaviour
         }
         foreach (var wotsu in wotsuList)
         {
-            int count = wotsu.isPromoted ? BalanceTuning.WotsuPromotedChukaCount : BalanceTuning.WotsuChukaCount;
+            int count = wotsu.awakened ? BalanceTuning.WotsuAwakenedChukaCount
+                : wotsu.isPromoted ? BalanceTuning.WotsuPromotedChukaCount : BalanceTuning.WotsuChukaCount;
             yield return SpawnChuka(wotsu, count);
         }
 
@@ -74,7 +75,7 @@ public partial class AbilitySystem : MonoBehaviour
             if (!monin.isAlive) continue;
 
             // 成り後は50%で絶起（行動スキップ）
-            if (monin.isPromoted && Random.value < 0.5f)
+            if (monin.isPromoted && !monin.awakened && Random.value < 0.5f)
             {
                 if (BattleLogUI.Instance != null)
                     BattleLogUI.Instance.AddLog(BattleLogUI.ColorName(monin.DisplayName, monin.team) + " は絶起した！");
@@ -82,7 +83,7 @@ public partial class AbilitySystem : MonoBehaviour
                 continue;
             }
 
-            yield return ExecuteAutoMove(monin);
+            yield return ExecuteAutoMove(monin, true);
         }
 
         // なこの能力
@@ -196,6 +197,11 @@ public partial class AbilitySystem : MonoBehaviour
         {
             if (!p.stunned) continue;
             p.stunned = false;
+            if (p.frozen)
+            {
+                p.frozen = false;
+                p.bonusDEF += 1;
+            }
             CombatResolver.RefreshStats(p);
         }
 
@@ -461,14 +467,18 @@ public partial class AbilitySystem : MonoBehaviour
     private IEnumerator ExecuteKipuAbility(PieceInstance kipu)
     {
         // もともと動けない駒（深海・中華など）や、もう冷笑された駒は相手にしない
-        var targets = AdjacentEnemies(kipu);
+        // 覚醒（絶対零度）は2マス先まで3体（成ったへるは周りすべて）
+        var targets = kipu.awakened
+            ? GetEnemiesInRange(kipu.boardPosition, BalanceTuning.KipuAwakenedRange, kipu.team == Team.Player ? Team.Enemy : Team.Player, null)
+            : AdjacentEnemies(kipu);
         targets.RemoveAll(target => target.stunned || !CanEverMove(target));
         if (targets.Count == 0) yield break;
-        if (!kipu.isPromoted)
+        int maxTargets = kipu.isPromoted && !kipu.awakened ? int.MaxValue
+            : kipu.awakened ? Mathf.Max(BalanceTuning.KipuAwakenedTargets, kipu.isPromoted ? targets.Count : 0) : BalanceTuning.KipuSneerTargets;
+        if (targets.Count > maxTargets)
         {
             ShuffleList(targets);
-            if (targets.Count > BalanceTuning.KipuSneerTargets)
-                targets.RemoveRange(BalanceTuning.KipuSneerTargets, targets.Count - BalanceTuning.KipuSneerTargets);
+            targets.RemoveRange(maxTargets, targets.Count - maxTargets);
         }
 
         SpeechBubble.Say(kipu, PieceLines.KipuLaugh);
@@ -476,6 +486,13 @@ public partial class AbilitySystem : MonoBehaviour
         foreach (var target in targets)
         {
             target.stunned = true;
+            if (kipu.awakened && !target.frozen)
+            {
+                // 絶対零度: 凍って防御−1（冷笑が解けると元に戻る）
+                target.frozen = true;
+                target.bonusDEF -= 1;
+                if (BattleEffects.Instance != null) BattleEffects.Instance.PlayAwakenBurst("FrostBurst", target.boardPosition, kipu.data.awakenColor);
+            }
             if (BattleEffects.Instance != null) BattleEffects.Instance.PlayStream(kipu.boardPosition, target.boardPosition, SneerBlue);
             CombatResolver.RefreshStats(target);
             FloatingText.Spawn(target.boardPosition, "冷笑", SneerBlue);
@@ -500,7 +517,7 @@ public partial class AbilitySystem : MonoBehaviour
         if (rihaku == null || !rihaku.isAlive || rihaku.data.pieceType != PieceType.Rihaku) return;
 
         int radius = rihaku.isPromoted ? 2 : 1;
-        int flipCount = rihaku.isPromoted ? 3 : 1;
+        int flipCount = (rihaku.isPromoted ? 3 : 1) + (rihaku.awakened ? 1 : 0);
 
         BoardManager bm = BoardManager.Instance;
         Vector2Int center = rihaku.boardPosition;
@@ -517,7 +534,8 @@ public partial class AbilitySystem : MonoBehaviour
                 PieceInstance target = bm.GetPieceAt(pos);
                 if (target != null && target != rihaku
                     && target.data.pieceType != PieceType.C3
-                    && !target.data.immuneToFlip)
+                    && !target.data.immuneToFlip
+                    && (!rihaku.awakened || WorthFlipping(rihaku, target)))
                     candidates.Add(target);
             }
         }
@@ -548,7 +566,17 @@ public partial class AbilitySystem : MonoBehaviour
                 GameManager.Instance.PromotePiece(target);
             }
             FloatingText.Spawn(target.boardPosition, "？", new Color(0.8f, 0.6f, 1f), 3.4f, 0.2f);
+            // 詩仙: 裏返すたびに酔いが回って攻撃+1（上限あり）
+            if (rihaku.awakened && rihaku.poetStacks < BalanceTuning.RihakuPoetMax)
+            {
+                rihaku.poetStacks++;
+                rihaku.bonusATK += 1;
+                CombatResolver.RefreshStats(rihaku);
+                FloatingText.Spawn(rihaku.boardPosition, "攻+1", Palette.ATK, 2.8f, 0.35f);
+            }
         }
+        if (flipped > 0 && rihaku.awakened && BattleEffects.Instance != null)
+            BattleEffects.Instance.PlayAwakenBurst("BrushSwirl", center, rihaku.data.awakenColor);
 
         if (flipped > 0)
         {
@@ -560,6 +588,25 @@ public partial class AbilitySystem : MonoBehaviour
             SpeechBubble.Say(rihaku, PieceLines.RihakuFlip);
             RunRoster.Feat(rihaku);
         }
+    }
+
+    /// <summary>詩仙: 裏返して得になる駒か（味方は成ると得をする駒だけ、敵は成っている駒だけ）</summary>
+    public static bool WorthFlipping(PieceInstance rihaku, PieceInstance target)
+    {
+        if (target.team == rihaku.team)
+            return !target.isPromoted && target.data.canPromote && !target.data.diesOnPromotion && target.data.pieceType != PieceType.Monotetsu;
+        return target.isPromoted;
+    }
+
+    /// <summary>覚醒した瞬間の能力（ヲツの満漢全席: 味方全員を1回復）</summary>
+    public void OnAwakened(PieceInstance p)
+    {
+        if (p == null || p.data.pieceType != PieceType.Wotsu) return;
+        if (BattleEffects.Instance != null) BattleEffects.Instance.PlayAwakenBurst("FeastFlame", p.boardPosition, p.data.awakenColor);
+        foreach (var ally in BoardManager.Instance.GetTeamPieces(p.team))
+            if (ally.isAlive && ally != p && ally.data.pieceType != PieceType.Chuka) CombatResolver.Heal(ally, 1);
+        if (BattleLogUI.Instance != null)
+            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("ヲツ", p.team) + " の満漢全席！味方全員が1回復");
     }
 
     // ============================================================
@@ -587,8 +634,9 @@ public partial class AbilitySystem : MonoBehaviour
     {
         BoardManager bm = BoardManager.Instance;
 
-        // 能力中に成った場合も2回目が発動するよう、毎回回数を評価する
-        for (int run = 0; run < (nako.isPromoted ? 2 : 1); run++)
+        // 能力中に成った場合も2回目が発動するよう、毎回回数を評価する。覚醒（ドパ・オーバードライブ）は倒すたびにもう一度
+        int chain = 0;
+        for (int run = 0; run < (nako.isPromoted ? 2 : 1) + chain; run++)
         {
             if (!nako.isAlive) yield break;
 
@@ -662,6 +710,7 @@ public partial class AbilitySystem : MonoBehaviour
             // パス上の敵駒に2ダメージ（スライド到着後。攻撃の上乗せぶん増える）。C3は能力の影響を受けない
             int dash = CombatResolver.AbilityDamage(nako, 2);
             bool hitAny = false;
+            bool killedAny = false;
             foreach (var pos in path)
             {
                 PieceInstance target = bm.GetPieceAt(pos);
@@ -671,12 +720,18 @@ public partial class AbilitySystem : MonoBehaviour
                     hitAny = true;
                     if (BattleLogUI.Instance != null)
                         BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("なこ", nako.team) + "の突撃！" + BattleLogUI.ColorName(target.DisplayName, target.team) + " に" + dash + "ダメージ");
-                    CombatResolver.ApplyDamage(target, dash, false);
+                    if (CombatResolver.ApplyDamage(target, dash, false)) killedAny = true;
                     yield return new WaitForSeconds(0.15f);
                 }
             }
 
             if (hitAny) RunRoster.Feat(nako);
+            if (nako.awakened && killedAny && chain < BalanceTuning.NakoChainMax && nako.isAlive)
+            {
+                chain++;
+                FloatingText.Spawn(nako.boardPosition, "連鎖", nako.data.awakenColor, 3.4f);
+                if (BattleEffects.Instance != null) BattleEffects.Instance.PlayAwakenBurst("DopaBurst", nako.boardPosition, nako.data.awakenColor);
+            }
 
             // 成りチェック
             yield return GameManager.Instance.CheckPromotionRoutine(nako);
@@ -914,8 +969,9 @@ public partial class AbilitySystem : MonoBehaviour
                 PieceInstance target = bm.GetPieceAt(pos);
                 if (target == null || target.team != chuka.team || target == chuka) continue;
                 if (CombatResolver.Heal(target, amount) > 0) helped = true;
+                int fullMax = chuka.summoner != null && chuka.summoner.awakened ? BalanceTuning.WotsuAwakenedFullMax : BalanceTuning.ChukaFullMax;
                 if (feed && target.data.pieceType != PieceType.C3 && target.data.pieceType != PieceType.Chuka
-                    && target.fullCount < BalanceTuning.ChukaFullMax)
+                    && target.fullCount < fullMax)
                 {
                     target.fullCount++;
                     target.bonusATK += 1;
@@ -958,7 +1014,7 @@ public partial class AbilitySystem : MonoBehaviour
     // ============================================================
     // 自動移動（門人）
     // ============================================================
-    private IEnumerator ExecuteAutoMove(PieceInstance piece)
+    private IEnumerator ExecuteAutoMove(PieceInstance piece, bool allowRepeat = true)
     {
         List<MoveValidator.MoveResult> moves = MoveValidator.GetValidMoves(piece);
         if (moves.Count == 0) yield break;
@@ -1010,8 +1066,17 @@ public partial class AbilitySystem : MonoBehaviour
         }
 
         if (chosen.isAttack) RunRoster.Feat(piece);
+        PieceInstance victim = chosen.isAttack ? BoardManager.Instance.GetPieceAt(chosen.position) : null;
         yield return CombatResolver.ExecuteMove(piece, chosen);
         yield return new WaitForSeconds(0.3f);
+
+        // 覚醒（免許皆伝）: 倒したら、もう1回だけ動く
+        if (allowRepeat && piece.awakened && piece.isAlive && victim != null && !victim.isAlive)
+        {
+            if (BattleEffects.Instance != null) BattleEffects.Instance.PlayAwakenBurst("InkImpact", piece.boardPosition, piece.data.awakenColor);
+            FloatingText.Spawn(piece.boardPosition, "免許皆伝", piece.data.awakenColor, 3.4f);
+            yield return ExecuteAutoMove(piece, false);
+        }
     }
 
     // ============================================================

@@ -163,6 +163,10 @@ public static class BalanceSimulator
                     if (team == Team.Enemy) { run.enemyMoves++; if (deep) run.enemyDeepMoves++; }
                     else { run.playerMoves++; if (deep) run.playerDeepMoves++; }
                     GameSim.RunSync(CombatResolver.ExecuteMove(piece, move));
+                    // 再行動（ゾーン）
+                    PieceInstance again = gm.TakeBonusMove();
+                    if (again != null && ai.TryChooseMove(team, thinkMs, out piece, out move, again))
+                        GameSim.RunSync(CombatResolver.ExecuteMove(piece, move));
                 }
                 GameSim.RunSync(gm.SimEndTurn());
             }
