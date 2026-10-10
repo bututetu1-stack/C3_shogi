@@ -174,6 +174,9 @@ public static class PiecePool
             }
         }
 
+        // 新しい部員が足りなくなってきたら、鍛える札を1枚は必ず出す
+        if (trainSlots == 0 && trainable.Count > 0 && stage >= BalanceTuning.TrainFromStage && available.Count < count - upgradeSlots)
+            trainSlots = 1;
         int pieceSlots = Mathf.Min(count - upgradeSlots - trainSlots, available.Count);
         for (int i = 0; i < pieceSlots; i++)
         {
@@ -191,9 +194,9 @@ public static class PiecePool
             available.Remove(selected);
         }
 
-        // 新しい部員が足りないぶんは、まず鍛える札で埋める（部員がそろってきた後半でも選ぶ意味が残る）
-        int trainWanted = trainSlots + Mathf.Max(0, count - upgradeSlots - trainSlots - pieceSlots);
-        while (result.Count < count - upgradeSlots && trainWanted > 0 && trainable.Count > 0)
+        // 鍛える札（残りの足りないぶんは、これまでどおり全軍強化で埋める）
+        int trainWanted = trainSlots;
+        while (trainWanted > 0 && trainable.Count > 0)
         {
             PieceData member = PickTrainTarget(trainable);
             result.Add(DraftOption.Train(member));

@@ -66,15 +66,15 @@ public static class BalanceTuning
     public static int XpPerStageSurvived = 1;
     /// <summary>能力が決まったとき（活躍）の練度と、1局でたまる上限</summary>
     public static int XpPerFeat = 1;
-    public static int FeatXpMaxPerStage = 2;
+    public static int FeatXpMaxPerStage = 1;
     /// <summary>鍛える札の練度、出てくる局、1枠混ざる確率</summary>
     public static int TrainXp = 3;
     public static int TrainFromStage = 3;
     public static float TrainSlotChance = 0.5f;
     /// <summary>★1・★2・★3 に必要な練度（ブロンズは早く、激レアは遅く育つ）</summary>
-    public static int[] StarXpBronze = { 3, 6, 10 };
-    public static int[] StarXpRare = { 4, 8, 13 };
-    public static int[] StarXpSuperRare = { 5, 10, 16 };
+    public static int[] StarXpBronze = { 3, 7, 12 };
+    public static int[] StarXpRare = { 4, 9, 15 };
+    public static int[] StarXpSuperRare = { 5, 11, 18 };
     /// <summary>★の効果: ★1で攻撃、★2で体力、★3で防御</summary>
     public static int StarATK = 1;
     public static int StarHP = 2;
