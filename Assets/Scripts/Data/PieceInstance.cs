@@ -31,7 +31,7 @@ public class PieceInstance
     public bool isSealed;             // けいの「デバッグ完了」で能力を封じられた（その局のあいだ）
     public int bokuStacks;          // 僕に強化された量（覚醒した僕の強化の上限）
     public bool substituteUsed;     // 覚醒した僕が身代わりを使った（1局に1回）
-    public bool frozen;             // 覚醒したきぷに凍らされた（冷笑のあいだ防御−1）
+    public bool frozen;             // 覚醒したきぷに凍らされた（凍らせた側の次の手番が終わるまで防御−1）
     public int poetStacks;          // 覚醒した李白が裏返して得た攻撃の上乗せ
 
     public int ATK { get { return (isPromoted ? data.promotedATK : data.baseATK) + bonusATK; } }

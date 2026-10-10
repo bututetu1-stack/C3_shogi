@@ -200,11 +200,14 @@ public partial class AbilitySystem : MonoBehaviour
         {
             if (!p.stunned) continue;
             p.stunned = false;
-            if (p.frozen)
-            {
-                p.frozen = false;
-                p.bonusDEF += 1;
-            }
+            CombatResolver.RefreshStats(p);
+        }
+        // 絶対零度で凍らせた相手は、こちらの次の手番が終わるまで防御−1（相手の手番のうちに解けると、攻める側の得にならない）
+        foreach (var p in bm.GetTeamPieces(team == Team.Player ? Team.Enemy : Team.Player))
+        {
+            if (!p.frozen) continue;
+            p.frozen = false;
+            p.bonusDEF += 1;
             CombatResolver.RefreshStats(p);
         }
 
