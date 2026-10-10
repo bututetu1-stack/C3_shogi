@@ -22,6 +22,8 @@ public partial class AbilitySystem
     }
 
     private readonly Dictionary<int, Fleet> fleets = new Dictionary<int, Fleet>();
+    // 作戦完了して帰投した艦隊の支援射撃（その局のあいだ、自軍の手番の終わりごとの回数）
+    private int supportShots;
 
     private static readonly PieceType[] ShipClasses =
     {
@@ -32,6 +34,7 @@ public partial class AbilitySystem
     private void ResetFleets()
     {
         fleets.Clear();
+        supportShots = 0;
         if (BattleEffects.Instance != null) BattleEffects.Instance.SetNight(false);
     }
 
@@ -242,6 +245,7 @@ public partial class AbilitySystem
                 BattleEffects.Instance.PlayRetreatHorn();
                 BattleEffects.Instance.SetNight(false);
             }
+            if (sRank || !BalanceTuning.FleetSupportNeedsS) supportShots += BalanceTuning.FleetSupportShots;
             if (BalanceTuning.FleetStaysAfterVictory)
             {
                 // 艦隊はそのまま盤に残って戦い続ける（つながりは残るので、提督が沈めば艦娘も沈む）
@@ -250,8 +254,11 @@ public partial class AbilitySystem
                 return;
             }
             StartCoroutine(CutInUI.Play("作戦完了", sRank ? "S勝利！ 艦隊、帰投せよ" : "A勝利 艦隊、帰投せよ", null, CutInUI.Navy, 1.3f));
-            CombatResolver.RemoveWithExit(teitoku, PieceController.ExitStyle.Retreat);
+            if (BalanceTuning.FleetVeteranReturn) ReturnAsVeteran(teitoku);
+            else CombatResolver.RemoveWithExit(teitoku, PieceController.ExitStyle.Retreat);
             foreach (var ship in ships) CombatResolver.RemoveWithExit(ship, PieceController.ExitStyle.Retreat);
+            if (supportShots > 0 && BattleLogUI.Instance != null)
+                BattleLogUI.Instance.AddLog("帰投した艦隊が支援艦隊として援護につく");
             fleets.Remove(groupId);
             return;
         }
@@ -265,6 +272,49 @@ public partial class AbilitySystem
             if (BattleEffects.Instance != null) BattleEffects.Instance.SetNight(false);
             fleets.Remove(groupId);
         }
+    }
+
+    /// <summary>生還と再配置: 提督は物鉄に戻り、歴戦の物鉄として自陣に残る（この局ではもう着任しない）</summary>
+    private void ReturnAsVeteran(PieceInstance teitoku)
+    {
+        teitoku.Demote();
+        teitoku.linkedGroupId = -1;
+        teitoku.promotionSpent = true;
+        teitoku.bonusATK += 1;
+        teitoku.AddMaxHP(1);
+        CombatResolver.PlayFlip(teitoku);
+        CombatResolver.RefreshStats(teitoku);
+        FloatingText.Spawn(teitoku.boardPosition, "生還", Palette.GoldLight, 3.6f, 0.3f);
+        if (BattleLogUI.Instance != null)
+            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("提督", Team.Player) + "は生還し、" + BattleLogUI.ColorName("物鉄", Team.Player) + "として前線に戻った（攻撃+1・体力+1）");
+    }
+
+    /// <summary>支援艦隊: 帰投した艦隊が、自軍の手番の終わりにランダムな敵（C3以外）へ支援射撃をする</summary>
+    private IEnumerator SupportFleetFire()
+    {
+        if (supportShots <= 0) yield break;
+        BoardManager bm = BoardManager.Instance;
+        BattleEffects fx = BattleEffects.Instance;
+        int stage = StageManager.Instance != null ? StageManager.Instance.currentStage : 1;
+        // 盤の手前（自陣の外）から撃つ
+        Vector2Int origin = new Vector2Int(bm.CurrentBoardSize / 2, -1);
+        var source = GameSim.BeginSource(null);
+        for (int i = 0; i < supportShots; i++)
+        {
+            var targets = new List<PieceInstance>();
+            foreach (var p in bm.GetTeamPieces(Team.Enemy))
+                if (p.isAlive && p.data.pieceType != PieceType.C3) targets.Add(p);
+            if (targets.Count == 0) break;
+            PieceInstance target = targets[Random.Range(0, targets.Count)];
+            if (fx != null) fx.PlayBombardmentEffect(origin, target.boardPosition);
+            yield return new WaitForSeconds(BattleEffects.BombardmentImpactTime);
+            if (!target.isAlive) continue;
+            int damage = BalanceTuning.FleetSupportDamage + StageManager.EnemyStageAtk(stage);
+            if (BattleLogUI.Instance != null)
+                BattleLogUI.Instance.AddLog("支援艦隊の支援射撃！" + BattleLogUI.ColorName(target.DisplayName, target.team) + " に" + damage + "ダメージ");
+            CombatResolver.ApplyDamage(target, damage, true);
+        }
+        GameSim.EndSource(source);
     }
 
     // ============================================================
@@ -387,6 +437,12 @@ public partial class AbilitySystem
     private static void FleetHit(PieceInstance ship, PieceInstance target, int damage)
     {
         if (target == null || !target.isAlive) return;
+        // 随伴艦の壁: 随伴が残っているあいだ、旗艦へのダメージは半分（切り上げ）
+        if (BalanceTuning.FlagshipGuard && target.isFlagship && AliveShinkai().Exists(s => !s.isFlagship))
+        {
+            damage = (damage + 1) / 2;
+            FloatingText.Spawn(target.boardPosition, "かばう", new Color(0.6f, 0.85f, 1f), 2.8f, 0.15f);
+        }
         if (PieceTypes.IsShinkai(target.data.pieceType)) ship.fleetDamage += Mathf.Min(damage, target.currentHP);
         CombatResolver.ApplyDamage(target, damage, true);
     }

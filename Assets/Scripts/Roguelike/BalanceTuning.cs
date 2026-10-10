@@ -65,4 +65,14 @@ public static class BalanceTuning
     public static bool FleetStaysAfterVictory = false;
     /// <summary>艦娘は随伴の深海を先に狙い、旗艦は最後に狙う（作戦が長く続く）</summary>
     public static bool FleetEscortsFirst = false;
+    /// <summary>随伴艦の壁: 随伴が残っているあいだ、旗艦が艦隊から受けるダメージを半分にする</summary>
+    public static bool FlagshipGuard = false;
+    /// <summary>生還と再配置: 作戦完了で提督は物鉄に戻って盤に残る（攻撃+1・体力+1、その局ではもう着任しない）</summary>
+    public static bool FleetVeteranReturn = false;
+    /// <summary>支援艦隊: 作戦完了のあと、その局のあいだ自軍の手番の終わりに支援射撃をする回数（0なら無し）</summary>
+    public static int FleetSupportShots = 0;
+    /// <summary>支援射撃1回のダメージ（防御を無視）</summary>
+    public static int FleetSupportDamage = 1;
+    /// <summary>支援艦隊はS勝利（艦娘が1隻も沈まなかった）ときだけ付く</summary>
+    public static bool FleetSupportNeedsS = false;
 }

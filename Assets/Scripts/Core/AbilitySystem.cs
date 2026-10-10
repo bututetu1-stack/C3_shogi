@@ -285,6 +285,7 @@ public partial class AbilitySystem : MonoBehaviour
         if (team == Team.Player)
         {
             yield return ExecuteKanmusuAbilities();
+            yield return SupportFleetFire();
         }
 
         // けい・異端のバグ修正、きぷ・へるの冷笑

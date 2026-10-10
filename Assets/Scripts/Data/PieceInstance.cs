@@ -23,6 +23,7 @@ public class PieceInstance
     public bool kai2;               // 艦娘の改二（改のまま敵陣を出た）
     public int fleetDamage;         // 艦娘が深海に与えたダメージ（MVP の判定）
     public bool damageAnnounced;    // 艦娘の中破を知らせた
+    public bool promotionSpent;     // この局ではもう成らない（作戦完了で生還した物鉄）
 
     public int ATK { get { return (isPromoted ? data.promotedATK : data.baseATK) + bonusATK; } }
     public int DEF { get { return (isPromoted ? data.promotedDEF : data.baseDEF) + bonusDEF; } }
@@ -139,7 +140,7 @@ public class PieceInstance
 
     public bool CanPromoteAt(int boardRow, int boardSize)
     {
-        if (!data.canPromote || isPromoted) return false;
+        if (!data.canPromote || isPromoted || promotionSpent) return false;
         int promoteRows = BoardCell.GetPromoteRows(boardSize);
         if (team == Team.Player)
             return boardRow >= boardSize - promoteRows;
