@@ -93,6 +93,8 @@ public static class BalanceTuning
     public static int KeiAwakenedRange = 2;
     /// <summary>覚醒したなこ: 突撃で倒したときの追加の突撃の回数</summary>
     public static int NakoChainMax = 2;
+    /// <summary>覚醒したなこ: ドパを、通り道に敵がいちばん多く並ぶ向きに出す（false なら覚醒前と同じくでたらめな向き）</summary>
+    public static bool NakoAwakenedAim = true;
     /// <summary>覚醒したヲツが作る中華の数と、その中華の満腹の上限（1体あたり）</summary>
     public static int WotsuAwakenedChukaCount = 4;
     public static int WotsuAwakenedFullMax = 2;
@@ -109,6 +111,8 @@ public static class BalanceTuning
     public static int MaouAwakenedStrikes = 2;
     /// <summary>AI が能力を意識する（支援役を狙う・僕や中華のそばに寄る・けい／きぷ／小錦の隣を避ける）</summary>
     public static bool AiAbilityAware = true;
+    /// <summary>AI が覚醒した駒に上乗せする値打ち（守る・狙う重み）</summary>
+    public static int AiAwakenedValue = 60;
     /// <summary>覚醒した僕が1体を強化できる量の上限</summary>
     public static int BokuAwakenedCap = 1;
 

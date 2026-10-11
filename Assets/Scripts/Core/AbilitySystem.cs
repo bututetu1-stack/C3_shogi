@@ -722,7 +722,7 @@ public partial class AbilitySystem : MonoBehaviour
 
             if (candidates.Count == 0) yield break;
 
-            Vector2Int dopaPos = candidates[Random.Range(0, candidates.Count)];
+            Vector2Int dopaPos = nako.awakened && BalanceTuning.NakoAwakenedAim ? AimDopa(nako, candidates) : candidates[Random.Range(0, candidates.Count)];
 
             // ドパ生成（敵チームとして出現）
             PieceData dopaData = bm.GetPieceDataByType(PieceType.Dopa);
@@ -803,6 +803,27 @@ public partial class AbilitySystem : MonoBehaviour
 
             yield return new WaitForSeconds(0.3f);
         }
+    }
+
+    /// <summary>覚醒したなこ（ドパ・オーバードライブ）: 通り道に敵（C3 を除く）がいちばん多く並ぶマスにドパを出す。誰もいなければでたらめ</summary>
+    private Vector2Int AimDopa(PieceInstance nako, List<Vector2Int> candidates)
+    {
+        BoardManager bm = BoardManager.Instance;
+        var best = new List<Vector2Int>();
+        int bestHits = 0;
+        foreach (var c in candidates)
+        {
+            int hits = 0;
+            foreach (var pos in GetBresenhamLine(nako.boardPosition, c))
+            {
+                PieceInstance t = bm.GetPieceAt(pos);
+                if (t != null && t.isAlive && t.team != nako.team && t.data.pieceType != PieceType.C3) hits++;
+            }
+            if (hits < bestHits) continue;
+            if (hits > bestHits) { bestHits = hits; best.Clear(); }
+            best.Add(c);
+        }
+        return bestHits > 0 ? best[Random.Range(0, best.Count)] : candidates[Random.Range(0, candidates.Count)];
     }
 
     // ============================================================
