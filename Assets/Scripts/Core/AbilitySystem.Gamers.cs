@@ -35,8 +35,13 @@ public partial class AbilitySystem
                 return s;
             }
             default:
-                if (p.staggered) return "スタッガー（次に受けるダメージ+" + BalanceTuning.MutouStaggerDamage + "）";
-                return p.block > 0 ? "ブロック " + p.block : null;
+            {
+                var parts = new List<string>();
+                if (p.posture > 0) parts.Add("体幹 " + p.posture + "/" + PostureMax(p));
+                if (p.staggered) parts.Add("スタッガー（次に受けるダメージ+" + BalanceTuning.MutouStaggerDamage + "）");
+                if (p.block > 0) parts.Add("ブロック " + p.block);
+                return parts.Count > 0 ? string.Join("　", parts) : null;
+            }
         }
     }
 
@@ -149,24 +154,72 @@ public partial class AbilitySystem
         RunRoster.Feat(target);
     }
 
-    /// <summary>SEKIRO の弾き: 成った（覚醒した）RN が、通常の攻撃をブロックで全部防いだら、相手に返す（防御無視）</summary>
-    public void OnParry(PieceInstance rn, PieceInstance attacker)
+    /// <summary>体幹の上限（敵の最大体力。強い敵ほど崩しにくいが、攻撃も強いので防いだ量も多い）</summary>
+    public static int PostureMax(PieceInstance p) { return Mathf.Max(1, p.MaxHP); }
+
+    private static bool IsBoss(PieceInstance p)
+    {
+        PieceType t = p.data.pieceType;
+        return t == PieceType.Raitei || t == PieceType.Ryuujin || t == PieceType.Maou;
+    }
+
+    /// <summary>
+    /// SEKIRO（成った・覚醒した RN）: 敵の通常の攻撃をブロックで防ぐと、その敵の体幹が防いだ量だけたまる（全部防いだ「弾き」はさらに+1）。
+    /// 体幹が最大体力に届くと体幹崩しで忍殺（ふつうの敵は倒れ、ボスは最大体力の1/3を失って次の手番は動けない）
+    /// </summary>
+    public void OnPostureHit(PieceInstance rn, PieceInstance attacker, int blocked, bool parried)
     {
         if (rn == null || attacker == null || rn.data.pieceType != PieceType.RN || !RnMultiPlay(rn) || !rn.isAlive || !attacker.isAlive) return;
-        int damage = CombatResolver.AbilityDamage(rn, BalanceTuning.RnParryDamage);
-        FloatingText.Spawn(rn.boardPosition, "弾き", Color.white, 3.4f);
-        if (BattleEffects.Instance != null)
+        if (attacker.team == rn.team || attacker.data.pieceType == PieceType.C3) return;
+        int gain = blocked + (parried ? BalanceTuning.RnPostureParryBonus : 0);
+        attacker.posture += gain;
+        int max = PostureMax(attacker);
+        if (parried)
         {
-            BattleEffects.Instance.PlayStream(rn.boardPosition, attacker.boardPosition, Color.white);
-            if (rn.awakened) BattleEffects.Instance.PlayAwakenBurst("Ascension", rn.boardPosition, rn.data.awakenColor);
+            FloatingText.Spawn(rn.boardPosition, "弾き", Color.white, 3.4f);
+            if (BattleEffects.Instance != null)
+            {
+                BattleEffects.Instance.PlayStream(rn.boardPosition, attacker.boardPosition, Color.white);
+                if (rn.awakened) BattleEffects.Instance.PlayAwakenBurst("Ascension", rn.boardPosition, rn.data.awakenColor);
+            }
         }
-        if (BattleLogUI.Instance != null)
-            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("RN", rn.team) + " が " + BattleLogUI.ColorName(attacker.DisplayName, attacker.team) + " の攻撃を弾いた（" + damage + "ダメージ）");
+        FloatingText.Spawn(attacker.boardPosition, "体幹 " + Mathf.Min(attacker.posture, max) + "/" + max, PostureGold, 3f, 0.25f);
+        CombatResolver.RefreshStats(attacker);
         RunRoster.Feat(rn);
-        var source = GameSim.BeginSource(rn);
-        CombatResolver.ApplyDamage(attacker, damage, true);
-        GameSim.EndSource(source);
+        if (attacker.posture < max)
+        {
+            if (BattleLogUI.Instance != null)
+                BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("RN", rn.team) + " が " + BattleLogUI.ColorName(attacker.DisplayName, attacker.team)
+                    + " の攻撃を" + (parried ? "弾いた" : "受け止めた") + "（体幹 " + attacker.posture + "/" + max + "）");
+            return;
+        }
+        Deathblow(rn, attacker);
     }
+
+    /// <summary>体幹崩し → 忍殺</summary>
+    private void Deathblow(PieceInstance rn, PieceInstance target)
+    {
+        bool boss = IsBoss(target);
+        int damage = boss ? Mathf.CeilToInt(target.MaxHP / (float)Mathf.Max(1, BalanceTuning.RnDeathblowBossRatio)) : target.currentHP;
+        target.posture = 0;
+        FloatingText.Spawn(target.boardPosition, "忍殺", DeathblowRed, 4.6f);
+        if (BattleEffects.Instance != null) BattleEffects.Instance.PlayDeathblow(rn.boardPosition, target.boardPosition);
+        if (BattleLogUI.Instance != null)
+            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("RN", rn.team) + " が " + BattleLogUI.ColorName(target.DisplayName, target.team)
+                + " の体幹を崩した。忍殺！" + (boss ? "（" + damage + "ダメージ、次の手番は動けない）" : ""));
+        var source = GameSim.BeginSource(rn);
+        bool killed = CombatResolver.ApplyDamage(target, damage, true);
+        GameSim.EndSource(source);
+        if (!killed && boss && target.isAlive)
+        {
+            target.stunned = true;
+            target.stunHeld = true;
+            CombatResolver.RefreshStats(target);
+        }
+    }
+
+    private static readonly Color PostureGold = new Color(1f, 0.82f, 0.3f);
+    private static readonly Color DeathblowRed = new Color(1f, 0.22f, 0.18f);
 
     // ============================================================
     // 通常の攻撃が当たって相手が生き残ったとき: 外跳の跳ね飛ばし、無糖（AC）のスタッガー

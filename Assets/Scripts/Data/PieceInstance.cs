@@ -31,6 +31,8 @@ public class PieceInstance
     public bool isSealed;             // けいの「デバッグ完了」で能力を封じられた（その局のあいだ）
     public int bokuStacks;          // 僕に強化された量（覚醒した僕の強化の上限）
     public bool substituteUsed;     // 覚醒した僕が身代わりを使った（1局に1回）
+    public int posture;             // 体幹（成った・覚醒した RN に防がれるとたまる。最大体力に届くと忍殺）
+    public bool stunHeld;           // 相手の手番のうちに動けなくなった（その手番の終わりには解かず、次の手番を動けずに過ごす）
     public bool frozen;             // 覚醒したきぷに凍らされた（凍らせた側の次の手番が終わるまで防御−1）
     public int poetStacks;          // 覚醒した李白が裏返して得た攻撃の上乗せ
     public int block;               // RN のブロック（受けるダメージをこの分防ぐ。自分の陣営の手番の初めに消える）
