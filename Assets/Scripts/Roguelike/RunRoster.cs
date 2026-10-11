@@ -126,6 +126,44 @@ public class RunRoster
         }
     }
 
+    /// <summary>その部員の「能力が決まる（活躍）」になること。敵を倒すのはどの部員も活躍（null なら能力の活躍はない）</summary>
+    public static string FeatText(PieceType type)
+    {
+        switch (type)
+        {
+            case PieceType.Monin: return "自動で動いて敵を攻撃したとき";
+            case PieceType.Boku: return "そばの味方を強化したとき";
+            case PieceType.Wotsu: return "作った中華が味方の回復・満腹の役に立ったとき";
+            case PieceType.Nako: return "突撃で敵に当てたとき";
+            case PieceType.Rihaku: return "駒を裏返したとき";
+            case PieceType.Konishiki: return "攻撃を受け止めたとき、敵を組み止めて手番を終えたとき";
+            case PieceType.Kei: return "周りの敵の数値を下げたとき";
+            case PieceType.Kipu: return "敵を冷笑したとき";
+            case PieceType.Yuu: return "助走をつけて攻撃したとき";
+            case PieceType.Monotetsu: return "提督として作戦を完了したとき";
+            case PieceType.Mitsuharu: return "裏金がたまったとき、お土産を渡したとき";
+            case PieceType.Niko: return "タスクを処理したとき（タスクを投げた部員の活躍にもなる）";
+            case PieceType.Shimesaba: return "レスバで言い返したとき、世界が終わったとき";
+            case PieceType.Kawasemi: return "パーツを拾ったとき、最強PCを動かしたとき";
+            default: return null;
+        }
+    }
+
+    /// <summary>練度のたまり方（遊び方・駒の情報で使う）</summary>
+    public static string XpSourcesText()
+    {
+        return "敵を倒す +" + BalanceTuning.XpPerKill
+            + "／局に勝ったとき盤に残っている +" + BalanceTuning.XpPerStageSurvived
+            + "／活躍（能力が決まる）+" + BalanceTuning.XpPerFeat + "（1局に" + BalanceTuning.FeatXpMaxPerStage + "回まで）"
+            + "／鍛える札 +" + BalanceTuning.TrainXp;
+    }
+
+    /// <summary>★に必要な練度の一覧（"3・7・12"）</summary>
+    public static string ThresholdText(Rarity rarity)
+    {
+        return string.Join("・", System.Array.ConvertAll(Thresholds(rarity), x => x.ToString()));
+    }
+
     /// <summary>★の効果の説明（★1〜★3）</summary>
     public static string StarEffectText(int star)
     {
