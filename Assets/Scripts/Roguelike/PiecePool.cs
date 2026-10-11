@@ -9,7 +9,8 @@ public enum UpgradeKind
     AllDEF,   // C3以外の全員の防御+1
     AllHP,    // C3以外の全員の体力+2
     C3HP,     // C3の体力+4
-    DamageControl  // 応急修理要員（艦娘が沈むとき1回だけ全快。物鉄を仲間にしているときだけ出る）
+    DamageControl, // 応急修理要員（艦娘が沈むとき1回だけ全快。物鉄を仲間にしているときだけ出る）
+    NoPawns        // 歩兵を消す（この局から最後まで、自軍の歩兵が出ない。1周に1回）
 }
 
 /// <summary>仲間選択の1枚のカード</summary>
@@ -42,6 +43,7 @@ public class DraftOption
                 case UpgradeKind.AllHP: return "部室の差し入れ";
                 case UpgradeKind.C3HP: return "部の結束";
                 case UpgradeKind.DamageControl: return "応急修理要員";
+                case UpgradeKind.NoPawns: return "歩兵を消す";
                 default: return "";
             }
         }
@@ -61,6 +63,7 @@ public class DraftOption
                 case UpgradeKind.AllHP: return "C3以外の味方全員の体力が +2 される。この効果は最後まで続く。";
                 case UpgradeKind.C3HP: return "C3の体力が +4 される。この効果は最後まで続く。";
                 case UpgradeKind.DamageControl: return "提督の艦娘が沈むとき、1回だけ体力が全快して踏みとどまる。使うまで最後まで残る。";
+                case UpgradeKind.NoPawns: return "この局から最後まで、自軍の歩兵が出なくなる。守りは薄くなるが、駒が前に出やすくなる。";
                 default: return "";
             }
         }
@@ -78,6 +81,7 @@ public class DraftOption
                 case UpgradeKind.AllHP: return "体";
                 case UpgradeKind.C3HP: return "C3";
                 case UpgradeKind.DamageControl: return "修";
+                case UpgradeKind.NoPawns: return "歩";
                 default: return "";
             }
         }
@@ -93,6 +97,7 @@ public class DraftOption
                 case UpgradeKind.AllDEF: return Palette.DEF;
                 case UpgradeKind.AllHP: return Palette.HP;
                 case UpgradeKind.DamageControl: return CutInUI.SeaLight;
+                case UpgradeKind.NoPawns: return Palette.EnemyLight;
                 default: return Palette.Gold;
             }
         }
@@ -260,6 +265,9 @@ public static class PiecePool
         var kinds = new List<UpgradeKind> { UpgradeKind.AllATK, UpgradeKind.AllDEF, UpgradeKind.AllHP, UpgradeKind.C3HP };
         if (owned != null && owned.Exists(p => p != null && p.pieceType == PieceType.Monotetsu))
             kinds.Add(UpgradeKind.DamageControl);
+        // 歩兵を消すは1周に1回だけ
+        if (BalanceTuning.NoPawnsCard && (GameManager.Instance == null || !GameManager.Instance.RunNoPawns))
+            kinds.Add(UpgradeKind.NoPawns);
         return kinds;
     }
 

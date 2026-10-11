@@ -15,7 +15,8 @@ MonoBehaviour:
   pieceType: 10
   displayName: "\u4E2D\u83EF"
   pieceName: "\u4E2D\u83EF"
-  description: "\u79FB\u52D5\u4E0D\u53EF\u3002\u624B\u756A\u7D42\u4E86\u6642\u3001\u5468\u56F21\u30DE\u30B9\u306E\u5473\u65B9\u306E\u4F53\u529B\u30923\u56DE\u5FA9\u3057\u3001\u6E80\u8179\u306B\u3057\u3066\uFF08\u653B\u6483\u529B+1\u3001\u305D\u306E\u5C40\u306E\u3042\u3044\u30601\u4F531\u56DE\u307E\u3067\uFF09\u6D88\u3048\u308B\u3002"
+  flavor: "\u30F2\u30C4\u304C\u4F5C\u3063\u305F\u4E2D\u83EF\u3002"
+  description: "\u52D5\u3051\u306A\u3044\u3002\u624B\u756A\u306E\u7D42\u308F\u308A\u306B\u3001\u5468\u308A1\u30DE\u30B9\u306E\u5473\u65B9\u306E\u4F53\u529B\u30923\u56DE\u5FA9\u3057\u3001\u6E80\u8179\u306B\u3057\u3066\uFF08\u653B\u6483+1\u3001\u305D\u306E\u5C40\u306E\u3042\u3044\u30601\u4F531\u56DE\u307E\u3067\uFF09\u6D88\u3048\u308B\u3002"
   baseATK: 0
   baseDEF: 0
   baseHP: 1
@@ -24,11 +25,24 @@ MonoBehaviour:
   canPromote: 0
   promotedDisplayName: 
   promotedName: 
+  promotedFlavor: 
   promotedDescription: 
   promotedATK: 0
   promotedDEF: 0
   promotedHP: 0
   promotedMoveDirections: []
+  canAwaken: 0
+  awakenedName: 
+  awakenedDescription: 
+  awakenCaption: 
+  awakenColor: {r: 1, g: 0.8, b: 0.35, a: 1}
+  awakenedATK: 0
+  awakenedDEF: 0
+  awakenedHP: 0
+  awakenedMoveDirections: []
+  veteranName: 
+  veteranDescription: 
+  veteranMoveDirections: []
   hasPromotedRarity: 0
   promotedRarity: 0
   isAutoMove: 0

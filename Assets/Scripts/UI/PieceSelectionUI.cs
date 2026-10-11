@@ -358,9 +358,9 @@ public class PieceSelectionUI : MonoBehaviour
 
         left.Add(UIFactory.StatRow(atk, def, UIFactory.FormatHP(hp)));
 
-        var descLabel = UIFactory.Paragraph(desc, 20, Palette.Text);
-        descLabel.style.marginTop = 14;
-        left.Add(descLabel);
+        var descBox = UIFactory.PieceText(UIFactory.FlavorOf(piece, promoted), desc, 20);
+        descBox.style.marginTop = 4;
+        left.Add(descBox);
 
         if (piece.canPromote)
         {

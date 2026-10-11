@@ -15,7 +15,8 @@ MonoBehaviour:
   pieceType: 18
   displayName: "\u30C9\u30D1"
   pieceName: "\u30C9\u30D1"
-  description: "\u306A\u3053\u304C\u6C42\u3081\u308B\u30C9\u30FC\u30D1\u30DF\u30F3\u3002\u7A81\u6483\u5148\u306E\u76EE\u5370\u3068\u3057\u3066\u53EC\u559A\u3055\u308C\u308B\u3002"
+  flavor: "\u306A\u3053\u304C\u6C42\u3081\u308B\u30C9\u30FC\u30D1\u30DF\u30F3\u3002"
+  description: "\u306A\u3053\u306E\u7A81\u6483\u5148\u306E\u76EE\u5370\u3068\u3057\u3066\u3001\u6575\u5074\u306B\u51FA\u3066\u304F\u308B\u3002\u306A\u3053\u304C\u7740\u304F\u3068\u6D88\u3048\u308B\u3002"
   baseATK: 0
   baseDEF: 0
   baseHP: 1
@@ -24,11 +25,24 @@ MonoBehaviour:
   canPromote: 0
   promotedDisplayName: 
   promotedName: 
+  promotedFlavor: 
   promotedDescription: 
   promotedATK: 0
   promotedDEF: 0
   promotedHP: 0
   promotedMoveDirections: []
+  canAwaken: 0
+  awakenedName: 
+  awakenedDescription: 
+  awakenCaption: 
+  awakenColor: {r: 1, g: 0.8, b: 0.35, a: 1}
+  awakenedATK: 0
+  awakenedDEF: 0
+  awakenedHP: 0
+  awakenedMoveDirections: []
+  veteranName: 
+  veteranDescription: 
+  veteranMoveDirections: []
   hasPromotedRarity: 0
   promotedRarity: 0
   isAutoMove: 0
@@ -40,3 +54,5 @@ MonoBehaviour:
   diesOnPromotion: 0
   isImmovableWhenPromoted: 0
   isTauntPiece: 0
+  portrait: {fileID: 0}
+  promotedPortrait: {fileID: 0}
