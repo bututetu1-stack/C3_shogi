@@ -12,8 +12,8 @@ public static class BalanceTuning
     public static int EnemyHpDivisor = 2;
     /// <summary>敵C3の体力の上乗せ = (局−1) ÷ この値</summary>
     public static int EnemyC3HpDivisor = 2;
-    /// <summary>敵C3の体力にさらに足す値（自軍のC3とは別に調整するため）</summary>
-    public static int EnemyC3ExtraHP = 0;
+    /// <summary>敵C3の体力にさらに足す値（自軍のC3とは別に調整するため。2026-10-11 に全クリア37%→30%にするため1）</summary>
+    public static int EnemyC3ExtraHP = 1;
 
     /// <summary>自軍の体力の上乗せ = (局−1) ÷ この値（C3も含む。部の時間を入れたとき4→5）</summary>
     public static int PlayerHpDivisor = 5;
