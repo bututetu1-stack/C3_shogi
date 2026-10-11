@@ -143,6 +143,8 @@ public static class BalanceTuning
     /// 既定は { 450, 150, 8, 3, 3, 4, 300 }。--set AiWeightsEnemy=600,150,8,3,3,4,300 のように試す
     /// </summary>
     public static int[] AiWeightsPlayer = new int[0];
+    /// <summary>自動プレイ専用: 仲間選択をでたらめではなく、測った強さの順に選ぶ（人が考えて選んだときの目安を出すため。既定は false）</summary>
+    public static bool SimSmartDraft = false;
     public static int[] AiWeightsEnemy = { 450, 150, 8, 3, 6, 8, 300 };   // 前進・接近を2倍（後半ほど C3 に迫る。勝率は同じ）
     /// <summary>覚醒した僕が1体を強化できる量の上限</summary>
     public static int BokuAwakenedCap = 1;
