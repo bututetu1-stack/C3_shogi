@@ -70,7 +70,7 @@ public class PieceDetailUI : MonoBehaviour
     {
         RunMember m = piece.team == Team.Player && GameManager.Instance != null ? GameManager.Instance.Roster.Get(piece.data.pieceType) : null;
         return piece.currentHP + "|" + piece.ATK + "|" + piece.DEF + "|" + piece.MaxHP + "|" + (piece.isPromoted ? "1" : "0") + (piece.IsVeteran ? "v" : "")
-            + (m != null ? "|" + m.xp : "") + "|" + piece.awakenCharge + (piece.awakened ? "a" : "") + (piece.isSealed ? "s" : "") + "|" + AbilitySystem.StatusLine(piece);
+            + (m != null ? "|" + m.xp : "") + "|" + piece.awakenCharge + (piece.awakened ? "a" : "") + (AbilitySystem.IsSuppressed(piece) ? "s" : "") + "|" + AbilitySystem.StatusLine(piece);
     }
 
     // ------------------------------------------------------------
@@ -165,9 +165,10 @@ public class PieceDetailUI : MonoBehaviour
             statusLabel.style.marginTop = 6;
             content.Add(statusLabel);
         }
-        if (piece.isSealed)
+        if (AbilitySystem.IsSuppressed(piece))
         {
-            var sealedNote = UIFactory.Label("封印されている（能力が止まっている）", 17, new Color(0.45f, 1f, 0.6f), "c3-bold");
+            var sealedNote = UIFactory.Label(piece.isSealed ? "封印されている（能力が止まっている）" : "結界で能力が止まっている", 17,
+                piece.isSealed ? new Color(0.45f, 1f, 0.6f) : AbilitySystem.KekkaiPurple, "c3-bold");
             sealedNote.style.marginTop = 6;
             content.Add(sealedNote);
         }

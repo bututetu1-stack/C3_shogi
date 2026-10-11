@@ -604,6 +604,23 @@ public class BattleEffects : MonoBehaviour
         if (good) StartCoroutine(Burst(p, 12, color, Color.white, 1.2f, 3f, 0.07f, 0.5f, 0f, SpriteFactory.Pixel));
     }
 
+    /// <summary>弓兵の矢（画像 Arrow があれば矢が飛ぶ。なければ光の筋）</summary>
+    public void PlayArrow(Vector2Int from, Vector2Int to)
+    {
+        Play(hitClip, null);
+        Sprite arrow = EffectArt.Get("Arrow");
+        if (arrow != null) StartCoroutine(StretchFx(arrow, World(from), World(to), 0.25f));
+        else PlayStream(from, to, new Color(0.95f, 0.78f, 0.45f));
+    }
+
+    /// <summary>狐火が灯る（画像 Kitsunebi があればそれ）</summary>
+    public void PlayFoxfire(Vector2Int pos)
+    {
+        Vector3 p = World(pos);
+        if (!ArtFx("Kitsunebi", p, 0.4f, 1.1f, 0.6f, 0f))
+            StartCoroutine(Glow(p, new Color(0.5f, 0.8f, 1f, 0.9f), 0.3f, 1.3f, 0.5f));
+    }
+
     /// <summary>忍殺: RN から敵へ赤い一閃（画像 Deathblow があればそれ）</summary>
     public void PlayDeathblow(Vector2Int from, Vector2Int to)
     {

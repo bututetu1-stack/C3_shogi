@@ -52,7 +52,7 @@ public partial class AbilitySystem
     }
 
     /// <summary>3本同時プレイ（ポケモンスリープ・SEKIRO の弾き）が動くか: 成っているか、覚醒している</summary>
-    private static bool RnMultiPlay(PieceInstance p) { return (p.isPromoted || p.awakened) && !p.isSealed; }
+    private static bool RnMultiPlay(PieceInstance p) { return (p.isPromoted || p.awakened) && !IsSuppressed(p); }
 
     /// <summary>寝癖のデイリーが報酬になる手番の数（外跳は短く、覚醒は毎手番）と、報酬の上限</summary>
     private static int NeguEveryOf(PieceInstance p) { return p.awakened ? 1 : p.isPromoted ? BalanceTuning.NeguPromotedDailyEvery : BalanceTuning.NeguDailyEvery; }
@@ -81,7 +81,7 @@ public partial class AbilitySystem
         bool partner = AlivePieces(team, PieceType.Monotetsu).Count > 0;
         foreach (var n in negus)
         {
-            bool on = partner && !n.isSealed;
+            bool on = partner && !IsSuppressed(n);
             if (on == n.allianceOn) continue;
             n.allianceOn = on;
             n.bonusATK += on ? BalanceTuning.NeguAllianceATK : -BalanceTuning.NeguAllianceATK;
@@ -100,7 +100,7 @@ public partial class AbilitySystem
 
         foreach (var rn in AlivePieces(team, PieceType.RN))
         {
-            if (rn.isSealed) continue;
+            if (IsSuppressed(rn)) continue;
             // ポケモンスリープ: 動かなかった手番は、寝ていたことにして回復する
             if (RnMultiPlay(rn) && !rn.acted && rn.currentHP < rn.MaxHP)
             {
@@ -115,7 +115,7 @@ public partial class AbilitySystem
 
         foreach (var n in AlivePieces(team, PieceType.Negu))
         {
-            if (n.isSealed || n.dailyRewards >= NeguCapOf(n)) continue;
+            if (IsSuppressed(n) || n.dailyRewards >= NeguCapOf(n)) continue;
             n.dailyCount++;
             if (n.dailyCount < NeguEveryOf(n))
             {
@@ -226,7 +226,7 @@ public partial class AbilitySystem
     // ============================================================
     public void OnHitAndSurvived(PieceInstance attacker, PieceInstance target)
     {
-        if (attacker == null || target == null || !attacker.isAlive || !target.isAlive || attacker.isSealed) return;
+        if (attacker == null || target == null || !attacker.isAlive || !target.isAlive || IsSuppressed(attacker)) return;
         if (target.data.pieceType == PieceType.C3) return;   // C3 は能力の影響を受けない
         if (attacker.data.pieceType == PieceType.Mutou && attacker.isPromoted)
         {

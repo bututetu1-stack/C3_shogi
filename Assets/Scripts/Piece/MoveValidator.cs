@@ -64,7 +64,7 @@ public static class MoveValidator
         }
 
         // 翡翠: 誘うと来てくれる（味方の部員の隣へ）
-        if (includeInvite && piece.data.pieceType == PieceType.Kawasemi && !piece.isSealed) AbilitySystem.AddInviteMoves(piece, results);
+        if (includeInvite && piece.data.pieceType == PieceType.Kawasemi && !AbilitySystem.IsSuppressed(piece)) AbilitySystem.AddInviteMoves(piece, results);
 
         ApplyTaunt(results, bm);
         if (BalanceTuning.KonishikiGrapple) ApplyGrapple(piece, results, bm);
@@ -84,7 +84,7 @@ public static class MoveValidator
             {
                 if (dx == 0 && dy == 0) continue;
                 PieceInstance n = bm.GetPieceAt(new Vector2Int(from.x + dx, from.y + dy));
-                if (n != null && n.isAlive && n.team != piece.team && n.data.isTauntPiece) { holder = n; break; }
+                if (n != null && n.isAlive && n.team != piece.team && n.data.isTauntPiece && n.data.pieceType != PieceType.Kugutsu && !AbilitySystem.IsSuppressed(n)) { holder = n; break; }
             }
         if (holder == null) return;
 
@@ -107,7 +107,7 @@ public static class MoveValidator
         {
             if (!results[i].isAttack) continue;
             PieceInstance t = bm.GetPieceAt(results[i].position);
-            if (t != null && t.data.isTauntPiece) { tauntInRange = true; break; }
+            if (t != null && t.data.isTauntPiece && !AbilitySystem.IsSuppressed(t)) { tauntInRange = true; break; }
         }
         if (!tauntInRange) return;
 
@@ -115,7 +115,7 @@ public static class MoveValidator
         {
             if (!results[i].isAttack) continue;
             PieceInstance t = bm.GetPieceAt(results[i].position);
-            if (t == null || !t.data.isTauntPiece) results.RemoveAt(i);
+            if (t == null || !t.data.isTauntPiece || AbilitySystem.IsSuppressed(t)) results.RemoveAt(i);
         }
     }
 

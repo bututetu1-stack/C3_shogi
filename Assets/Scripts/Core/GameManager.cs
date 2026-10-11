@@ -63,6 +63,18 @@ public class GameManager : MonoBehaviour
     public int RunBonusC3HP { get; private set; }
     /// <summary>応急修理要員の残り（艦娘が沈むとき1回ずつ使う）</summary>
     public int RunDamageControl { get; private set; }
+    /// <summary>局ごとの布陣の型（周の初めに決める。0 はもとの布陣）</summary>
+    private int[] stageVariants = new int[StageManager.MaxStages + 1];
+    public int VariantFor(int stage) { return stage >= 0 && stage < stageVariants.Length ? stageVariants[stage] : 0; }
+
+    /// <summary>周の初めに、局ごとの布陣の型を決める（自動プレイでは種で決まる）</summary>
+    private void PickStageVariants()
+    {
+        stageVariants = new int[StageManager.MaxStages + 1];
+        for (int s = 1; s <= StageManager.MaxStages; s++)
+            stageVariants[s] = UnityEngine.Random.Range(0, StageManager.VariantCount(s));
+    }
+
     /// <summary>強化「歩兵を消す」を取った（次の局から最後まで、自軍の歩兵を置かない）</summary>
     public bool RunNoPawns { get; private set; }
     // 艦隊がS勝利したら、次の局の選択肢に強化が1枚増える（その局の番号）
@@ -118,6 +130,7 @@ public class GameManager : MonoBehaviour
         RunBonusATK = RunBonusDEF = RunBonusHP = RunBonusC3HP = 0;
         RunDamageControl = 0;
         RunNoPawns = false;
+        PickStageVariants();
         SecretFund = 0;
         bonusUpgradeStage = 0;
         pendingExtraPicks = pendingExtraRerolls = pendingEnemyHp = pendingEnemyAtk = 0;
@@ -417,6 +430,7 @@ public class GameManager : MonoBehaviour
             runATK = RunBonusATK, runDEF = RunBonusDEF, runHP = RunBonusHP, runC3HP = RunBonusC3HP,
             damageControl = RunDamageControl,
             noPawns = RunNoPawns,
+            variants = (int[])stageVariants.Clone(),
             secretFund = SecretFund,
             bonusUpgradeStage = bonusUpgradeStage,
             enemyHp = phase == "battle" ? pendingEnemyHp : 0,
@@ -442,6 +456,7 @@ public class GameManager : MonoBehaviour
         RunBonusATK = data.runATK; RunBonusDEF = data.runDEF; RunBonusHP = data.runHP; RunBonusC3HP = data.runC3HP;
         RunDamageControl = data.damageControl;
         RunNoPawns = data.noPawns;
+        if (data.variants != null && data.variants.Length == stageVariants.Length) stageVariants = (int[])data.variants.Clone();
         SecretFund = data.secretFund;
         bonusUpgradeStage = data.bonusUpgradeStage;
         pendingEnemyHp = data.phase == "battle" ? data.enemyHp : 0;
@@ -492,7 +507,7 @@ public class GameManager : MonoBehaviour
             ApplyRunBonuses();
 
             if (!GameSim.Headless)
-                EnsureStageTitle().ShowTitle(stageManager.currentStage, stageManager.GetStageName(stageManager.currentStage));
+                EnsureStageTitle().ShowTitle(stageManager.currentStage, stageManager.GetStageTitle(stageManager.currentStage));
         }
 
         // 対局開始SE
@@ -623,7 +638,7 @@ public class GameManager : MonoBehaviour
         foreach (var piece in boardManager.GetTeamPieces(team))
         {
             PieceType t = piece.data.pieceType;
-            if (t == PieceType.C3 || t == PieceType.Chuka || t == PieceType.Dopa) continue;
+            if (t == PieceType.C3 || t == PieceType.Chuka || t == PieceType.Dopa || AbilitySystem.IsObstacle(t)) continue;
             return true;
         }
         return false;

@@ -533,6 +533,10 @@ public class SimpleAI : MonoBehaviour
             case PieceType.Gundaishou: return v + 55;
             case PieceType.Yomigaeru: return v + 40;
             case PieceType.Dokuro: return v - 20;
+            case PieceType.Kekkai: return v + 70;
+            case PieceType.Yumihei: return v + 30;
+            case PieceType.Kyogan: return v - 80;
+            case PieceType.Kugutsu: return v - 60;
             default: return v;
         }
     }

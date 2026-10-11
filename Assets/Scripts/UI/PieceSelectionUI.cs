@@ -70,7 +70,7 @@ public class PieceSelectionUI : MonoBehaviour
         StageManager sm = StageManager.Instance;
         if (sm != null)
         {
-            var stage = UIFactory.Label("第" + UIFactory.Kanji(sm.currentStage) + "局「" + sm.GetStageName(sm.currentStage) + "」を前に", 20, Palette.Gold, "c3-mincho");
+            var stage = UIFactory.Label("第" + UIFactory.Kanji(sm.currentStage) + "局「" + sm.GetStageTitle(sm.currentStage) + "」を前に", 20, Palette.Gold, "c3-mincho");
             stage.style.marginBottom = 4;
             scroll.Add(stage);
         }

@@ -21,14 +21,22 @@ public static class CombatResolver
     /// <summary>ブロック・スタッガーを数える前の通常攻撃のダメージ</summary>
     private static int RawDamage(PieceInstance attacker, PieceInstance target)
     {
-        int def = attacker.data.pieceType == PieceType.Shimesaba && !attacker.isSealed ? 0 : target.DEF;
-        return Mathf.Max(0, attacker.ATK + RunUpBonus(attacker, target) + BossBonus(attacker, target) - def);
+        int def = attacker.data.pieceType == PieceType.Shimesaba && !AbilitySystem.IsSuppressed(attacker) ? 0 : target.DEF;
+        return Mathf.Max(0, attacker.ATK + RunUpBonus(attacker, target) + BossBonus(attacker, target) - def - ShieldGuard(attacker, target));
+    }
+
+    /// <summary>大盾: 正面（大盾が向いている側）からの通常の攻撃を減らす</summary>
+    public static int ShieldGuard(PieceInstance attacker, PieceInstance target)
+    {
+        if (target.data.pieceType != PieceType.Ootate || target.isSealed) return 0;
+        bool front = target.team == Team.Enemy ? attacker.boardPosition.y < target.boardPosition.y : attacker.boardPosition.y > target.boardPosition.y;
+        return front ? BalanceTuning.OotateGuard : 0;
     }
 
     /// <summary>無糖（フロム脳）はボス（雷帝・龍神・魔王）に強い</summary>
     public static int BossBonus(PieceInstance attacker, PieceInstance target)
     {
-        if (attacker.data.pieceType != PieceType.Mutou || attacker.isSealed) return 0;
+        if (attacker.data.pieceType != PieceType.Mutou || AbilitySystem.IsSuppressed(attacker)) return 0;
         PieceType t = target.data.pieceType;
         return t == PieceType.Raitei || t == PieceType.Ryuujin || t == PieceType.Maou ? BalanceTuning.MutouBossBonus : 0;
     }
@@ -59,7 +67,9 @@ public static class CombatResolver
     /// <summary>ユウの助走: 敵まで走ったマスのうち、2マス目から1マスごとに攻撃が上がる（攻撃の前の位置で測る）</summary>
     public static int RunUpBonus(PieceInstance attacker, PieceInstance target)
     {
-        if (attacker.data.pieceType != PieceType.Yuu) return 0;
+        // ユウと猪突（敵）は助走が効く。ユウは結界・封印で止まる
+        if (attacker.data.pieceType != PieceType.Yuu && attacker.data.pieceType != PieceType.Chototsu) return 0;
+        if (AbilitySystem.IsSuppressed(attacker)) return 0;
         Vector2Int d = target.boardPosition - attacker.boardPosition;
         int distance = Mathf.Max(Mathf.Abs(d.x), Mathf.Abs(d.y));
         return Mathf.Max(0, distance - 1) * BalanceTuning.YuuRunUpPerSquare;
@@ -103,7 +113,7 @@ public static class CombatResolver
                 bool killed = Attack(piece, target);
                 ShowLastMove(from, to);
                 // 覚醒したユウ「ゾーン」: 助走で倒したら、もう一度動ける（C3 を倒したら決着なので出さない）
-                if (killed && piece.awakened && runUp > 0 && target.data.pieceType != PieceType.C3 && GameManager.Instance != null)
+                if (killed && piece.awakened && runUp > 0 && target.data.pieceType != PieceType.C3 && piece.isAlive && !AbilitySystem.IsSuppressed(piece) && GameManager.Instance != null)
                     GameManager.Instance.GrantBonusMove(piece);
 
                 // 撃破できなければ攻撃側はその場に留まる
@@ -370,14 +380,18 @@ public static class CombatResolver
             if (atSea) BattleEffects.Instance.PlaySinkEffect(pos, target.team == Team.Player);
             else BattleEffects.Instance.PlayDefeatEffect(pos);
         }
-        if (target.team == Team.Enemy && GameManager.Instance != null)
+        if (target.team == Team.Enemy && GameManager.Instance != null && !AbilitySystem.IsObstacle(target.data.pieceType))
         {
             GameManager.Instance.RegisterKill();
             GameManager.Instance.Roster.OnKill(GameSim.CurrentKiller, target);
         }
         GameSim.RecordKill(target);
-        // 光春の裏金・翡翠のパーツ
-        if (AbilitySystem.Instance != null) AbilitySystem.Instance.OnPieceKilled(target, pos);
+        // 光春の裏金・翡翠のパーツ、妖狐の狐火
+        if (AbilitySystem.Instance != null)
+        {
+            AbilitySystem.Instance.OnPieceKilled(target, pos);
+            AbilitySystem.Instance.OnEnemyPieceKilled(target, pos);
+        }
 
         if (atSea)
         {
@@ -391,6 +405,7 @@ public static class CombatResolver
             bm.RemovePiece(pos);
         }
 
+        if (AbilitySystem.Instance != null) AbilitySystem.Instance.FlushFoxes();
         if (checkLinkedDeaths && AbilitySystem.Instance != null)
             AbilitySystem.Instance.CheckLinkedDeaths(groupId, target);
     }

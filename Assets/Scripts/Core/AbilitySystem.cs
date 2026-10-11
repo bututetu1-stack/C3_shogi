@@ -59,7 +59,7 @@ public partial class AbilitySystem : MonoBehaviour
         var wotsuList = new List<PieceInstance>();
         foreach (var p in pieces)
         {
-            if (p.data.pieceType == PieceType.Wotsu && p.isAlive)
+            if (p.data.pieceType == PieceType.Wotsu && p.isAlive && !IsSuppressed(p))
                 wotsuList.Add(p);
         }
         foreach (var wotsu in wotsuList)
@@ -74,7 +74,7 @@ public partial class AbilitySystem : MonoBehaviour
         var moninList = new List<PieceInstance>();
         foreach (var p in pieces)
         {
-            if (p.data.pieceType == PieceType.Monin && p.isAlive)
+            if (p.data.pieceType == PieceType.Monin && p.isAlive && !IsSuppressed(p))
                 moninList.Add(p);
         }
         foreach (var monin in moninList)
@@ -98,7 +98,7 @@ public partial class AbilitySystem : MonoBehaviour
         var nakoList = new List<PieceInstance>();
         foreach (var p in pieces)
         {
-            if (p.data.pieceType == PieceType.Nako && p.isAlive)
+            if (p.data.pieceType == PieceType.Nako && p.isAlive && !IsSuppressed(p))
                 nakoList.Add(p);
         }
         foreach (var nako in nakoList)
@@ -224,7 +224,7 @@ public partial class AbilitySystem : MonoBehaviour
         var chukaList = new List<PieceInstance>();
         foreach (var p in pieces)
         {
-            if (p.data.pieceType == PieceType.Chuka && p.isAlive)
+            if (p.data.pieceType == PieceType.Chuka && p.isAlive && !IsSuppressed(p))
                 chukaList.Add(p);
         }
         foreach (var chuka in chukaList)
@@ -294,6 +294,9 @@ public partial class AbilitySystem : MonoBehaviour
                 if (buffed) SpeechBubble.Say(gun, PieceLines.GundaishouRally);
             }
         }
+
+        // 弓兵の射撃
+        yield return ExecuteArchers(team);
 
         // 深海の攻撃 (敵ターン終了時)
         if (team == Team.Enemy)
@@ -393,7 +396,7 @@ public partial class AbilitySystem : MonoBehaviour
     {
         foreach (var kei in AlivePieces(team, PieceType.Kei))
         {
-            if (!kei.isAlive) continue;
+            if (!kei.isAlive || IsSuppressed(kei)) continue;
             yield return ExecuteKeiAbility(kei);
         }
     }
@@ -468,7 +471,7 @@ public partial class AbilitySystem : MonoBehaviour
         BoardManager bm = BoardManager.Instance;
         foreach (var k in AlivePieces(team, PieceType.Konishiki))
         {
-            if (!k.isAlive) continue;
+            if (!k.isAlive || IsSuppressed(k)) continue;
             var targets = AdjacentEnemies(k);
             if (targets.Count == 0) continue;
             // 敵を組み止めて手番を終えたら活躍（練度と覚醒に数える）
@@ -513,7 +516,7 @@ public partial class AbilitySystem : MonoBehaviour
     {
         foreach (var kipu in AlivePieces(team, PieceType.Kipu))
         {
-            if (!kipu.isAlive) continue;
+            if (!kipu.isAlive || IsSuppressed(kipu)) continue;
             yield return ExecuteKipuAbility(kipu);
         }
     }
@@ -568,7 +571,7 @@ public partial class AbilitySystem : MonoBehaviour
     // ============================================================
     public void ExecuteRihakuAbility(PieceInstance rihaku)
     {
-        if (rihaku == null || !rihaku.isAlive || rihaku.data.pieceType != PieceType.Rihaku) return;
+        if (rihaku == null || !rihaku.isAlive || rihaku.data.pieceType != PieceType.Rihaku || IsSuppressed(rihaku)) return;
 
         int radius = (rihaku.isPromoted ? 2 : 1) + (rihaku.awakened ? BalanceTuning.RihakuAwakenedRadius : 0);
         int flipCount = (rihaku.isPromoted ? 3 : 1) + (rihaku.awakened ? 1 : 0);
@@ -1075,6 +1078,7 @@ public partial class AbilitySystem : MonoBehaviour
     /// <summary>小錦が攻撃されたとき、周りの味方が「同情」して攻撃+1（C3・小錦を除く、1体に上限あり）</summary>
     public void Sympathize(PieceInstance konishiki)
     {
+        if (IsSuppressed(konishiki)) return;
         BoardManager bm = BoardManager.Instance;
         bool any = false;
         for (int dx = -1; dx <= 1; dx++)
@@ -1176,7 +1180,7 @@ public partial class AbilitySystem : MonoBehaviour
         var pieces = bm.GetTeamPieces(team);
         foreach (var p in pieces)
         {
-            if (p.data.pieceType == PieceType.Boku && p.isAlive)
+            if (p.data.pieceType == PieceType.Boku && p.isAlive && !IsSuppressed(p))
                 bokuList.Add(p);
         }
 

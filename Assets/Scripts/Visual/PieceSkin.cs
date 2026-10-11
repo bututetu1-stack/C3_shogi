@@ -75,6 +75,15 @@ public static class PieceSkin
                 if (promoted) SetAura(ref look, new Color(0.36f, 1f, 0.6f), false);
                 break;
 
+            case PieceType.Kyogan:
+                // 巨岩: 灰色の石の駒
+                look.body = SpriteFactory.SpecialBody("stone");
+                look.ink = Palette.Hex(0x3A3A3A);
+                break;
+            case PieceType.Kugutsu: SetAura(ref look, Palette.ATK, true); break;          // 挑発の輪
+            case PieceType.Kekkai: SetAura(ref look, AbilitySystem.KekkaiPurple, true); break;
+            case PieceType.Youko:
+            case PieceType.Kitsunebi: SetAura(ref look, new Color(0.5f, 0.8f, 1f), false); break;
             case PieceType.Maou: SetAura(ref look, new Color(0.62f, 0.3f, 0.95f), false); break;
             case PieceType.Raitei: SetAura(ref look, new Color(1f, 0.88f, 0.35f), false); break;
             case PieceType.Ryuujin: SetAura(ref look, new Color(0.4f, 0.85f, 1f), false); break;

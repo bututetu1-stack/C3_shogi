@@ -28,7 +28,9 @@ public class PieceCatalogUI : MonoBehaviour
             PieceType.Shinkai, PieceType.ShinkaiElite, PieceType.ShinkaiFlagship, PieceType.ShinkaiHime),
         new Group("敵",
             PieceType.Kishou, PieceType.Kagenin, PieceType.Teppeki, PieceType.Tengu, PieceType.Fujin, PieceType.Raitei,
-            PieceType.Ryuujin, PieceType.Enmashi, PieceType.Gundaishou, PieceType.Yomigaeru, PieceType.Dokuro, PieceType.Maou),
+            PieceType.Ryuujin, PieceType.Enmashi, PieceType.Gundaishou, PieceType.Yomigaeru, PieceType.Dokuro, PieceType.Maou,
+            PieceType.Kekkai, PieceType.Yumihei, PieceType.Ootate, PieceType.Chototsu, PieceType.Youko, PieceType.Kitsunebi,
+            PieceType.Kugutsu, PieceType.Kyogan),
         new Group("将棋の駒",
             PieceType.Pawn, PieceType.Lance, PieceType.Knight, PieceType.Silver, PieceType.Gold, PieceType.Bishop, PieceType.Rook, PieceType.C3)
     };
@@ -370,11 +372,22 @@ public class PieceCatalogUI : MonoBehaviour
         var list = new List<string>();
         for (int stage = 1; stage <= StageManager.MaxStages; stage++)
         {
+            // 布陣の型のどれかに出てくれば、その局に数える（いちばん多い型の数）
             int count = 0;
-            foreach (var p in StageManager.GetEnemyLayout(stage, StageManager.GetBoardSizeForStage(stage)))
-                if (p.type == type) count++;
-            if (count > 0) list.Add("第" + UIFactory.Kanji(stage) + "局" + (count > 1 ? "×" + count : ""));
+            var names = new List<string>();
+            for (int v = 0; v < StageManager.VariantCount(stage); v++)
+            {
+                int n = 0;
+                foreach (var p in StageManager.GetEnemyLayout(stage, StageManager.GetBoardSizeForStage(stage), v))
+                    if (p.type == type) n++;
+                if (n == 0) continue;
+                count = Mathf.Max(count, n);
+                string vn = StageManager.VariantName(stage, v);
+                if (vn != null) names.Add(vn);
+            }
+            if (count > 0) list.Add("第" + UIFactory.Kanji(stage) + "局" + (count > 1 ? "×" + count : "") + (names.Count > 0 && names.Count < StageManager.VariantCount(stage) ? "（" + string.Join("・", names) + "）" : ""));
         }
+        if (type == PieceType.Kitsunebi) return "妖狐が倒れたとき";
         return list.Count > 0 ? string.Join("・", list) : null;
     }
 }

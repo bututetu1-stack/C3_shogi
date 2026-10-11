@@ -27,6 +27,7 @@ public class SimStageRecord
     public string[] growth;         // 局のあとの部員の練度（"なこ:★2:9"）
     public string[] awakenings;     // この局で覚醒した部員（"小錦@12"）
     public string stageEvent;       // この局の前に選んだできごと
+    public int variant;             // 布陣の型（0 はもとの布陣）
     public int playerC3HP;
     public int enemyLeft;           // 決着時に残っていた敵（C3を除く）
 }
@@ -119,7 +120,7 @@ public static class BalanceSimulator
 
         while (true)
         {
-            var rec = new SimStageRecord { stage = sm.currentStage, pick = "" };
+            var rec = new SimStageRecord { stage = sm.currentStage, pick = "", variant = gm.VariantFor(sm.currentStage) };
 
             // 局の合間のできごと（2つからランダム）
             List<StageEventKind> events = gm.SimDrawEvents();
