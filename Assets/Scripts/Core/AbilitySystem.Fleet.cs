@@ -227,6 +227,29 @@ public partial class AbilitySystem
             GameSim.EndSource(source);
             yield return new WaitForSeconds(0.4f);
         }
+
+        // 開幕雷撃: 改で出撃した潜水艦（練度★3の提督）は、着任のときに先制の雷撃（直線上の最初の敵に、いなければ深海に）
+        foreach (var sub in ships)
+        {
+            if (sub.data.pieceType != PieceType.KanmusuSS || !sub.isAlive || !sub.isPromoted || BalanceTuning.SubOpeningTorpedo <= 0) continue;
+            var abyss = AliveShinkai();
+            if (abyss.Count == 0) break;
+            PieceInstance target = PickShipTarget(abyss);
+            PieceInstance hit = FirstEnemyOnLine(sub, target) ?? target;
+            if (BattleLogUI.Instance != null) BattleLogUI.Instance.AddLog("開幕雷撃！");
+            if (fx != null)
+            {
+                FloatingText.Spawn(sub.boardPosition, "開幕雷撃", CutInUI.SeaLight, 3.6f, 0.2f);
+                fx.PlayTorpedoEffect(sub.boardPosition, hit.boardPosition);
+                yield return new WaitForSeconds(BattleEffects.TorpedoImpactTime);
+            }
+            var source = GameSim.BeginSource(sub);
+            int damage = ShipDamage(sub, BalanceTuning.SubOpeningTorpedo, fleet);
+            LogAttack(sub, "開幕雷撃", hit, damage);
+            FleetHit(sub, hit, damage);
+            GameSim.EndSource(source);
+            yield return new WaitForSeconds(0.3f);
+        }
     }
 
     // ============================================================
@@ -402,7 +425,7 @@ public partial class AbilitySystem
         BattleEffects fx = BattleEffects.Instance;
         var targets = new List<PieceInstance>();
         foreach (var p in bm.GetTeamPieces(Team.Enemy))
-            if (p.isAlive && p.data.pieceType != PieceType.C3 && !IsObstacle(p.data.pieceType)) targets.Add(p);
+            if (IsRandomFleetTarget(p)) targets.Add(p);
         if (targets.Count == 0) yield break;
         ShuffleList(targets);
         if (targets.Count > BalanceTuning.LandBaseTargets) targets.RemoveRange(BalanceTuning.LandBaseTargets, targets.Count - BalanceTuning.LandBaseTargets);
@@ -428,6 +451,16 @@ public partial class AbilitySystem
         GameSim.EndSource(source);
         GameSim.RecordFleet("基地航空隊", hit);
         if (fx != null) yield return new WaitForSeconds(0.3f);
+    }
+
+    /// <summary>
+    /// 盤の外からの爆撃・支援射撃が狙う敵: C3・地形と、まだ覚醒していないボス（雷帝・龍神・魔王）は狙わない。
+    /// ボスを削ると早く第二形態になって、かえって負けやすくなったため（第十局の雷帝の覚醒が 39/85 → 70/98、中央13手 → 9手）
+    /// </summary>
+    private static bool IsRandomFleetTarget(PieceInstance p)
+    {
+        if (p == null || !p.isAlive || p.data.pieceType == PieceType.C3 || IsObstacle(p.data.pieceType)) return false;
+        return !(p.team == Team.Enemy && p.data.canAwaken && !p.awakened);
     }
 
     /// <summary>艦娘の出撃位置: 提督の周り（入渠できるマス）。空いていなければ、または FleetSortieNearTeitoku でなければ自陣のどこか</summary>
@@ -506,7 +539,7 @@ public partial class AbilitySystem
         {
             var targets = new List<PieceInstance>();
             foreach (var p in bm.GetTeamPieces(Team.Enemy))
-                if (p.isAlive && p.data.pieceType != PieceType.C3) targets.Add(p);
+                if (IsRandomFleetTarget(p)) targets.Add(p);
             if (targets.Count == 0) break;
             PieceInstance target = targets[Random.Range(0, targets.Count)];
             PieceType cls = supportClasses.Count > 0 ? supportClasses[Random.Range(0, supportClasses.Count)] : PieceType.KanmusuBB;
@@ -590,6 +623,34 @@ public partial class AbilitySystem
     }
 
     /// <summary>改のまま敵陣を出た艦娘は改二になる（攻撃+1・防御+1・体力1回復）</summary>
+    private static readonly Color RingPink = new Color(1f, 0.72f, 0.82f);
+
+    /// <summary>
+    /// ケッコンカッコカリ（Gemini 第三回）: 作戦を終えて生還した物鉄・改が、もう一度敵陣に入る（出る）と、
+    /// 体力が全快して最大体力が上がる。1局に1回のめったに起きない演出
+    /// </summary>
+    public void CheckRing(PieceInstance piece, Vector2Int from)
+    {
+        if (BalanceTuning.RingMaxHp <= 0 || piece == null || !piece.isAlive || piece.ringed || !piece.IsVeteran
+            || piece.data.pieceType != PieceType.Monotetsu || IsSuppressed(piece)) return;
+        int size = BoardManager.Instance.CurrentBoardSize;
+        if (!InEnemyCamp(piece.team, from.y, size) && !InEnemyCamp(piece.team, piece.boardPosition.y, size)) return;
+        piece.ringed = true;
+        piece.AddMaxHP(BalanceTuning.RingMaxHp);
+        piece.currentHP = piece.MaxHP;
+        CombatResolver.RefreshStats(piece);
+        RunRoster.Feat(piece);
+        GameSim.RecordFleet("ケッコン", GameManager.Instance != null ? GameManager.Instance.MoveCount : 0);
+        FloatingText.Spawn(piece.boardPosition, "ケッコンカッコカリ", RingPink, 4.4f, 0.3f);
+        if (BattleEffects.Instance != null)
+        {
+            BattleEffects.Instance.PlayHaloEffect(piece.boardPosition);
+            BattleEffects.Instance.PlayHealEffect(piece.boardPosition);
+        }
+        if (BattleLogUI.Instance != null)
+            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("物鉄・改", piece.team) + " がケッコンカッコカリ！ 体力が全快し、最大体力+" + BalanceTuning.RingMaxHp);
+    }
+
     public void CheckKai2(PieceInstance ship, Vector2Int from)
     {
         if (ship == null || !ship.isAlive || ship.kai2 || !ship.isPromoted || !PieceTypes.IsKanmusu(ship.data.pieceType)) return;

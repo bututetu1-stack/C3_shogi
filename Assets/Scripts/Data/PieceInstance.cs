@@ -25,6 +25,7 @@ public class PieceInstance
     public int fleetDamageAll;      // 艦娘が与えたダメージの合計（深海以外も。自動プレイの集計用）
     public bool damageAnnounced;    // 艦娘の中破を知らせた
     public bool promotionSpent;     // この局ではもう成らない（作戦完了で生還した物鉄）
+    public bool ringed;             // ケッコンカッコカリを済ませた（生還した物鉄・改が、もう一度敵陣に入ったとき。1局に1回）
     public PieceInstance summoner;  // この駒を作った駒（中華を作ったヲツ。練度の活躍に数える）
     public bool awakened;           // 覚醒した（練度★3の部員が、その局で活躍を重ねた）
     public int awakenCharge;        // この局の活躍の数（覚醒まで）

@@ -178,7 +178,10 @@ public static class CombatResolver
         if (gm != null && gm.ShouldPromote(piece, from))
             yield return gm.PromoteRoutine(piece);
         else if (AbilitySystem.Instance != null)
+        {
             AbilitySystem.Instance.CheckKai2(piece, from);   // 改のまま敵陣を出た艦娘は改二
+            AbilitySystem.Instance.CheckRing(piece, from);   // 生還した物鉄・改がもう一度敵陣に入るとケッコンカッコカリ
+        }
         if (!piece.isAlive) yield break;
 
         // 李白の裏返し能力（移動後に発動）

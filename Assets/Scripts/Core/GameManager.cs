@@ -817,8 +817,14 @@ public class GameManager : MonoBehaviour
         // 光春は裏金を持って海外へ（盤外から支援する）、〆鯖は最終兵器の起動
         if (piece.data.pieceType == PieceType.Mitsuharu && AbilitySystem.Instance != null)
         {
-            AbilitySystem.Instance.SendAbroad(piece);
-            return;
+            // 仲間がいなければ旅立たず、成った姿で盤に残る
+            if (AbilitySystem.MitsuharuHasCompany(piece))
+            {
+                AbilitySystem.Instance.SendAbroad(piece);
+                return;
+            }
+            if (BattleLogUI.Instance != null)
+                BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("光春", piece.team) + " は仲間を置いて行けず、盤に残った");
         }
         if (piece.data.pieceType == PieceType.Shimesaba && AbilitySystem.Instance != null)
             AbilitySystem.Instance.StartDoomsday(piece);

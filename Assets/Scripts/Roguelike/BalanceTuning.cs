@@ -270,6 +270,10 @@ public static class BalanceTuning
     /// <summary>基地航空隊: S勝利した次の局の初めに、敵（C3以外）LandBaseTargets 体に LandBaseDamage（＋局の攻撃の上乗せ、防御無視）</summary>
     public static int LandBaseTargets = 3;
     public static int LandBaseDamage = 1;
+    /// <summary>開幕雷撃: 改で出撃した潜水艦（練度★3の提督）が着任のときに撃つ雷撃の元の値（0なら撃たない。Gemini 第三回）</summary>
+    public static int SubOpeningTorpedo = 2;
+    /// <summary>ケッコンカッコカリ: 生還した物鉄・改がもう一度敵陣に入ったときの最大体力の上乗せ（体力も全快。0なら起きない）</summary>
+    public static int RingMaxHp = 2;
     /// <summary>艦娘は提督の周り（入渠できるマス）から出撃する（false なら自陣のどこか）</summary>
     public static bool FleetSortieNearTeitoku = true;
 
