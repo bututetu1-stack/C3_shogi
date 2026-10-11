@@ -23,10 +23,10 @@ sb.Append("1 連合 " + negu.allianceOn + " 攻 " + a0 + "→" + negu.ATK + "\n"
 
 // 2) 手番の終わり: ブロック・デイリー
 GameSim.RunSync(ab.ExecuteTurnEndAbilities(Team.Player));
-sb.Append("2 RNブロック " + rn.block + " / ねぐデイリー " + negu.dailyCount + "\n");
+sb.Append("2 RNブロック " + rn.block + " / 寝癖デイリー " + negu.dailyCount + "\n");
 GameSim.RunSync(ab.ExecuteTurnEndAbilities(Team.Player));
 GameSim.RunSync(ab.ExecuteTurnEndAbilities(Team.Player));
-sb.Append("2b 3手番後 ねぐデイリー " + negu.dailyCount + " 報酬 " + negu.dailyRewards + " 攻 " + negu.ATK + "\n");
+sb.Append("2b 3手番後 寝癖デイリー " + negu.dailyCount + " 報酬 " + negu.dailyRewards + " 攻 " + negu.ATK + "\n");
 
 // 3) ブロックで防ぐ（成る前は弾かない）
 var e1 = enemies[0];
@@ -92,5 +92,5 @@ var m = gm.Roster.Get(PieceType.Mutou);
 sb.Append("8 篝火 生存 " + mutou.isAlive + " " + pos0 + "→" + mutou.boardPosition + " 体力 " + mutou.currentHP + "/" + mutou.MaxHP + " 死 " + m.deaths + "\n");
 CombatResolver.KillPiece(mutou);
 sb.Append("8b 二度目 生存 " + mutou.isAlive + " 死 " + m.deaths + " 次の局の上乗せ " + gm.Roster.DeathBonus(PieceType.Mutou) + "\n");
-sb.Append("状態 RN: " + AbilitySystem.StatusLine(rn) + " / ねぐ: " + AbilitySystem.StatusLine(negu) + " / 敵: " + AbilitySystem.StatusLine(e3));
+sb.Append("状態 RN: " + AbilitySystem.StatusLine(rn) + " / 寝癖: " + AbilitySystem.StatusLine(negu) + " / 敵: " + AbilitySystem.StatusLine(e3));
 return sb.ToString();

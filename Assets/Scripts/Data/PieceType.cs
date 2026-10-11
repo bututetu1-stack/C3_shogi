@@ -53,7 +53,7 @@ public enum PieceType
     Kawasemi,   // 翡翠（かわせみ）
     // PlayStation 鯖の部員
     RN,         // RN（STS2・ポケモンスリープ・SEKIRO）
-    Negu,       // 寝癖（駒は「ねぐ」、成ると外跳）
+    Negu,       // 寝癖（正式名は「ねぐせ」、成ると外跳）
     Mutou       // 無糖（成るとアーマード・コア）
 }
 
