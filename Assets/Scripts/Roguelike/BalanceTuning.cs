@@ -282,6 +282,11 @@ public static class BalanceTuning
     public static int RingMaxHp = 2;
     /// <summary>夜間触接: 夜戦に入ったとき軽巡か空母がいれば、夜戦のあいだ艦娘の攻撃にこの値を足す（0なら起きない。Gemini 第三回）</summary>
     public static int NightContactDamage = 0;
+    /// <summary>戦果（夜の改善ループの案、既定はオフ）: 艦隊がS勝利するたびに、その周のあいだ自軍全員の体力にこの値を足す（FleetSpoilsMax 回まで）</summary>
+    public static int FleetSpoilsHp = 0;
+    public static int FleetSpoilsMax = 3;
+    /// <summary>歴戦の艦隊（夜の改善ループの案、既定はオフ）: その周で一度でもS勝利していれば、次からの着任で艦娘が最初から改で出撃する（練度★3と同じ）</summary>
+    public static bool FleetVeteranKai = false;
     /// <summary>艦娘は提督の周り（入渠できるマス）から出撃する（false なら自陣のどこか）</summary>
     public static bool FleetSortieNearTeitoku = true;
 

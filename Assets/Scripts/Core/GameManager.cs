@@ -53,6 +53,8 @@ public class GameManager : MonoBehaviour
     public IList<PieceData> OwnedPieces { get { return playerOwnedPieces.AsReadOnly(); } }
     /// <summary>光春の裏帳簿の裏金（周のあいだ残る）</summary>
     public int SecretFund;
+    /// <summary>この周で艦隊がS勝利した回数（戦果・歴戦の艦隊に使う）</summary>
+    public int FleetSWins;
     /// <summary>部員の練度と★（周のあいだ残る）</summary>
     public RunRoster Roster { get; } = new RunRoster();
 
@@ -132,6 +134,7 @@ public class GameManager : MonoBehaviour
         RunNoPawns = false;
         PickStageVariants();
         SecretFund = 0;
+        FleetSWins = 0;
         bonusUpgradeStage = 0;
         pendingExtraPicks = pendingExtraRerolls = pendingEnemyHp = pendingEnemyAtk = 0;
         TotalKills = TotalMoves = StagesCleared = 0;
@@ -344,6 +347,13 @@ public class GameManager : MonoBehaviour
     public void GrantFleetBonus()
     {
         bonusUpgradeStage = (stageManager != null ? stageManager.currentStage : 1) + 1;
+        // 戦果: S勝利のたびに、その周のあいだ全軍の体力が上がる（既定はオフ）
+        if (BalanceTuning.FleetSpoilsHp > 0 && FleetSWins < BalanceTuning.FleetSpoilsMax)
+        {
+            RunBonusHP += BalanceTuning.FleetSpoilsHp;
+            if (BattleLogUI.Instance != null) BattleLogUI.Instance.AddLog("戦果: その周のあいだ、全軍の体力+" + BalanceTuning.FleetSpoilsHp);
+        }
+        FleetSWins++;
     }
 
     /// <summary>応急修理要員を1つ使う（残っていれば true）</summary>
@@ -432,6 +442,7 @@ public class GameManager : MonoBehaviour
             noPawns = RunNoPawns,
             variants = (int[])stageVariants.Clone(),
             secretFund = SecretFund,
+            fleetSWins = FleetSWins,
             bonusUpgradeStage = bonusUpgradeStage,
             enemyHp = phase == "battle" ? pendingEnemyHp : 0,
             enemyAtk = phase == "battle" ? pendingEnemyAtk : 0,
@@ -458,6 +469,7 @@ public class GameManager : MonoBehaviour
         RunNoPawns = data.noPawns;
         if (data.variants != null && data.variants.Length == stageVariants.Length) stageVariants = (int[])data.variants.Clone();
         SecretFund = data.secretFund;
+        FleetSWins = data.fleetSWins;
         bonusUpgradeStage = data.bonusUpgradeStage;
         pendingEnemyHp = data.phase == "battle" ? data.enemyHp : 0;
         pendingEnemyAtk = data.phase == "battle" ? data.enemyAtk : 0;

@@ -194,8 +194,9 @@ public partial class AbilitySystem
             GameManager.Instance.ApplySummonBonuses(ship);
             ship.linkedGroupId = groupId;
             ships.Add(ship);
-            // 練度★3の提督の艦娘は、最初から改で出撃する
-            if (GameManager.Instance.Roster.StarsOf(teitoku.data.pieceType) >= 3 && !ship.isPromoted)
+            // 練度★3の提督の艦娘は、最初から改で出撃する（歴戦の艦隊: その周で一度S勝利していても）
+            bool veteranFleet = BalanceTuning.FleetVeteranKai && GameManager.Instance.FleetSWins > 0;
+            if ((GameManager.Instance.Roster.StarsOf(teitoku.data.pieceType) >= 3 || veteranFleet) && !ship.isPromoted)
             {
                 ship.Promote();
                 CombatResolver.PlayFlip(ship);
