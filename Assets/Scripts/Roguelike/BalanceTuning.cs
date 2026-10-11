@@ -112,6 +112,8 @@ public static class BalanceTuning
     public static bool NakoAwakenedAim = true;
     /// <summary>素のなこがドパを「通り道に敵がいちばん多い向き」に出す割合（%）。0 ならでたらめ（夜の改善ループで相談用に作った。既定は0）</summary>
     public static int NakoBaseAimPercent = 0;
+    /// <summary>門人の突進を少し考えさせる（倒せる相手・ダメージの大きい相手を狙い、攻撃できなければ相手の C3 に近づく）。false ならでたらめ（夜の改善ループで相談用に作った。既定は false）</summary>
+    public static bool MoninSmartRush = false;
     /// <summary>覚醒したヲツが作る中華の数と、その中華の満腹の上限（1体あたり）</summary>
     public static int WotsuAwakenedChukaCount = 4;
     public static int WotsuAwakenedFullMax = 2;
