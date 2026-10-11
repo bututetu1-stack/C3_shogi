@@ -19,6 +19,8 @@ public class PieceRenderer : MonoBehaviour
     private static readonly Vector3 ShadowOffset = new Vector3(0.035f, -0.055f, 0f);
     private static readonly Color StunnedTint = new Color(0.6f, 0.72f, 0.9f);
     private static readonly Color SealedTint = new Color(0.72f, 1f, 0.78f);
+    // 潜航中の潜水艦は青く透かして、海の中にいるように見せる
+    private static readonly Color SubmergedTint = new Color(0.62f, 0.82f, 1f, 0.66f);
 
     private PieceInstance pieceInstance;
     private bool isEnemyPiece;
@@ -72,7 +74,8 @@ public class PieceRenderer : MonoBehaviour
         {
             if (pieceInstance == null) return Color.white;
             if (pieceInstance.stunned) return StunnedTint;
-            return AbilitySystem.IsSuppressed(pieceInstance) ? SealedTint : Color.white;
+            if (AbilitySystem.IsSuppressed(pieceInstance)) return SealedTint;
+            return AbilitySystem.IsSubmerged(pieceInstance) ? SubmergedTint : Color.white;
         }
     }
     public float BaseScale { get; private set; }

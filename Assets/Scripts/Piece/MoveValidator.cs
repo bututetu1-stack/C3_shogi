@@ -43,6 +43,8 @@ public static class MoveValidator
                 if (!bm.IsInBounds(target)) break;
 
                 PieceInstance targetPiece = bm.GetPieceAt(target);
+                // 潜航中の潜水艦の上は通り抜けられる（止まれはしない）
+                bool passOver = dir.canJump || AbilitySystem.IsSubmerged(targetPiece);
 
                 if (targetPiece == null)
                 {
@@ -51,15 +53,15 @@ public static class MoveValidator
                 else if (targetPiece.team != piece.team)
                 {
                     results.Add(new MoveResult { position = target, isAttack = true });
-                    if (!dir.canJump) break;
+                    if (!passOver) break;
                 }
                 else
                 {
-                    if (!dir.canJump) break;
+                    if (!passOver) break;
                 }
 
                 if (dir.canJump && dist >= dir.maxDistance) break;
-                if (!dir.canJump && targetPiece != null) break;
+                if (!passOver && targetPiece != null) break;
             }
         }
 
@@ -84,7 +86,9 @@ public static class MoveValidator
             {
                 if (dx == 0 && dy == 0) continue;
                 PieceInstance n = bm.GetPieceAt(new Vector2Int(from.x + dx, from.y + dy));
-                if (n != null && n.isAlive && n.team != piece.team && n.data.isTauntPiece && n.data.pieceType != PieceType.Kugutsu && !AbilitySystem.IsSuppressed(n)) { holder = n; break; }
+                // 傀儡と、潜っている潜水艦は組み止めない
+                if (n != null && n.isAlive && n.team != piece.team && n.data.isTauntPiece && n.data.pieceType != PieceType.Kugutsu
+                    && !AbilitySystem.IsSubmerged(n) && !AbilitySystem.IsSuppressed(n)) { holder = n; break; }
             }
         if (holder == null) return;
 
@@ -139,7 +143,7 @@ public static class MoveValidator
                 positions.Add(target); // 味方位置も含める
 
                 PieceInstance targetPiece = bm.GetPieceAt(target);
-                if (targetPiece != null && !dir.canJump) break;
+                if (targetPiece != null && !dir.canJump && !AbilitySystem.IsSubmerged(targetPiece)) break;
                 if (dir.canJump && dist >= dir.maxDistance) break;
             }
         }

@@ -609,7 +609,7 @@ public class BattleEffects : MonoBehaviour
     {
         Play(hitClip, null);
         Sprite arrow = EffectArt.Get("Arrow");
-        if (arrow != null) StartCoroutine(StretchFx(arrow, World(from), World(to), 0.25f));
+        if (arrow != null) StartCoroutine(FlyFx(arrow, World(from), World(to), 0.22f, 0.95f));
         else PlayStream(from, to, new Color(0.95f, 0.78f, 0.45f));
     }
 
@@ -1503,6 +1503,23 @@ public class BattleEffects : MonoBehaviour
             yield return null;
         }
         Destroy(sr.gameObject);
+    }
+
+    /// <summary>画像が from から to へまっすぐ飛ぶ（進む向きに回す。画像は右向きの前提）。着いたら小さく弾ける</summary>
+    private IEnumerator FlyFx(Sprite art, Vector3 from, Vector3 to, float life, float size)
+    {
+        Vector3 d = to - from;
+        var sr = CreateSprite(art, from, Color.white, size, OrderParticle + 3);
+        sr.transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg);
+        float elapsed = 0f;
+        while (elapsed < life)
+        {
+            elapsed += Time.deltaTime;
+            sr.transform.position = Vector3.Lerp(from, to, Mathf.Clamp01(elapsed / life));
+            yield return null;
+        }
+        Destroy(sr.gameObject);
+        StartCoroutine(Burst(to, 6, new Color(0.9f, 0.75f, 1f), Color.white, 0.8f, 2f, 0.06f, 0.3f, 0f, SpriteFactory.Pixel));
     }
 
     /// <summary>水柱の画像（下から上へ伸びて消える。画像は横から見た水柱の前提）</summary>

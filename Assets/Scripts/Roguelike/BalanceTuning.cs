@@ -58,6 +58,11 @@ public static class BalanceTuning
     public static bool KonishikiGrapple = true;
     /// <summary>小錦が攻撃されたときの「同情」（周りの味方の攻撃+1）を1体が受けられる回数（その局のあいだ）</summary>
     public static int KonishikiSympathyMax = 2;
+    /// <summary>挑発の引きつけ: 自軍の挑発駒（小錦・潜水）から何マス以内の敵が、その駒を狙って寄ってくるか（0なら引きつけない。敵の思考にかかる）</summary>
+    public static int TauntLureRange = 2;
+    /// <summary>引きつけの強さ（敵の思考で、挑発駒を攻撃する手と、1マス近づく手に足す点。駒1体の値打ちがおよそ100〜300）</summary>
+    public static int TauntLureAttack = 150;
+    public static int TauntLureApproach = 50;
 
     /// <summary>僕のそばに何手番続けていると強化されるか</summary>
     public static int BokuBuffTurns = 2;
@@ -241,6 +246,12 @@ public static class BalanceTuning
     /// <summary>空母の空爆で、狙った深海に当てるダメージの元の値（周りの敵2体へは CarrierSplashDamage）</summary>
     public static int CarrierStrikeDamage = 1;
     public static int CarrierSplashDamage = 2;
+    /// <summary>空母の空爆で巻き込む、狙った深海の周り2マスの敵の数</summary>
+    public static int CarrierSplashTargets = 2;
+    /// <summary>夜間作戦航空要員: 改（成った）空母は夜戦でも発艦できる（false なら夜戦では攻撃しない）</summary>
+    public static bool CarrierNightOps = false;
+    /// <summary>艦娘は提督の周り（入渠できるマス）から出撃する（false なら自陣のどこか）</summary>
+    public static bool FleetSortieNearTeitoku = true;
 
     /// <summary>着任のときに建造する艦娘の数（艦種は重複なし）</summary>
     public static int FleetShips = 2;
