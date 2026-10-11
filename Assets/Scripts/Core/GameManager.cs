@@ -261,6 +261,8 @@ public class GameManager : MonoBehaviour
             // 部員の練度（★）
             RunMember m = p.team == Team.Player ? Roster.Get(p.data.pieceType) : null;
             if (m != null) RunRoster.ApplyStars(p, 0, m.stars);
+            // 無糖の死んで覚える（倒された回数ぶん攻撃が上がる）
+            if (m != null) p.bonusATK += Roster.DeathBonus(p.data.pieceType);
         }
         CombatResolver.RefreshStats(p);
     }

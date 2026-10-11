@@ -69,7 +69,7 @@ public partial class AbilitySystem
                 return "パーツ " + Instance.PartsOf(p) + "/" + BalanceTuning.KawasemiPartsMax
                     + (p.awakened ? "（最強PC: 当たりしか出ない）" : p.isPromoted ? "（当たり " + Mathf.RoundToInt(KawasemiGoodChance(Instance.PartsOf(p)) * 100f) + "%）" : "");
             default:
-                return null;
+                return GamerStatusLine(p);
         }
     }
 
@@ -269,6 +269,7 @@ public partial class AbilitySystem
             case PieceType.Wotsu: case PieceType.Kei: case PieceType.Kipu: case PieceType.Boku: case PieceType.Rihaku:
             case PieceType.Nako: case PieceType.Monin: case PieceType.Konishiki: case PieceType.Yuu: case PieceType.SN:
             case PieceType.Monotetsu: case PieceType.Mitsuharu: case PieceType.Shimesaba: case PieceType.Kawasemi:
+            case PieceType.RN: case PieceType.Negu: case PieceType.Mutou:
                 return true;
             default:
                 return false;
@@ -537,7 +538,7 @@ public partial class AbilitySystem
                 return true;
             }
             default:
-                return false;
+                return DoGamerCard(niko, task.type);
         }
     }
 
@@ -786,6 +787,7 @@ public partial class AbilitySystem
             case PieceType.Nako: case PieceType.Monotetsu: case PieceType.Monin: case PieceType.Boku: case PieceType.Wotsu:
             case PieceType.Kei: case PieceType.Kipu: case PieceType.Rihaku: case PieceType.SN: case PieceType.Konishiki:
             case PieceType.Yuu: case PieceType.Mitsuharu: case PieceType.Niko: case PieceType.Shimesaba: case PieceType.Kawasemi:
+            case PieceType.RN: case PieceType.Negu: case PieceType.Mutou:
                 return true;
             default:
                 return false;

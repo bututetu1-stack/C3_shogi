@@ -63,6 +63,12 @@ public static class PieceLines
     public static readonly string[] KipuLaugh = { "うおw", "ええてw", "どわーw", "クカw", "かっけーw", "ちょw" };
     public static readonly string[] KipuTaunt = { "えwwこの武器持ってる人に負けるんですかww" };
 
+    // RN: ブロックで攻撃を防いだとき（ときどき）・成ったとき（セリフはユーザーが書いたもの）
+    public static readonly string[] RnLines = { "ちゃかばいやね", "STS2が一番面白いんだから", "ゲームが上手ちゃかばい" };
+
+    // 寝癖: デイリーの報酬をもらったとき（ときどき）・成ったとき（セリフはユーザーが書いたもの）
+    public static readonly string[] NeguLines = { "おお", "うーん", "なんか違う" };
+
     // 敵
     public static readonly string[] GundaishouRally = { "かかれ！" };
     public static readonly string[] YomigaeruSummon = { "黄泉より来たれ" };
@@ -103,6 +109,9 @@ public static class PieceLines
             case PieceType.Niko: return new CutIn("ニコ 本気", "タスクをもっと投げても良くなった", 0x2E1E3A, 0xFFB86B);
             case PieceType.Shimesaba: return new CutIn("〆鯖 最終兵器", "世界が終わる", 0x121216, 0xE0E8F0);
             case PieceType.Kawasemi: return new CutIn("翡翠 最強PC", "一体何が起きるのか", 0x0E2A26, 0x5CE0C8);
+            case PieceType.RN: return new CutIn("RN 3本同時", "STS2・ポケモンスリープ・SEKIRO を同時に", 0x2A1410, 0xFF7A4A);
+            case PieceType.Negu: return new CutIn("外跳", "成ったが、相変わらず訓練が足りてない", 0x2E1430, 0xFF9AD5);
+            case PieceType.Mutou: return new CutIn("無糖 AC", "アーマード・コアの機体を扱えるようになった", 0x141A22, 0xFFB040);
             default: return null;
         }
     }
@@ -133,6 +142,8 @@ public static class PieceLines
             case PieceType.Kei: return new[] { "（人の心を失った）" };
             case PieceType.Yuu: return new[] { "おい、創作しろよ" };
             case PieceType.Kipu: return new[] { "クカw" };
+            case PieceType.RN: return RnLines;
+            case PieceType.Negu: return NeguLines;
             default: return null;
         }
     }

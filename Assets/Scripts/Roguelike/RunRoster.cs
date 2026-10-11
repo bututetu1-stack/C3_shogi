@@ -11,6 +11,7 @@ public class RunMember
     public int stars;           // ★（0〜3）
     public int kills;           // この周で倒した数
     public int featXpThisStage; // この局の活躍で得た練度（上限あり）
+    public int deaths;          // 無糖が倒された回数（死んで覚える。周のあいだ攻撃が上がる）
 }
 
 /// <summary>
@@ -145,6 +146,9 @@ public class RunRoster
             case PieceType.Niko: return "タスクを処理したとき（タスクを投げた部員の活躍にもなる）";
             case PieceType.Shimesaba: return "レスバで言い返したとき、世界が終わったとき";
             case PieceType.Kawasemi: return "パーツを拾ったとき、最強PCを動かしたとき";
+            case PieceType.RN: return "ブロックで攻撃を防いだとき";
+            case PieceType.Negu: return "デイリーの報酬をもらったとき、跳ね飛ばしたとき";
+            case PieceType.Mutou: return "ボスを攻撃したとき、スタッガーさせたとき";
             default: return null;
         }
     }
@@ -215,6 +219,22 @@ public class RunRoster
         if (piece.awakenCharge < BalanceTuning.AwakenActivities) return;
         if (GameManager.Instance != null) GameManager.Instance.Awaken(piece);
         else Awakening.Apply(piece);
+    }
+
+    /// <summary>無糖が倒された（死んで覚える）。上限に届く前なら true（攻撃が上がる）</summary>
+    public bool OnDied(PieceType type)
+    {
+        RunMember m = Get(type);
+        if (m == null || m.deaths >= BalanceTuning.MutouDeathCap) return false;
+        m.deaths++;
+        return true;
+    }
+
+    /// <summary>死んで覚えた攻撃の上乗せ（局の初めに付ける）</summary>
+    public int DeathBonus(PieceType type)
+    {
+        RunMember m = Get(type);
+        return m != null && type == PieceType.Mutou ? Mathf.Min(m.deaths, BalanceTuning.MutouDeathCap) : 0;
     }
 
     /// <summary>局に勝った: 盤に残っている部員の練度を上げる</summary>

@@ -44,6 +44,9 @@ public partial class AbilitySystem : MonoBehaviour
     {
         BoardManager bm = BoardManager.Instance;
 
+        // RN のブロックはこちらの手番が来たら消える。寝癖のえちち連合
+        BeginGamerTurn(team);
+
         // 艦隊の入渠（提督の隣の艦娘が回復）
         if (team == Team.Player) DockShips();
 
@@ -314,6 +317,9 @@ public partial class AbilitySystem : MonoBehaviour
         yield return ExecuteNikoAbilities(team);
         yield return ExecuteDoomsday(team);
         yield return ExecuteKawasemiPC(team);
+
+        // RN のブロック、寝癖のデイリー消化
+        yield return ExecuteGamers(team);
 
         // 僕バフ処理
         yield return ProcessBokuBuffs(team);

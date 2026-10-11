@@ -244,6 +244,9 @@ public class TitleScreenUI : MonoBehaviour
             new System.Collections.Generic.KeyValuePair<string, PieceType>("ニコ", PieceType.Niko),
             new System.Collections.Generic.KeyValuePair<string, PieceType>("〆鯖", PieceType.Shimesaba),
             new System.Collections.Generic.KeyValuePair<string, PieceType>("翡翠", PieceType.Kawasemi),
+            new System.Collections.Generic.KeyValuePair<string, PieceType>("RN", PieceType.RN),
+            new System.Collections.Generic.KeyValuePair<string, PieceType>("寝癖", PieceType.Negu),
+            new System.Collections.Generic.KeyValuePair<string, PieceType>("無糖", PieceType.Mutou),
         };
         var sb = new System.Text.StringBuilder("敵を倒すのは、どの部員でも活躍です。それに加えて:");
         foreach (var m in members) sb.Append("\n・" + m.Key + ": " + RunRoster.FeatText(m.Value));

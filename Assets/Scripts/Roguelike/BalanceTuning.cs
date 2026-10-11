@@ -160,6 +160,30 @@ public static class BalanceTuning
     public static int KawasemiBenchDamage = 2;
     public static int KawasemiCoolHeal = 2;
 
+    // ---- PlayStation 鯖の部員（RN・寝癖・無糖） ----
+
+    /// <summary>RN: 自分の手番の終わりに得るブロック（次の自分の手番まで、受けるダメージをこの分防ぐ）。成ると・覚醒の上乗せ</summary>
+    public static int RnBlock = 2;
+    public static int RnPromotedBlock = 3;
+    public static int RnAwakenedBlockBonus = 2;
+    /// <summary>RN（成った後）: ポケモンスリープ（動かなかった手番の終わりの回復）と SEKIRO の弾き（ブロックで全部防いだら相手に。防御無視）</summary>
+    public static int RnSleepHeal = 1;
+    public static int RnParryDamage = 1;
+    /// <summary>寝癖: デイリーが何手番で報酬（攻撃+1）になるか（外跳は短い。覚醒は毎手番）と、報酬の上限（その局のあいだ）</summary>
+    public static int NeguDailyEvery = 3;
+    public static int NeguPromotedDailyEvery = 2;
+    public static int NeguDailyCap = 3;
+    public static int NeguAwakenedDailyCap = 5;
+    /// <summary>寝癖: えちち連合（物鉄が同じ盤にいるあいだ）の攻撃の上乗せ</summary>
+    public static int NeguAllianceATK = 1;
+    /// <summary>外跳: 跳ね飛ばした敵が何かにぶつかったときのダメージの元の値（防御無視）</summary>
+    public static int NeguBounceWallDamage = 2;
+    /// <summary>無糖: 死んで覚える（倒されるたびに周のあいだ攻撃+1）の上限、ボスへの攻撃の上乗せ</summary>
+    public static int MutouDeathCap = 3;
+    public static int MutouBossBonus = 1;
+    /// <summary>無糖（AC）: スタッガーした敵が次に受けるダメージの上乗せ</summary>
+    public static int MutouStaggerDamage = 2;
+
     // ---- 局の合間のできごと（部の時間） ----
 
     /// <summary>できごとがあるか（false なら勝ったらすぐ仲間選び）</summary>
