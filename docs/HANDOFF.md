@@ -152,7 +152,7 @@
 ### 画像・音
 - 覚醒の画像は10枚を受け取って組み込み済み（2026-10-11。`Hal.png` は `Halo.png` に直した。けいの封印に `CodeRing`）。
 - 新しい部員の覚醒4枚とお土産も受け取って組み込み済み（2026-10-11 夜）: `WorldTrip`（光春、お土産を配るとき）・`CardFan`（ニコ、札を処理するとき）・`LogicShatter`（〆鯖、論破と世界が終わる）・`RgbFan`（翡翠、最強PC）・`Souvenir`（お土産が届くとき）。扇と地球儀とお土産は回さずに出す。
-- 依頼中（素材依頼帳の「覚醒」の節。届くまでは光で代用。置かれたら `Assets/Resources/Effects/<名前>.png` を確かめるだけで使われる）: ボスの気3枚 `RaiteiAura`・`RyuujinAura`・`MaouAura`。
+- ボスの気3枚（`RaiteiAura`・`RyuujinAura`・`MaouAura`）と新しい3人の覚醒（`Ascension`・`Gacha`・`Bonfire`）も 2026-10-11 夜に受け取って組み込んだ。依頼中の画像はいまない。置かれたら `Assets/Resources/Effects/<名前>.png` を確かめるだけで使われる。
 - 画像が届いたら: 黒背景なら黒が透明になる。ファイル名の打ち間違い（`Hal.png` のような）に気をつける。中身は人物・文字が入っていないかを見る。
 - 効果音は依頼中: `Awaken`・`BossAwaken`・`Push`・`Sink`。
 
@@ -247,7 +247,7 @@
 4. 翡翠とニコ（できない札を飛ばすようにしてから）が少し強いかもしれない（試遊で確かめる）。
 4b. 無糖のセリフをユーザーからもらう（メッセージが途中で切れていた）。もらったら `PieceLines` に足して、能力が決まったとき（ときどき）と成ったときに出す。
 4c. 依頼中の画像はない（覚醒の画像は全部届いた）。効果音（`Awaken`・`BossAwaken`・`Push`・`Sink`）はまだ。
-5. 依頼中の画像（ボスの気3枚）と効果音（`Awaken`・`BossAwaken`・`Push`・`Sink`）が届いたら確かめる。
+5. 依頼中の効果音（`Awaken`・`BossAwaken`・`Push`・`Sink`）が届いたら確かめる。
 6. 駒一覧のブラウザ版ページ（https://claude.ai/artifact/FQyUcJnkbyCc9NGA14utpw）に新しい部員と覚醒を足す（データは `docs/snippets/dump_pieces.cs` で書き出せる）。
 7. 前から残っているもの:
    - 僕の手触り（1手番で強化 `BokuBuffTurns=1`、前後にも動ける案）をユーザーと相談中。
