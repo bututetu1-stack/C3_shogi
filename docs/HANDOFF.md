@@ -3,7 +3,7 @@
 作業の約束は `CLAUDE.md`。このメモは「いまどうなっているか」と「次に何をするか」をまとめたもの。ノート PC の Claude の記憶（memory）はデスクトップには来ないので、決まったことはこのメモと `CLAUDE.md` にすべて書いてある。
 
 ## いまの状態（2026-10-11 の夜、ノート PC から引き継ぐとき）
-- **main は PR #14 のマージ（`4b036c6`）のまま。そのあとのノート PC の作業は全部 `feat/ps-members` に入っていて、push 済み・未マージ。** ノート PC には GitHub CLI（`gh`）がないので PR はまだ作っていない。デスクトップで `feat/ps-members` → main の PR を1本作り、マージはユーザーの指示で行う。
+- **ノート PC の作業（`feat/ps-members`）は、2026-10-11 夜にユーザーの指示でローカルで main にマージして push した。** ノート PC には GitHub CLI（`gh`）がないので PR は作っていない（マージコミットに中身を書いた）。main に全部入っている。
 - `feat/ps-members` に入っているもの（積み上げた `feat/growth-help`・`feat/catalog-fix-mitsuharu` も含む。古い順）:
   1. 遊び方と駒の情報で、練度と覚醒の説明を詳しく（部員ごとの活躍の一覧も）。成ったユウは縦横どこまでも走る。
   2. 駒一覧で札をクリックしても右に説明が出なかったのを直した（覚醒の表示を足したときに、選んだあとの描き直しが抜けていた）。光晴 → 光春 に改名（`PieceType.Mitsuharu` はそのまま）。ニコの札の一覧で小錦とユウを別の行に。
@@ -28,13 +28,12 @@
 - エディタで使う小さなスクリプトは `docs/snippets/`（画面の確認・対局の準備・駒のデータの書き出し・新しい3人の能力の確かめ `test_gamers.cs`）。
 
 ## デスクトップでの準備
-1. `git fetch` → `git checkout feat/ps-members` → `git pull`（PR をマージしたあとなら `git checkout main` → `git pull`）。
-2. PR を作る（ユーザーに確かめてから）: `gh pr create --base main --head feat/ps-members`。中身は上の「feat/ps-members に入っているもの」を箇条書きにすればよい。マージはユーザーの指示で。
-3. ユーザーが置いた素材がないか `git status` で見る（`Assets/Resources/Effects`・`Assets/Resources/Audio`。zip のこともある）。
-4. Unity でプロジェクトを開き、**`Assets/Scenes/SampleScene.unity` を開いておく**。新しい駒のアセット（`Assets/Resources/Pieces/RN・Negu・Mutou.asset`）と `PieceType` の追加（RN・Negu・Mutou を末尾に）が入るので、最初のコンパイルは少し長い。
-5. `isuzu-unity-cli verify --test --filter '.'`（テスト55件が通る）。
-6. 自動プレイ用のビルドを作り直す: メニュー「C3将棋 > 自動プレイ用のビルドを作る」（`Builds/Sim/`。git に入らないので PC ごとに作る。**古いビルドには新しい3人がいないので必ず作り直す**）。ビルドすると `Assets/Settings/UniversalRP.asset`・`Assets/UniversalRenderPipelineGlobalSettings.asset`・`ProjectSettings/ProjectSettings.asset`・`ProjectSettings/UnityConnectSettings.asset` に差分が出るので `git checkout --` で戻す。
-7. 速報で動作確認: `node docs/balance/run_parallel.js --base 100 --out BalanceReports/check`。ノート PC の最後の形は 平均10.12局・全クリア29%（`BalanceReports/` は git に入らないので、比べるときは同じビルドで回し直す。100周でも全クリアは ±5% ほど揺れる）。
+1. `git fetch` → `git checkout main` → `git pull`。
+2. ユーザーが置いた素材がないか `git status` で見る（`Assets/Resources/Effects`・`Assets/Resources/Audio`。zip のこともある）。
+3. Unity でプロジェクトを開き、**`Assets/Scenes/SampleScene.unity` を開いておく**。新しい駒のアセット（`Assets/Resources/Pieces/RN・Negu・Mutou.asset`）と `PieceType` の追加（RN・Negu・Mutou を末尾に）が入るので、最初のコンパイルは少し長い。
+4. `isuzu-unity-cli verify --test --filter '.'`（テスト55件が通る）。
+5. 自動プレイ用のビルドを作り直す: メニュー「C3将棋 > 自動プレイ用のビルドを作る」（`Builds/Sim/`。git に入らないので PC ごとに作る。**古いビルドには新しい3人がいないので必ず作り直す**）。ビルドすると `Assets/Settings/UniversalRP.asset`・`Assets/UniversalRenderPipelineGlobalSettings.asset`・`ProjectSettings/ProjectSettings.asset`・`ProjectSettings/UnityConnectSettings.asset` に差分が出るので `git checkout --` で戻す。
+6. 速報で動作確認: `node docs/balance/run_parallel.js --base 100 --out BalanceReports/check`。ノート PC の最後の形は 平均10.12局・全クリア29%（`BalanceReports/` は git に入らないので、比べるときは同じビルドで回し直す。100周でも全クリアは ±5% ほど揺れる）。
 
 ## いまのゲーム（main。第7版までの土台。第8版と新しい部員は下の節）
 
@@ -246,13 +245,12 @@
 - 設定画面（タイトルと対局中の上部）で BGM と効果音を別々に調整できる（`SoundSettings`、PlayerPrefs）。艦載機の音は1.6倍。
 
 ## 次にやること
-1. `feat/ps-members` の PR を作ってマージする（ユーザーの指示で）。
-2. ユーザーの試遊の感想を聞く（新しい部員7人と覚醒、部の時間、練度と覚醒の頻度、難しさ。全クリア29%にしたあとの手ごたえ）。
-3. 作ったセリフ（光春・ニコ・翡翠・無糖）をユーザーに見てもらう。直したいと言われたら `PieceLines` を書き換えるだけ（〆鯖はセリフなし）。
-4. 強さの差で、ユーザーが「いまは触らない」としたもの（2026-10-11）: 門人はレアなのにいちばん強い（+2.52）、僕は素が弱く（−0.52）覚醒が強すぎる（+2.83）。光春も弱め（−0.32、ブロンズなので許容かも）。翡翠・ニコが少し強いかもしれない（試遊で確かめる）。
-5. 依頼中の効果音（`Awaken`・`BossAwaken`・`Push`・`Sink`）が届いたら確かめる。依頼中の画像はない。
-6. 駒一覧のブラウザ版ページ（https://claude.ai/artifact/FQyUcJnkbyCc9NGA14utpw）に新しい部員（7人）と覚醒を足す（データは `docs/snippets/dump_pieces.cs` で書き出せる）。
-7. 前から残っているもの:
+1. ユーザーの試遊の感想を聞く（新しい部員7人と覚醒、部の時間、練度と覚醒の頻度、難しさ。全クリア29%にしたあとの手ごたえ）。
+2. 作ったセリフ（光春・ニコ・翡翠・無糖）をユーザーに見てもらう。直したいと言われたら `PieceLines` を書き換えるだけ（〆鯖はセリフなし）。
+3. 強さの差で、ユーザーが「いまは触らない」としたもの（2026-10-11）: 門人はレアなのにいちばん強い（+2.52）、僕は素が弱く（−0.52）覚醒が強すぎる（+2.83）。光春も弱め（−0.32、ブロンズなので許容かも）。翡翠・ニコが少し強いかもしれない（試遊で確かめる）。
+4. 依頼中の効果音（`Awaken`・`BossAwaken`・`Push`・`Sink`）が届いたら確かめる。依頼中の画像はない。
+5. 駒一覧のブラウザ版ページ（https://claude.ai/artifact/FQyUcJnkbyCc9NGA14utpw）に新しい部員（7人）と覚醒を足す（データは `docs/snippets/dump_pieces.cs` で書き出せる）。
+6. 前から残っているもの:
    - 僕の手触り（1手番で強化 `BokuBuffTurns=1`、前後にも動ける案）をユーザーと相談中。
    - SN は強い（先代部長なので強いままでよい、というのがユーザーの方針）。
    - 艦隊の艦種ごとの数値。分けて測るなら `SimOptions` に艦種を固定する設定を足す。
