@@ -1,6 +1,8 @@
 # エディタで使う小さなスクリプト
 
-`isuzu-unity-cli call execute_code --file <ファイル>` で流す。プレイ中に使うものは `play_mode_play` → `play_mode_step --seconds 2` のあとに流す。
+`isuzu-unity-cli call execute_code --file <ファイル>` で流す。
+
+**注意**: 盤を用意するスクリプト（`setup_battle.cs`・`test_*.cs`・`visual_autoplay.cs` など）は、対局を始めるときに中断データ（タイトルの「続きから」）を上書きする。ユーザーが中断した周があるときは、先に `RunSave` のファイル（`Application.persistentDataPath`）を控えておく。プレイ中に使うものは `play_mode_play` → `play_mode_step --seconds 2` のあとに流す。
 
 | ファイル | 使いどころ |
 |---|---|
