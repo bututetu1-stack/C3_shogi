@@ -357,7 +357,7 @@
 4. 依頼中の効果音（`Awaken`・`BossAwaken`・`Push`・`Sink`）が届いたら確かめる。依頼中の画像はない。
 5. （済み 2026-10-12 朝）駒一覧のブラウザ版ページ（https://claude.ai/artifact/FQyUcJnkbyCc9NGA14utpw）を、新しい部員7人・第9版の敵8種・覚醒・キャラと能力の分け方・夜の改善ループの強さで作り直した。作り直すときは `docs/snippets/dump_pieces.cs`（`BalanceReports/pieces_dump.json` と、局と型ごとの敵の並び `layouts_dump.json`）から。
 6. 前から残っているもの:
-   - 僕の手触り（1手番で強化 `BokuBuffTurns=1`、前後にも動ける案）をユーザーと相談中。
+   - 僕の手触り（1手番で強化 `BokuBuffTurns=1`、前後にも動ける案）をユーザーと相談中。新しい AI で `BokuBuffTurns=1` を測ると、僕を第一局から持った200周で 11.77 → 13.14局（+1.37、通常の周 12.96）。
    - SN は強い（先代部長なので強いままでよい、というのがユーザーの方針）。
    - 艦隊の艦種ごとの数値。分けて測るなら `SimOptions` に艦種を固定する設定を足す。
    - 李白で物鉄を成れるようにする案は見送りで確定（`immuneToFlip`）。
