@@ -134,6 +134,12 @@ public static class BalanceTuning
     /// </summary>
     public static int AiFeaturesPlayer = 10;
     public static int AiFeaturesEnemy = 14;
+    /// <summary>
+    /// AI の評価の重み（陣営ごと。空なら既定）: [C3 への脅威1つ, C3 の隣の味方1体, 取れる駒の値打ち×/10, 取られそうな駒×/10, 1段の前進, 相手 C3 へ1マス, C3 の体力1]。
+    /// 既定は { 450, 150, 8, 3, 3, 4, 300 }。--set AiWeightsEnemy=600,150,8,3,3,4,300 のように試す
+    /// </summary>
+    public static int[] AiWeightsPlayer = new int[0];
+    public static int[] AiWeightsEnemy = new int[0];
     /// <summary>覚醒した僕が1体を強化できる量の上限</summary>
     public static int BokuAwakenedCap = 1;
 

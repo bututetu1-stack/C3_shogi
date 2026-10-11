@@ -41,6 +41,12 @@ public class SimpleAI : MonoBehaviour
     private const int QuiesceDepth = 2;
     private const int QuiesceMaxMoves = 6;
 
+    // 評価の重み（陣営ごと。BalanceTuning.AiWeightsPlayer / AiWeightsEnemy の並び）
+    private const int WThreat = 0, WGuard = 1, WCapture = 2, WHanging = 3, WAdvance = 4, WApproach = 5, WC3Hp = 6;
+    private static readonly int[] DefaultWeights = { 450, 150, 8, 3, 3, 4, 300 };
+    private int[] weights = DefaultWeights;
+    private int W(int i) { return i < weights.Length ? weights[i] : DefaultWeights[i]; }
+
     /// <summary>直前の手で読んだ局面の数と、かかった時間（ミリ秒）。自動プレイの統計用</summary>
     public int LastNodes { get; private set; }
     public double LastMs { get; private set; }
@@ -55,6 +61,8 @@ public class SimpleAI : MonoBehaviour
     private void ConfigureDifficulty(Team team)
     {
         features = team == Team.Player ? BalanceTuning.AiFeaturesPlayer : BalanceTuning.AiFeaturesEnemy;
+        int[] w = team == Team.Player ? BalanceTuning.AiWeightsPlayer : BalanceTuning.AiWeightsEnemy;
+        weights = w != null && w.Length > 0 ? w : DefaultWeights;
         // 自動プレイで自軍を指すときは、いちばん強い設定で指す
         if (team == Team.Player) { searchDepths = FullDepths; randomMargin = 15; }
         else
@@ -793,13 +801,13 @@ public class SimpleAI : MonoBehaviour
         foreach (var p in evalPlayer) if (p.data.pieceType != PieceType.C3) score -= PieceValue(p);
 
         // 2. C3の体力
-        score += eC3.currentHP * 300 - pC3.currentHP * 300;
+        score += eC3.currentHP * W(WC3Hp) - pC3.currentHP * W(WC3Hp);
         if (pC3.currentHP <= 2) score += 1500;
         if (eC3.currentHP <= 2) score -= 1500;
 
         // 3. C3の護衛
-        score += CountAdjacent(eC3.boardPosition, Team.Enemy) * 150;
-        score -= CountAdjacent(pC3.boardPosition, Team.Player) * 150;
+        score += CountAdjacent(eC3.boardPosition, Team.Enemy) * W(WGuard);
+        score -= CountAdjacent(pC3.boardPosition, Team.Player) * W(WGuard);
 
         // 4. C3への脅威（届く駒の数と合計ダメージ）
         int pIdx = pC3.boardPosition.x + pC3.boardPosition.y * size;
@@ -808,7 +816,7 @@ public class SimpleAI : MonoBehaviour
         int threatsToE = reachCountP[eIdx];
         int dmgToP = Mathf.Max(0, reachSumAtkE[pIdx] - threatsToP * pC3.DEF);
         int dmgToE = Mathf.Max(0, reachSumAtkP[eIdx] - threatsToE * eC3.DEF);
-        score += threatsToP * 450 - threatsToE * 450;
+        score += threatsToP * W(WThreat) - threatsToE * W(WThreat);
         if (dmgToP >= pC3.currentHP && threatsToP > 0) score += toMove == Team.Enemy ? 20000 : 3000;
         if (dmgToE >= eC3.currentHP && threatsToE > 0) score -= toMove == Team.Player ? 20000 : 3000;
 
@@ -838,9 +846,9 @@ public class SimpleAI : MonoBehaviour
             }
         }
         if (toMove == Team.Enemy)
-            score += bestEnemyCapture * 8 / 10 - enemyHanging * 3 / 10;
+            score += bestEnemyCapture * W(WCapture) / 10 - enemyHanging * W(WHanging) / 10;
         else
-            score -= bestPlayerCapture * 8 / 10 - playerHanging * 3 / 10;
+            score -= bestPlayerCapture * W(WCapture) / 10 - playerHanging * W(WHanging) / 10;
 
         // 6. 能力の噛み合い（僕・中華のそばに寄る、小錦・けい・きぷの隣の敵）
         if (BalanceTuning.AiAbilityAware)
@@ -853,14 +861,14 @@ public class SimpleAI : MonoBehaviour
         foreach (var p in evalEnemy)
         {
             if (!IsControllable(p)) continue;
-            score += (10 - Chebyshev(p.boardPosition, pC3.boardPosition)) * 4;
-            score += (size - 1 - p.boardPosition.y) * 3;
+            score += (10 - Chebyshev(p.boardPosition, pC3.boardPosition)) * W(WApproach);
+            score += (size - 1 - p.boardPosition.y) * W(WAdvance);
         }
         foreach (var p in evalPlayer)
         {
             if (!IsControllable(p)) continue;
-            score -= (10 - Chebyshev(p.boardPosition, eC3.boardPosition)) * 4;
-            score -= p.boardPosition.y * 3;
+            score -= (10 - Chebyshev(p.boardPosition, eC3.boardPosition)) * W(WApproach);
+            score -= p.boardPosition.y * W(WAdvance);
         }
 
         return score;
