@@ -71,13 +71,13 @@ public static class PieceLines
 
     // ここから下は、セリフをもらっていない部員に説明文から作ったもの（2026-10-11、ユーザーが「適当に作って」）
     // 光春: 敵を倒して裏金がたまったとき（ときどき）
-    public static readonly string[] MitsuharuFund = { "経費です", "帳簿は合ってます", "計上しときます" };
+    public static readonly string[] MitsuharuFund = { "経費で落とすか", "裏帳簿無いよ(笑)" };
 
     // ニコ: タスクを処理したとき（ときどき）
     public static readonly string[] NikoTask = { "任せて", "処理しておくね", "（ウィンク）" };
 
     // 〆鯖: レスバで言い返したとき（ときどき）
-    public static readonly string[] ShimesabaRetort = { "それは違いますね", "正論ですが？", "ソースは？" };
+    public static readonly string[] ShimesabaRetort = { "それは違うだろ", "正論だが？", "ソース出せよ" };
 
     // 翡翠: パーツを拾ったとき（ときどき）／誘われて来たとき
     public static readonly string[] KawasemiScavenge = { "まだ使える", "ジャンク、もらいます", "CPU高い……" };
