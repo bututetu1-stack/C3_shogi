@@ -145,9 +145,9 @@ public static class BalanceTuning
     public static int NikoBuffCap = 2;
     /// <summary>〆鯖のレスバ（攻撃されて生き残ったとき言い返す）のダメージの元の値（防御無視）</summary>
     public static int ShimesabaRetort = 1;
-    /// <summary>〆鯖（成った後）: 世界が終わるまでの手番と、そのときのダメージの元の値（盤上の敵すべて・防御無視）</summary>
+    /// <summary>〆鯖（成った後）: 世界が終わるまでの手番と、そのときのダメージの元の値（いちばん体力の多い敵1体・防御無視。2026-10-11 に全体3から単体に）</summary>
     public static int ShimesabaCountdown = 3;
-    public static int ShimesabaEndDamage = 3;
+    public static int ShimesabaEndDamage = 8;
     /// <summary>覚醒した〆鯖（完全論破）: レスバの上乗せと、成っているときの世界が終わるまでの手番（成っていなければ世界は終わらない）</summary>
     public static int ShimesabaAwakenedRetortBonus = 1;
     public static int ShimesabaAwakenedCountdown = 2;

@@ -580,7 +580,6 @@ public partial class AbilitySystem
         if (target.data.pieceType != PieceType.Shimesaba || target.isSealed) return;
         int damage = CombatResolver.AbilityDamage(target, BalanceTuning.ShimesabaRetort + (target.awakened ? BalanceTuning.ShimesabaAwakenedRetortBonus : 0));
         FloatingText.Spawn(target.boardPosition, target.awakened ? "論破" : "レスバ", ArgueWhite, 3.2f);
-        SpeechBubble.SayMaybe(target, PieceLines.ShimesabaRetort, 0.5f);
         if (target.awakened && BattleEffects.Instance != null) BattleEffects.Instance.PlayAwakenBurst("LogicShatter", attacker.boardPosition, target.data.awakenColor);
         if (BattleEffects.Instance != null) BattleEffects.Instance.PlayStream(target.boardPosition, attacker.boardPosition, ArgueWhite);
         if (BattleLogUI.Instance != null)
@@ -604,6 +603,19 @@ public partial class AbilitySystem
         return s.awakened && s.isPromoted ? BalanceTuning.ShimesabaAwakenedCountdown : BalanceTuning.ShimesabaCountdown;
     }
 
+    /// <summary>世界が終わるの狙い: いちばん体力の多い敵（同じなら攻撃の高いほう。C3・中華・ドパは除く）</summary>
+    private static PieceInstance DoomTarget(Team foe)
+    {
+        PieceInstance best = null;
+        foreach (var e in BoardManager.Instance.GetTeamPieces(foe))
+        {
+            PieceType t = e.data.pieceType;
+            if (!e.isAlive || t == PieceType.C3 || t == PieceType.Chuka || t == PieceType.Dopa) continue;
+            if (best == null || e.currentHP > best.currentHP || (e.currentHP == best.currentHP && e.ATK > best.ATK)) best = e;
+        }
+        return best;
+    }
+
     private IEnumerator ExecuteDoomsday(Team team)
     {
         foreach (var s in AlivePieces(team, PieceType.Shimesaba))
@@ -618,29 +630,33 @@ public partial class AbilitySystem
                 FloatingText.Spawn(s.boardPosition, "あと" + left, ArgueWhite, 3.4f);
                 continue;
             }
+            // 世界が終わる: いちばん体力の多い敵1体に大ダメージ（防御無視。C3 は狙わない）。狙える敵がいなければ次の手番に持ち越す
+            PieceInstance victim = DoomTarget(team == Team.Player ? Team.Enemy : Team.Player);
+            if (victim == null)
+            {
+                doomCountdown[s] = 1;
+                continue;
+            }
             doomCountdown[s] = DoomCountdown(s);
 
-            // 世界が終わる: 盤上の敵すべてに（防御無視）
             if (!GameSim.Headless)
             {
                 if (BattleEffects.Instance != null) BattleEffects.Instance.PlayCutInSound();
                 yield return CutInUI.PlayPiece(s.data, true, "世界が終わる", "Hack分野の最終兵器", Palette.Hex(0x101014), Palette.Hex(0xE0E8F0), 1.1f);
-                if (BattleEffects.Instance != null) BattleEffects.Instance.PlayWorldEnd(s.boardPosition);
-                if (s.awakened && BattleEffects.Instance != null) BattleEffects.Instance.PlayAwakenBurst("LogicShatter", s.boardPosition, s.data.awakenColor);
+                if (BattleEffects.Instance != null)
+                {
+                    BattleEffects.Instance.PlayWorldEnd(s.boardPosition);
+                    BattleEffects.Instance.PlayStream(s.boardPosition, victim.boardPosition, ArgueWhite);
+                    BattleEffects.Instance.PlayExplosionEffect(victim.boardPosition);
+                    if (s.awakened) BattleEffects.Instance.PlayAwakenBurst("LogicShatter", victim.boardPosition, s.data.awakenColor);
+                }
             }
-            if (BattleLogUI.Instance != null) BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("〆鯖", s.team) + " の最終兵器……世界が終わる");
-            RunRoster.Feat(s);
             int damage = CombatResolver.AbilityDamage(s, BalanceTuning.ShimesabaEndDamage);
-            var victims = new List<PieceInstance>();
-            foreach (var e in BoardManager.Instance.GetTeamPieces(team == Team.Player ? Team.Enemy : Team.Player))
-                if (e.isAlive && e.data.pieceType != PieceType.C3) victims.Add(e);
+            if (BattleLogUI.Instance != null)
+                BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("〆鯖", s.team) + " の最終兵器……世界が終わる（" + BattleLogUI.ColorName(victim.DisplayName, victim.team) + " に" + damage + "ダメージ）");
+            RunRoster.Feat(s);
             var source = GameSim.BeginSource(s);
-            foreach (var e in victims)
-            {
-                if (!e.isAlive) continue;
-                if (BattleEffects.Instance != null) BattleEffects.Instance.PlayExplosionEffect(e.boardPosition);
-                CombatResolver.ApplyDamage(e, damage, true);
-            }
+            CombatResolver.ApplyDamage(victim, damage, true);
             GameSim.EndSource(source);
             yield return new WaitForSeconds(0.5f);
         }
