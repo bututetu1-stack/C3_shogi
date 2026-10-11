@@ -110,6 +110,8 @@ public static class BalanceTuning
     public static int NakoChainMax = 2;
     /// <summary>覚醒したなこ: ドパを、通り道に敵がいちばん多く並ぶ向きに出す（false なら覚醒前と同じくでたらめな向き）</summary>
     public static bool NakoAwakenedAim = true;
+    /// <summary>素のなこがドパを「通り道に敵がいちばん多い向き」に出す割合（%）。0 ならでたらめ（夜の改善ループで相談用に作った。既定は0）</summary>
+    public static int NakoBaseAimPercent = 0;
     /// <summary>覚醒したヲツが作る中華の数と、その中華の満腹の上限（1体あたり）</summary>
     public static int WotsuAwakenedChukaCount = 4;
     public static int WotsuAwakenedFullMax = 2;

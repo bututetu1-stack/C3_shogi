@@ -726,7 +726,9 @@ public partial class AbilitySystem : MonoBehaviour
 
             if (candidates.Count == 0) yield break;
 
-            Vector2Int dopaPos = nako.awakened && BalanceTuning.NakoAwakenedAim ? AimDopa(nako, candidates) : candidates[Random.Range(0, candidates.Count)];
+            // 覚醒したなこは狙って出す。素のなこも NakoBaseAimPercent の割合で狙う（既定は0＝でたらめ）
+            bool aim = (nako.awakened && BalanceTuning.NakoAwakenedAim) || (BalanceTuning.NakoBaseAimPercent > 0 && Random.Range(0, 100) < BalanceTuning.NakoBaseAimPercent);
+            Vector2Int dopaPos = aim ? AimDopa(nako, candidates) : candidates[Random.Range(0, candidates.Count)];
 
             // ドパ生成（敵チームとして出現）
             PieceData dopaData = bm.GetPieceDataByType(PieceType.Dopa);
