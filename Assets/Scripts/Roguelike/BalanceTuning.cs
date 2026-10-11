@@ -10,7 +10,7 @@ public static class BalanceTuning
     public static int EnemyAtkDelay = 0;
     /// <summary>敵の駒（C3・深海を除く）に局の上乗せが付き始める局。前半は上乗せせず、敵の種類と布陣で難しさを作る（第9版）。
     /// 上乗せは「この局を1とした局の数」を、下の割る数で割った値</summary>
-    public static int EnemyScaleFromStage = 8;
+    public static int EnemyScaleFromStage = 9;
     /// <summary>後半の敵の駒の上乗せ: 体力 = (局 − 7) ÷ この値、攻撃 = (局 − 7) ÷ EnemyLateAtkDivisor（第八局から。第十五局で体力+8・攻撃+4）。
     /// 深海・艦娘の上乗せは EnemyAtkDivisor（局 ÷ 4）のまま</summary>
     public static int EnemyLateHpDivisor = 1;
