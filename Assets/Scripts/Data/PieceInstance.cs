@@ -33,6 +33,13 @@ public class PieceInstance
     public bool substituteUsed;     // 覚醒した僕が身代わりを使った（1局に1回）
     public bool frozen;             // 覚醒したきぷに凍らされた（凍らせた側の次の手番が終わるまで防御−1）
     public int poetStacks;          // 覚醒した李白が裏返して得た攻撃の上乗せ
+    public int block;               // RN のブロック（受けるダメージをこの分防ぐ。自分の陣営の手番の初めに消える）
+    public bool acted;              // この手番に動いた・攻撃した（RN のポケモンスリープ）
+    public bool staggered;          // 無糖（AC）にスタッガーされた（次に受けるダメージが増える）
+    public int dailyCount;          // 寝癖のデイリーの進み
+    public int dailyRewards;        // 寝癖のデイリーの報酬で上がった攻撃（その局のあいだ）
+    public bool allianceOn;         // 寝癖のえちち連合が効いている（物鉄が同じ盤にいる）
+    public bool bonfireUsed;        // 覚醒した無糖が篝火で蘇った（1局に1回）
 
     public int ATK { get { return (isPromoted ? data.promotedATK : data.baseATK) + bonusATK; } }
     public int DEF { get { return (isPromoted ? data.promotedDEF : data.baseDEF) + bonusDEF; } }

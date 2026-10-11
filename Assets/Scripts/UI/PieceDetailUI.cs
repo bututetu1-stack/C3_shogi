@@ -135,14 +135,25 @@ public class PieceDetailUI : MonoBehaviour
             var growth = UIFactory.Label("練度 " + PieceSelectionUI.StarText(member.stars) + "　" + RunRoster.XpText(member), 19, Palette.GoldLight, "c3-bold");
             growth.style.marginTop = 10;
             content.Add(growth);
-            var effects = UIFactory.Paragraph("★1 " + RunRoster.StarEffectText(1) + "　★2 " + RunRoster.StarEffectText(2) + "　★3 " + RunRoster.StarEffectText(3)
-                + "。敵を倒す・局を生き残る・能力が決まると練度がたまる。", 15, Palette.TextSub);
+            int next = RunRoster.NextThreshold(member);
+            string feat = RunRoster.FeatText(d.pieceType);
+            string guide = (next > 0
+                    ? "次は★" + (member.stars + 1) + "（" + RunRoster.StarEffectText(member.stars + 1) + "）。"
+                    : "★3（いちばん上）。")
+                + "★1 " + RunRoster.StarEffectText(1) + "、★2 " + RunRoster.StarEffectText(2) + "、★3 " + RunRoster.StarEffectText(3)
+                + "（必要な練度 " + RunRoster.ThresholdText(member.rarity) + "）"
+                + "\n練度がたまる: " + RunRoster.XpSourcesText()
+                + "\nこの部員の活躍: " + (feat != null ? feat + "、" : "") + "敵を倒したとき"
+                + (d.pieceType == PieceType.Monotetsu ? "\n★3なら、着任した艦娘が最初から改になる" : "");
+            var effects = UIFactory.Paragraph(guide, 15, Palette.TextSub);
             content.Add(effects);
-            if (d.canAwaken && member.stars >= 3)
+            if (d.canAwaken)
             {
-                string awake = piece.awakened ? "覚醒「" + d.awakenedName + "」"
-                    : "覚醒まで: この局の活躍あと" + Mathf.Max(0, BalanceTuning.AwakenActivities - piece.awakenCharge) + "（倒す・能力が決まる）";
-                var a = UIFactory.Label(awake, 18, d.awakenColor, "c3-bold");
+                string name = "覚醒「" + d.awakenedName + "」";
+                string awake = piece.awakened ? name + "（この局のあいだ）"
+                    : member.stars >= 3 ? name + "まで: この局の活躍あと" + Mathf.Max(0, BalanceTuning.AwakenActivities - piece.awakenCharge)
+                    : name + ": ★3になると、局の中で活躍を" + BalanceTuning.AwakenActivities + "回重ねてその場で覚醒する";
+                var a = UIFactory.Paragraph(awake, 17, d.awakenColor, "c3-bold");
                 a.style.marginTop = 6;
                 content.Add(a);
             }

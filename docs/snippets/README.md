@@ -8,6 +8,7 @@
 | `setup_battle.cs` | 第六局の盤を作り、新しい部員4人とヲツを仲間にして対局を始める（裏金は5）。駒や局を書き換えて、能力の確かめに使う |
 | `cap_setup.cs` | 画面の確認の準備。PanelSettings とカメラの両方に RenderTexture を設定する。このあと `play_mode_step --seconds 0.3` などで数フレーム進める |
 | `cap_save_template.cs` | 画面を PNG で保存する。`OUTPATH` を保存先に書き換えたコピーを作って流す（例: `sed 's#OUTPATH#C:\\\\tmp\\\\shot.png#' cap_save_template.cs > shot.cs`） |
+| `test_gamers.cs` | プレイ中に第六局の盤を作り、RN・寝癖・無糖の能力（ブロック・弾き・デイリー・えちち連合・スタッガー・篝火）を1つずつ動かして数値を返す。能力を変えたときの確かめに使う |
 | `dump_pieces.cs` | 駒のデータ（数値・動き・説明・覚醒）を `BalanceReports/pieces_dump.json` に書き出す。駒一覧のページ（https://claude.ai/artifact/FQyUcJnkbyCc9NGA14utpw）を作り直すときに使う |
 
 画面の確認の流れ（PowerShell）:

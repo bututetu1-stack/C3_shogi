@@ -12,8 +12,8 @@ public static class BalanceTuning
     public static int EnemyHpDivisor = 2;
     /// <summary>敵C3の体力の上乗せ = (局−1) ÷ この値</summary>
     public static int EnemyC3HpDivisor = 2;
-    /// <summary>敵C3の体力にさらに足す値（自軍のC3とは別に調整するため）</summary>
-    public static int EnemyC3ExtraHP = 0;
+    /// <summary>敵C3の体力にさらに足す値（自軍のC3とは別に調整するため。2026-10-11 に全クリア37%→30%にするため1）</summary>
+    public static int EnemyC3ExtraHP = 1;
 
     /// <summary>自軍の体力の上乗せ = (局−1) ÷ この値（C3も含む。部の時間を入れたとき4→5）</summary>
     public static int PlayerHpDivisor = 5;
@@ -93,6 +93,8 @@ public static class BalanceTuning
     public static int KeiAwakenedRange = 2;
     /// <summary>覚醒したなこ: 突撃で倒したときの追加の突撃の回数</summary>
     public static int NakoChainMax = 2;
+    /// <summary>覚醒したなこ: ドパを、通り道に敵がいちばん多く並ぶ向きに出す（false なら覚醒前と同じくでたらめな向き）</summary>
+    public static bool NakoAwakenedAim = true;
     /// <summary>覚醒したヲツが作る中華の数と、その中華の満腹の上限（1体あたり）</summary>
     public static int WotsuAwakenedChukaCount = 4;
     public static int WotsuAwakenedFullMax = 2;
@@ -109,25 +111,27 @@ public static class BalanceTuning
     public static int MaouAwakenedStrikes = 2;
     /// <summary>AI が能力を意識する（支援役を狙う・僕や中華のそばに寄る・けい／きぷ／小錦の隣を避ける）</summary>
     public static bool AiAbilityAware = true;
+    /// <summary>AI が覚醒した駒に上乗せする値打ち（守る・狙う重み）</summary>
+    public static int AiAwakenedValue = 60;
     /// <summary>覚醒した僕が1体を強化できる量の上限</summary>
     public static int BokuAwakenedCap = 1;
 
     // ---- 2026-10-11 に加わった部員 ----
 
-    /// <summary>光晴: 盤にいるあいだ、味方が敵を倒すたびにたまる裏金と上限（周をまたいで残る）</summary>
+    /// <summary>光春: 盤にいるあいだ、味方が敵を倒すたびにたまる裏金と上限（周をまたいで残る）</summary>
     public static int MitsuharuFundPerKill = 1;
-    /// <summary>光晴（会計の権力）: 盤にいるあいだ、自軍の手番の初めにたまる裏金</summary>
+    /// <summary>光春（会計の権力）: 盤にいるあいだ、自軍の手番の初めにたまる裏金</summary>
     public static int MitsuharuFundPerTurn = 1;
-    /// <summary>光晴（高飛び）: 裏金1でお土産を送る味方の数</summary>
+    /// <summary>光春（高飛び）: 裏金1でお土産を送る味方の数</summary>
     public static int MitsuharuSouvenirTargets = 2;
     public static int MitsuharuFundMax = 10;
-    /// <summary>光晴: 裏金がこれだけたまると、自軍の手番の初めに自分から海外へ旅立つ（敵陣に入っても成る）</summary>
+    /// <summary>光春: 裏金がこれだけたまると、自軍の手番の初めに自分から海外へ旅立つ（敵陣に入っても成る）</summary>
     public static int MitsuharuTripCost = 5;
-    /// <summary>光晴（高飛び）のお土産: 傷ついた味方への回復（元気なら攻撃+1）</summary>
+    /// <summary>光春（高飛び）のお土産: 傷ついた味方への回復（元気なら攻撃+1）</summary>
     public static int MitsuharuSouvenirHeal = 2;
-    /// <summary>覚醒した光晴（世界一周）: お土産を送る味方の数</summary>
+    /// <summary>覚醒した光春（世界一周）: お土産を送る味方の数</summary>
     public static int MitsuharuAwakenedTargets = 4;
-    /// <summary>光晴: 裏金が尽きたら帰国して、成る前の姿で自陣に戻る</summary>
+    /// <summary>光春: 裏金が尽きたら帰国して、成る前の姿で自陣に戻る</summary>
     public static bool MitsuharuReturnsWhenBroke = true;
     /// <summary>ニコ: 山札の上限（成る前／成った後）</summary>
     public static int NikoCapacity = 3;
@@ -141,9 +145,9 @@ public static class BalanceTuning
     public static int NikoBuffCap = 2;
     /// <summary>〆鯖のレスバ（攻撃されて生き残ったとき言い返す）のダメージの元の値（防御無視）</summary>
     public static int ShimesabaRetort = 1;
-    /// <summary>〆鯖（成った後）: 世界が終わるまでの手番と、そのときのダメージの元の値（盤上の敵すべて・防御無視）</summary>
+    /// <summary>〆鯖（成った後）: 世界が終わるまでの手番と、そのときのダメージの元の値（いちばん体力の多い敵1体・防御無視。2026-10-11 に全体3から単体に）</summary>
     public static int ShimesabaCountdown = 3;
-    public static int ShimesabaEndDamage = 3;
+    public static int ShimesabaEndDamage = 8;
     /// <summary>覚醒した〆鯖（完全論破）: レスバの上乗せと、成っているときの世界が終わるまでの手番（成っていなければ世界は終わらない）</summary>
     public static int ShimesabaAwakenedRetortBonus = 1;
     public static int ShimesabaAwakenedCountdown = 2;
@@ -159,6 +163,30 @@ public static class BalanceTuning
     /// <summary>最強PC: ベンチマークのダメージ・水冷の回復</summary>
     public static int KawasemiBenchDamage = 2;
     public static int KawasemiCoolHeal = 2;
+
+    // ---- PlayStation 鯖の部員（RN・寝癖・無糖） ----
+
+    /// <summary>RN: 自分の手番の終わりに得るブロック（次の自分の手番まで、受けるダメージをこの分防ぐ）。成ると・覚醒の上乗せ</summary>
+    public static int RnBlock = 2;
+    public static int RnPromotedBlock = 3;
+    public static int RnAwakenedBlockBonus = 2;
+    /// <summary>RN（成った後）: ポケモンスリープ（動かなかった手番の終わりの回復）と SEKIRO の弾き（ブロックで全部防いだら相手に。防御無視）</summary>
+    public static int RnSleepHeal = 1;
+    public static int RnParryDamage = 1;
+    /// <summary>寝癖: デイリーが何手番で報酬（攻撃+1）になるか（外跳は短い。覚醒は毎手番）と、報酬の上限（その局のあいだ）</summary>
+    public static int NeguDailyEvery = 3;
+    public static int NeguPromotedDailyEvery = 2;
+    public static int NeguDailyCap = 3;
+    public static int NeguAwakenedDailyCap = 5;
+    /// <summary>寝癖: えちち連合（物鉄が同じ盤にいるあいだ）の攻撃の上乗せ</summary>
+    public static int NeguAllianceATK = 1;
+    /// <summary>外跳: 跳ね飛ばした敵が何かにぶつかったときのダメージの元の値（防御無視）</summary>
+    public static int NeguBounceWallDamage = 2;
+    /// <summary>無糖: 死んで覚える（倒されるたびに周のあいだ攻撃+1）の上限、ボスへの攻撃の上乗せ</summary>
+    public static int MutouDeathCap = 3;
+    public static int MutouBossBonus = 1;
+    /// <summary>無糖（AC）: スタッガーした敵が次に受けるダメージの上乗せ</summary>
+    public static int MutouStaggerDamage = 2;
 
     // ---- 局の合間のできごと（部の時間） ----
 

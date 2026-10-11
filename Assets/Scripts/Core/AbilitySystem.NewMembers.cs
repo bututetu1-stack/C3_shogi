@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 
 /// <summary>
-/// 2026-10-11 に加わった部員の能力: 光晴（裏帳簿・高飛び）、ニコ（タスク処理）、〆鯖（正論パンチ・レスバ・世界が終わる）、翡翠（ジャンク漁り・最強PC）
+/// 2026-10-11 に加わった部員の能力: 光春（裏帳簿・高飛び）、ニコ（タスク処理）、〆鯖（正論パンチ・レスバ・世界が終わる）、翡翠（ジャンク漁り・最強PC）
 /// </summary>
 public partial class AbilitySystem
 {
@@ -12,7 +12,7 @@ public partial class AbilitySystem
     private static readonly Color ArgueWhite = new Color(0.9f, 0.94f, 1f);
     private static readonly Color JadeGreen = new Color(0.36f, 0.88f, 0.78f);
 
-    /// <summary>高飛びして盤外にいる光晴（その局のあいだ）</summary>
+    /// <summary>高飛びして盤外にいる光春（その局のあいだ）</summary>
     private readonly List<PieceInstance> abroad = new List<PieceInstance>();
     /// <summary>ニコの山札（投げられたタスク。古い順）</summary>
     private readonly Dictionary<PieceInstance, List<NikoTask>> nikoDecks = new Dictionary<PieceInstance, List<NikoTask>>();
@@ -69,12 +69,12 @@ public partial class AbilitySystem
                 return "パーツ " + Instance.PartsOf(p) + "/" + BalanceTuning.KawasemiPartsMax
                     + (p.awakened ? "（最強PC: 当たりしか出ない）" : p.isPromoted ? "（当たり " + Mathf.RoundToInt(KawasemiGoodChance(Instance.PartsOf(p)) * 100f) + "%）" : "");
             default:
-                return null;
+                return GamerStatusLine(p);
         }
     }
 
     // ============================================================
-    // 撃破のたびに: 光晴の裏金、翡翠のパーツ
+    // 撃破のたびに: 光春の裏金、翡翠のパーツ
     // ============================================================
     public void OnPieceKilled(PieceInstance victim, Vector2Int pos)
     {
@@ -83,7 +83,7 @@ public partial class AbilitySystem
         PieceType v = victim.data.pieceType;
         bool fodder = v == PieceType.Chuka || v == PieceType.Dopa;
 
-        // 裏帳簿: 盤にいる光晴（成る前）がいれば、味方が敵を倒すたびに裏金がたまる
+        // 裏帳簿: 盤にいる光春（成る前）がいれば、味方が敵を倒すたびに裏金がたまる
         if (victim.team == Team.Enemy && !fodder && GameManager.Instance != null)
         {
             foreach (var m in AlivePieces(Team.Player, PieceType.Mitsuharu))
@@ -92,6 +92,7 @@ public partial class AbilitySystem
                 GameManager.Instance.SecretFund += BalanceTuning.MitsuharuFundPerKill;
                 GameManager.Instance.SecretFund = Mathf.Min(GameManager.Instance.SecretFund, BalanceTuning.MitsuharuFundMax);
                 FloatingText.Spawn(m.boardPosition, "裏金+" + BalanceTuning.MitsuharuFundPerKill, FundGold, 2.8f, 0.2f);
+                SpeechBubble.SayMaybe(m, PieceLines.MitsuharuFund, 0.3f);
                 RunRoster.Feat(m);
                 break;
             }
@@ -111,6 +112,7 @@ public partial class AbilitySystem
                 FloatingText.Spawn(k.boardPosition, "パーツ+1", JadeGreen, 2.8f, 0.3f);
                 if (BattleEffects.Instance != null) BattleEffects.Instance.PlayStream(pos, k.boardPosition, JadeGreen);
                 RunRoster.Feat(k);
+                SpeechBubble.SayMaybe(k, PieceLines.KawasemiScavenge, 0.3f);
             }
         }
     }
@@ -122,10 +124,10 @@ public partial class AbilitySystem
     }
 
     // ============================================================
-    // 光晴: 高飛び（成ると盤外へ）とお土産
+    // 光春: 高飛び（成ると盤外へ）とお土産
     // ============================================================
 
-    /// <summary>成った光晴を盤外へ送る（撃破ではないので数えない。攻撃もされない）</summary>
+    /// <summary>成った光春を盤外へ送る（撃破ではないので数えない。攻撃もされない）</summary>
     public void SendAbroad(PieceInstance m)
     {
         if (m == null || !m.isAlive) return;
@@ -133,12 +135,12 @@ public partial class AbilitySystem
         FloatingText.Spawn(pos, "高飛び", FundGold, 3.8f);
         if (BattleEffects.Instance != null) BattleEffects.Instance.PlayTakeoff(pos);
         if (BattleLogUI.Instance != null)
-            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("光晴", m.team) + " は裏金を持って海外旅行へ旅立った（裏金 " + (GameManager.Instance != null ? GameManager.Instance.SecretFund : 0) + "）");
+            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("光春", m.team) + " は裏金を持って海外旅行へ旅立った（裏金 " + (GameManager.Instance != null ? GameManager.Instance.SecretFund : 0) + "）");
         CombatResolver.RemoveWithExit(m, PieceController.ExitStyle.Retreat);
         abroad.Add(m);
     }
 
-    /// <summary>自軍の手番の初めに、旅費（裏金）がたまった光晴は海外へ旅立ち、盤外の光晴は裏金を使って味方1体にお土産を送る</summary>
+    /// <summary>自軍の手番の初めに、旅費（裏金）がたまった光春は海外へ旅立ち、盤外の光春は裏金を使って味方1体にお土産を送る</summary>
     private IEnumerator SendSouvenirs(Team team)
     {
         if (team != Team.Player || GameManager.Instance == null) yield break;
@@ -211,7 +213,7 @@ public partial class AbilitySystem
                 FloatingText.Spawn(to.boardPosition, "お土産", FundGold, 3.2f, 0.25f);
                 RunRoster.Feat(m);
                 if (BattleLogUI.Instance != null)
-                    BattleLogUI.Instance.AddLog("海外の" + BattleLogUI.ColorName("光晴", m.team) + " から " + BattleLogUI.ColorName(to.DisplayName, to.team) + " にお土産（" + gift + "、裏金 残り" + GameManager.Instance.SecretFund + "）");
+                    BattleLogUI.Instance.AddLog("海外の" + BattleLogUI.ColorName("光春", m.team) + " から " + BattleLogUI.ColorName(to.DisplayName, to.team) + " にお土産（" + gift + "、裏金 残り" + GameManager.Instance.SecretFund + "）");
             }
             yield return new WaitForSeconds(0.3f);
         }
@@ -232,7 +234,7 @@ public partial class AbilitySystem
             FloatingText.Spawn(home.Value, "帰国", FundGold, 3.6f, 0.3f);
             if (BattleEffects.Instance != null) BattleEffects.Instance.PlaySouvenir(home.Value);
             if (BattleLogUI.Instance != null)
-                BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("光晴", team) + " は裏金を使い果たして帰国した");
+                BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("光春", team) + " は裏金を使い果たして帰国した");
             yield return new WaitForSeconds(0.4f);
         }
     }
@@ -269,6 +271,7 @@ public partial class AbilitySystem
             case PieceType.Wotsu: case PieceType.Kei: case PieceType.Kipu: case PieceType.Boku: case PieceType.Rihaku:
             case PieceType.Nako: case PieceType.Monin: case PieceType.Konishiki: case PieceType.Yuu: case PieceType.SN:
             case PieceType.Monotetsu: case PieceType.Mitsuharu: case PieceType.Shimesaba: case PieceType.Kawasemi:
+            case PieceType.RN: case PieceType.Negu: case PieceType.Mutou:
                 return true;
             default:
                 return false;
@@ -360,6 +363,7 @@ public partial class AbilitySystem
         if (BattleLogUI.Instance != null)
             BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("ニコ", niko.team) + (task.thrower != null ? " が" + name + "のタスクを処理" : " が" + name + "の札を引いて使った"));
         RunRoster.Feat(niko);
+        SpeechBubble.SayMaybe(niko, PieceLines.NikoTask, 0.3f);
         // いつもありがとうございます: 処理したタスクは投げた部員の活躍になる
         if (task.thrower != null && task.thrower.isAlive) RunRoster.Feat(task.thrower);
         return true;
@@ -537,7 +541,7 @@ public partial class AbilitySystem
                 return true;
             }
             default:
-                return false;
+                return DoGamerCard(niko, task.type);
         }
     }
 
@@ -599,6 +603,19 @@ public partial class AbilitySystem
         return s.awakened && s.isPromoted ? BalanceTuning.ShimesabaAwakenedCountdown : BalanceTuning.ShimesabaCountdown;
     }
 
+    /// <summary>世界が終わるの狙い: いちばん体力の多い敵（同じなら攻撃の高いほう。C3・中華・ドパは除く）</summary>
+    private static PieceInstance DoomTarget(Team foe)
+    {
+        PieceInstance best = null;
+        foreach (var e in BoardManager.Instance.GetTeamPieces(foe))
+        {
+            PieceType t = e.data.pieceType;
+            if (!e.isAlive || t == PieceType.C3 || t == PieceType.Chuka || t == PieceType.Dopa) continue;
+            if (best == null || e.currentHP > best.currentHP || (e.currentHP == best.currentHP && e.ATK > best.ATK)) best = e;
+        }
+        return best;
+    }
+
     private IEnumerator ExecuteDoomsday(Team team)
     {
         foreach (var s in AlivePieces(team, PieceType.Shimesaba))
@@ -613,29 +630,33 @@ public partial class AbilitySystem
                 FloatingText.Spawn(s.boardPosition, "あと" + left, ArgueWhite, 3.4f);
                 continue;
             }
+            // 世界が終わる: いちばん体力の多い敵1体に大ダメージ（防御無視。C3 は狙わない）。狙える敵がいなければ次の手番に持ち越す
+            PieceInstance victim = DoomTarget(team == Team.Player ? Team.Enemy : Team.Player);
+            if (victim == null)
+            {
+                doomCountdown[s] = 1;
+                continue;
+            }
             doomCountdown[s] = DoomCountdown(s);
 
-            // 世界が終わる: 盤上の敵すべてに（防御無視）
             if (!GameSim.Headless)
             {
                 if (BattleEffects.Instance != null) BattleEffects.Instance.PlayCutInSound();
                 yield return CutInUI.PlayPiece(s.data, true, "世界が終わる", "Hack分野の最終兵器", Palette.Hex(0x101014), Palette.Hex(0xE0E8F0), 1.1f);
-                if (BattleEffects.Instance != null) BattleEffects.Instance.PlayWorldEnd(s.boardPosition);
-                if (s.awakened && BattleEffects.Instance != null) BattleEffects.Instance.PlayAwakenBurst("LogicShatter", s.boardPosition, s.data.awakenColor);
+                if (BattleEffects.Instance != null)
+                {
+                    BattleEffects.Instance.PlayWorldEnd(s.boardPosition);
+                    BattleEffects.Instance.PlayStream(s.boardPosition, victim.boardPosition, ArgueWhite);
+                    BattleEffects.Instance.PlayExplosionEffect(victim.boardPosition);
+                    if (s.awakened) BattleEffects.Instance.PlayAwakenBurst("LogicShatter", victim.boardPosition, s.data.awakenColor);
+                }
             }
-            if (BattleLogUI.Instance != null) BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("〆鯖", s.team) + " の最終兵器……世界が終わる");
-            RunRoster.Feat(s);
             int damage = CombatResolver.AbilityDamage(s, BalanceTuning.ShimesabaEndDamage);
-            var victims = new List<PieceInstance>();
-            foreach (var e in BoardManager.Instance.GetTeamPieces(team == Team.Player ? Team.Enemy : Team.Player))
-                if (e.isAlive && e.data.pieceType != PieceType.C3) victims.Add(e);
+            if (BattleLogUI.Instance != null)
+                BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("〆鯖", s.team) + " の最終兵器……世界が終わる（" + BattleLogUI.ColorName(victim.DisplayName, victim.team) + " に" + damage + "ダメージ）");
+            RunRoster.Feat(s);
             var source = GameSim.BeginSource(s);
-            foreach (var e in victims)
-            {
-                if (!e.isAlive) continue;
-                if (BattleEffects.Instance != null) BattleEffects.Instance.PlayExplosionEffect(e.boardPosition);
-                CombatResolver.ApplyDamage(e, damage, true);
-            }
+            CombatResolver.ApplyDamage(victim, damage, true);
             GameSim.EndSource(source);
             yield return new WaitForSeconds(0.5f);
         }
@@ -754,9 +775,10 @@ public partial class AbilitySystem
         invitesUsed.TryGetValue(k, out used);
         invitesUsed[k] = used + 1;
         FloatingText.Spawn(k.boardPosition, "呼ばれて来た", JadeGreen, 3f);
+        SpeechBubble.Say(k, PieceLines.KawasemiInvited);
     }
 
-    /// <summary>新しい部員が覚醒した瞬間（光晴は世界一周へ出発、成っている〆鯖は世界が終わるまでが縮む）</summary>
+    /// <summary>新しい部員が覚醒した瞬間（光春は世界一周へ出発、成っている〆鯖は世界が終わるまでが縮む）</summary>
     private void OnNewMemberAwakened(PieceInstance p)
     {
         switch (p.data.pieceType)
@@ -786,6 +808,7 @@ public partial class AbilitySystem
             case PieceType.Nako: case PieceType.Monotetsu: case PieceType.Monin: case PieceType.Boku: case PieceType.Wotsu:
             case PieceType.Kei: case PieceType.Kipu: case PieceType.Rihaku: case PieceType.SN: case PieceType.Konishiki:
             case PieceType.Yuu: case PieceType.Mitsuharu: case PieceType.Niko: case PieceType.Shimesaba: case PieceType.Kawasemi:
+            case PieceType.RN: case PieceType.Negu: case PieceType.Mutou:
                 return true;
             default:
                 return false;

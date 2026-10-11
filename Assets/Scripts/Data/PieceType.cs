@@ -47,10 +47,14 @@ public enum PieceType
     ShinkaiFlagship,
     ShinkaiHime, // 姫級
     // 2026-10-11 に加わった部員
-    Mitsuharu,  // 光晴（成ると盤外へ高飛び）
+    Mitsuharu,  // 光春（成ると盤外へ高飛び）
     Niko,       // ニコ
     Shimesaba,  // 〆鯖
-    Kawasemi    // 翡翠（かわせみ）
+    Kawasemi,   // 翡翠（かわせみ）
+    // PlayStation 鯖の部員
+    RN,         // RN（STS2・ポケモンスリープ・SEKIRO）
+    Negu,       // 寝癖（正式名は「ねぐせ」、成ると外跳）
+    Mutou       // 無糖（成るとアーマード・コア）
 }
 
 /// <summary>駒の種類のまとまり</summary>

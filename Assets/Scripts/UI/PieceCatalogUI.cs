@@ -21,7 +21,8 @@ public class PieceCatalogUI : MonoBehaviour
         new Group("部員",
             PieceType.Nako, PieceType.Monotetsu, PieceType.Monin, PieceType.Boku, PieceType.Wotsu, PieceType.Kei,
             PieceType.Kipu, PieceType.Rihaku, PieceType.SN, PieceType.Konishiki, PieceType.Yuu,
-            PieceType.Mitsuharu, PieceType.Niko, PieceType.Shimesaba, PieceType.Kawasemi, PieceType.Chuka, PieceType.Dopa),
+            PieceType.Mitsuharu, PieceType.Niko, PieceType.Shimesaba, PieceType.Kawasemi,
+            PieceType.RN, PieceType.Negu, PieceType.Mutou, PieceType.Chuka, PieceType.Dopa),
         new Group("提督の艦隊",
             PieceType.KanmusuDD, PieceType.KanmusuCL, PieceType.KanmusuCA, PieceType.KanmusuBB, PieceType.KanmusuCV, PieceType.KanmusuSS,
             PieceType.Shinkai, PieceType.ShinkaiElite, PieceType.ShinkaiFlagship, PieceType.ShinkaiHime),
@@ -233,16 +234,23 @@ public class PieceCatalogUI : MonoBehaviour
         showPromoted = promoted && data != null && data.canPromote;
         showVeteran = veteran && !showPromoted && HasVeteran(data);
         showAwakened = false;
+        Refresh();
     }
 
     private void SelectAwakened(PieceData data)
     {
-        Select(data, false);
+        selected = data;
+        showPromoted = showVeteran = false;
         showAwakened = data != null && data.canAwaken;
-        RenderDetail();
+        Refresh();
+    }
+
+    /// <summary>選んだ札を縁取り、右の説明を描き直す</summary>
+    private void Refresh()
+    {
         foreach (var card in cards)
         {
-            bool on = card.userData == (object)data;
+            bool on = card.userData == (object)selected;
             Color border = on ? Palette.GoldLight : Palette.PanelBorder;
             card.style.borderTopColor = card.style.borderBottomColor = card.style.borderLeftColor = card.style.borderRightColor = border;
             card.style.borderTopWidth = card.style.borderBottomWidth = card.style.borderLeftWidth = card.style.borderRightWidth = on ? 3 : 1;

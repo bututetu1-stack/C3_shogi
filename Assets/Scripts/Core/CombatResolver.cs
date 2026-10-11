@@ -7,13 +7,53 @@ using System.Collections;
 /// </summary>
 public static class CombatResolver
 {
-    /// <summary>通常攻撃のダメージ = 攻撃（＋ユウの助走）− 防御。0未満にはならない。潜水艦には0。〆鯖の正論パンチは防御を無視する</summary>
+    /// <summary>
+    /// 通常攻撃のダメージ = 攻撃（＋ユウの助走・無糖のボスへの上乗せ）− 防御。0未満にはならない。潜水艦には0。〆鯖の正論パンチは防御を無視する。
+    /// そのあとスタッガーの上乗せと RN のブロックを数える（減らすのは実際に当たったときの ConsumeGuard）
+    /// </summary>
     public static int CalcDamage(PieceInstance attacker, PieceInstance target)
     {
         // 潜水艦は通常の攻撃を受けない（能力の攻撃は受ける）
         if (target.data.pieceType == PieceType.KanmusuSS) return 0;
+        return AfterGuard(target, RawDamage(attacker, target));
+    }
+
+    /// <summary>ブロック・スタッガーを数える前の通常攻撃のダメージ</summary>
+    private static int RawDamage(PieceInstance attacker, PieceInstance target)
+    {
         int def = attacker.data.pieceType == PieceType.Shimesaba && !attacker.isSealed ? 0 : target.DEF;
-        return Mathf.Max(0, attacker.ATK + RunUpBonus(attacker, target) - def);
+        return Mathf.Max(0, attacker.ATK + RunUpBonus(attacker, target) + BossBonus(attacker, target) - def);
+    }
+
+    /// <summary>無糖（フロム脳）はボス（雷帝・龍神・魔王）に強い</summary>
+    public static int BossBonus(PieceInstance attacker, PieceInstance target)
+    {
+        if (attacker.data.pieceType != PieceType.Mutou || attacker.isSealed) return 0;
+        PieceType t = target.data.pieceType;
+        return t == PieceType.Raitei || t == PieceType.Ryuujin || t == PieceType.Maou ? BalanceTuning.MutouBossBonus : 0;
+    }
+
+    /// <summary>防御を引いたあとのダメージに、スタッガーの上乗せを足して、ブロックの分を引く（何も減らさない）</summary>
+    public static int AfterGuard(PieceInstance target, int damage)
+    {
+        if (target.staggered) damage += BalanceTuning.MutouStaggerDamage;
+        return Mathf.Max(0, damage - target.block);
+    }
+
+    /// <summary>実際に当たったとき: スタッガーを解き、ブロックを使う。ブロックで防いだ量を返す</summary>
+    private static int ConsumeGuard(PieceInstance target, int damage)
+    {
+        if (target.staggered)
+        {
+            target.staggered = false;
+            damage += BalanceTuning.MutouStaggerDamage;
+            FloatingText.Spawn(target.boardPosition, "スタッガー+" + BalanceTuning.MutouStaggerDamage, StaggerOrange, 3f, 0.2f);
+        }
+        int absorbed = Mathf.Min(target.block, damage);
+        if (absorbed <= 0) return 0;
+        target.block -= absorbed;
+        if (AbilitySystem.Instance != null) AbilitySystem.Instance.OnBlocked(target, absorbed);
+        return absorbed;
     }
 
     /// <summary>ユウの助走: 敵まで走ったマスのうち、2マス目から1マスごとに攻撃が上がる（攻撃の前の位置で測る）</summary>
@@ -47,6 +87,7 @@ public static class CombatResolver
         BoardManager bm = BoardManager.Instance;
         Vector2Int from = piece.boardPosition;
         Vector2Int to = move.position;
+        piece.acted = true;   // RN のポケモンスリープは、動かなかった手番だけ
 
         if (move.isAttack)
         {
@@ -145,8 +186,16 @@ public static class CombatResolver
 
         int runUp = RunUpBonus(attacker, target);
         int damage = CalcDamage(attacker, target);
+        int raw = target.data.pieceType == PieceType.KanmusuSS ? 0 : RawDamage(attacker, target);
+        int blocked = ConsumeGuard(target, raw);
         target.currentHP -= damage;
         RefreshHP(target);
+        bool parried = blocked > 0 && damage == 0;
+        if (BossBonus(attacker, target) > 0)
+        {
+            RunRoster.Feat(attacker);
+            SpeechBubble.SayMaybe(attacker, PieceLines.MutouBoss, 0.5f);
+        }
         // 小錦がいじめられると周りが同情して奮起する
         if (target.data.pieceType == PieceType.Konishiki && AbilitySystem.Instance != null)
         {
@@ -186,12 +235,18 @@ public static class CombatResolver
             if (BattleEffects.Instance != null) BattleEffects.Instance.PlayGuard(target.boardPosition);
             SpeechBubble.SayMaybe(target, PieceLines.KonishikiBullied, 0.5f);
         }
-        // 〆鯖のレスバ（言い返す）
-        if (AbilitySystem.Instance != null) AbilitySystem.Instance.OnAttackedAndSurvived(attacker, target);
+        // RN の弾き（ブロックで全部防いだ）、外跳の跳ね飛ばし・無糖（AC）のスタッガー、〆鯖のレスバ（言い返す）
+        if (AbilitySystem.Instance != null)
+        {
+            if (parried) AbilitySystem.Instance.OnParry(target, attacker);
+            AbilitySystem.Instance.OnHitAndSurvived(attacker, target);
+            AbilitySystem.Instance.OnAttackedAndSurvived(attacker, target);
+        }
         return false;
     }
 
     private static readonly Color DamageColor = new Color(1f, 0.5f, 0.4f);
+    private static readonly Color StaggerOrange = new Color(1f, 0.62f, 0.25f);
     private static readonly Color YuuOrange = new Color(1f, 0.6f, 0.25f);
     private static readonly Color PiercingColor = new Color(0.85f, 0.6f, 1f);
     public static readonly Color HealColor = new Color(0.5f, 0.95f, 0.55f);
@@ -201,7 +256,8 @@ public static class CombatResolver
     {
         if (target == null || !target.isAlive) return false;
 
-        int damage = piercing ? amount : Mathf.Max(0, amount - target.DEF);
+        int raw = piercing ? amount : Mathf.Max(0, amount - target.DEF);
+        int damage = AfterGuard(target, raw);
         if (damage >= target.currentHP)
         {
             PieceInstance sub = TakeSubstitute(target);
@@ -211,6 +267,7 @@ public static class CombatResolver
                 return false;
             }
         }
+        ConsumeGuard(target, raw);
         target.currentHP -= damage;
         RefreshHP(target);
         FloatingText.Spawn(target.boardPosition, damage > 0 ? "-" + damage : "0", damage > 0 ? (piercing ? PiercingColor : DamageColor) : Palette.TextSub);
@@ -293,6 +350,9 @@ public static class CombatResolver
     public static void KillPiece(PieceInstance target, bool checkLinkedDeaths = true)
     {
         if (target == null || !target.isAlive) return;
+        // 無糖: 死んで覚える（覚醒していれば、1局に1回は篝火から蘇る）
+        if (target.data.pieceType == PieceType.Mutou && target.team == Team.Player && AbilitySystem.Instance != null
+            && AbilitySystem.Instance.OnMutouDown(target)) return;
 
         BoardManager bm = BoardManager.Instance;
         Vector2Int pos = target.boardPosition;
@@ -316,7 +376,7 @@ public static class CombatResolver
             GameManager.Instance.Roster.OnKill(GameSim.CurrentKiller, target);
         }
         GameSim.RecordKill(target);
-        // 光晴の裏金・翡翠のパーツ
+        // 光春の裏金・翡翠のパーツ
         if (AbilitySystem.Instance != null) AbilitySystem.Instance.OnPieceKilled(target, pos);
 
         if (atSea)

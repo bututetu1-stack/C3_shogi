@@ -518,7 +518,7 @@ public class SimpleAI : MonoBehaviour
     /// <summary>能力の値打ち（数値に表れない分）。支援役・提督・覚醒した駒は高く、倒すと爆発する髑髏は低く見る</summary>
     private static int AbilityValue(PieceInstance p)
     {
-        int v = p.awakened ? 60 : 0;
+        int v = p.awakened ? BalanceTuning.AiAwakenedValue : 0;
         switch (p.data.pieceType)
         {
             case PieceType.Wotsu: return v + 70;
