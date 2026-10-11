@@ -689,6 +689,20 @@ public class BattleEffects : MonoBehaviour
             StartCoroutine(SakuraPetal(p, i * 0.03f));
     }
 
+    /// <summary>ケッコンカッコカリ: 桃色の光の輪が2重に広がり、桜の花びらと金の粒が舞う（物鉄・改がもう一度敵陣に入ったとき）</summary>
+    public void PlayRing(Vector2Int pos)
+    {
+        Vector3 p = World(pos);
+        Play(Clip("Awaken"), promoteClip);
+        Color pink = new Color(1f, 0.72f, 0.82f);
+        StartCoroutine(Glow(p, new Color(1f, 0.8f, 0.88f, 0.9f), 0.4f, 2.2f, 0.9f));
+        StartCoroutine(RingWave(p, pink, 0.3f, 2.4f, 0.6f));
+        StartCoroutine(RingWave(p, Palette.GoldLight, 0.2f, 1.6f, 0.8f));
+        StartCoroutine(Burst(p, 18, Palette.GoldLight, pink, 1.2f, 3f, 0.08f, 0.8f, 0.5f, SpriteFactory.Pixel));
+        for (int i = 0; i < 24; i++)
+            StartCoroutine(SakuraPetal(p, i * 0.04f));
+    }
+
     private IEnumerator MvpRoutine(Vector3 at)
     {
         StartCoroutine(Glow(at, new Color(1f, 0.85f, 0.4f, 0.8f), 0.3f, 1.3f, 0.7f));

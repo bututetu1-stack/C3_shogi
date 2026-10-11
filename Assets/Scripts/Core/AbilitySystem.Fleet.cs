@@ -644,11 +644,7 @@ public partial class AbilitySystem
         RunRoster.Feat(piece);
         GameSim.RecordFleet("ケッコン", GameManager.Instance != null ? GameManager.Instance.MoveCount : 0);
         FloatingText.Spawn(piece.boardPosition, "ケッコンカッコカリ", RingPink, 4.4f, 0.3f);
-        if (BattleEffects.Instance != null)
-        {
-            BattleEffects.Instance.PlayHaloEffect(piece.boardPosition);
-            BattleEffects.Instance.PlayHealEffect(piece.boardPosition);
-        }
+        if (BattleEffects.Instance != null) BattleEffects.Instance.PlayRing(piece.boardPosition);
         if (BattleLogUI.Instance != null)
             BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("物鉄・改", piece.team) + " がケッコンカッコカリ！ 体力が全快し、最大体力+" + BalanceTuning.RingMaxHp);
     }
