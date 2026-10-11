@@ -316,7 +316,7 @@ public static class CombatResolver
             GameManager.Instance.Roster.OnKill(GameSim.CurrentKiller, target);
         }
         GameSim.RecordKill(target);
-        // 光晴の裏金・翡翠のパーツ
+        // 光春の裏金・翡翠のパーツ
         if (AbilitySystem.Instance != null) AbilitySystem.Instance.OnPieceKilled(target, pos);
 
         if (atSea)

@@ -114,20 +114,20 @@ public static class BalanceTuning
 
     // ---- 2026-10-11 に加わった部員 ----
 
-    /// <summary>光晴: 盤にいるあいだ、味方が敵を倒すたびにたまる裏金と上限（周をまたいで残る）</summary>
+    /// <summary>光春: 盤にいるあいだ、味方が敵を倒すたびにたまる裏金と上限（周をまたいで残る）</summary>
     public static int MitsuharuFundPerKill = 1;
-    /// <summary>光晴（会計の権力）: 盤にいるあいだ、自軍の手番の初めにたまる裏金</summary>
+    /// <summary>光春（会計の権力）: 盤にいるあいだ、自軍の手番の初めにたまる裏金</summary>
     public static int MitsuharuFundPerTurn = 1;
-    /// <summary>光晴（高飛び）: 裏金1でお土産を送る味方の数</summary>
+    /// <summary>光春（高飛び）: 裏金1でお土産を送る味方の数</summary>
     public static int MitsuharuSouvenirTargets = 2;
     public static int MitsuharuFundMax = 10;
-    /// <summary>光晴: 裏金がこれだけたまると、自軍の手番の初めに自分から海外へ旅立つ（敵陣に入っても成る）</summary>
+    /// <summary>光春: 裏金がこれだけたまると、自軍の手番の初めに自分から海外へ旅立つ（敵陣に入っても成る）</summary>
     public static int MitsuharuTripCost = 5;
-    /// <summary>光晴（高飛び）のお土産: 傷ついた味方への回復（元気なら攻撃+1）</summary>
+    /// <summary>光春（高飛び）のお土産: 傷ついた味方への回復（元気なら攻撃+1）</summary>
     public static int MitsuharuSouvenirHeal = 2;
-    /// <summary>覚醒した光晴（世界一周）: お土産を送る味方の数</summary>
+    /// <summary>覚醒した光春（世界一周）: お土産を送る味方の数</summary>
     public static int MitsuharuAwakenedTargets = 4;
-    /// <summary>光晴: 裏金が尽きたら帰国して、成る前の姿で自陣に戻る</summary>
+    /// <summary>光春: 裏金が尽きたら帰国して、成る前の姿で自陣に戻る</summary>
     public static bool MitsuharuReturnsWhenBroke = true;
     /// <summary>ニコ: 山札の上限（成る前／成った後）</summary>
     public static int NikoCapacity = 3;

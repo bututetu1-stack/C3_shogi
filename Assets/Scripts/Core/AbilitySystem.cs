@@ -47,7 +47,7 @@ public partial class AbilitySystem : MonoBehaviour
         // 艦隊の入渠（提督の隣の艦娘が回復）
         if (team == Team.Player) DockShips();
 
-        // 盤外の光晴からのお土産
+        // 盤外の光春からのお土産
         yield return SendSouvenirs(team);
 
         List<PieceInstance> pieces = bm.GetTeamPieces(team);

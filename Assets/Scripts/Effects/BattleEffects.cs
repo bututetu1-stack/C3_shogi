@@ -524,7 +524,7 @@ public class BattleEffects : MonoBehaviour
         StartCoroutine(RingWave(p, Color.white, 0.3f, 1.6f, 0.4f));
     }
 
-    /// <summary>光晴の高飛び: 飛行機が駒の上から空へ去っていく</summary>
+    /// <summary>光春の高飛び: 飛行機が駒の上から空へ去っていく</summary>
     public void PlayTakeoff(Vector2Int pos)
     {
         PlayLimited(Clip("Plane"), 2.2f, airRaidClip, PlaneGain);
@@ -556,7 +556,7 @@ public class BattleEffects : MonoBehaviour
         Destroy(plane.gameObject);
     }
 
-    /// <summary>海外の光晴からのお土産: 金の光が空から降りてくる</summary>
+    /// <summary>海外の光春からのお土産: 金の光が空から降りてくる</summary>
     public void PlaySouvenir(Vector2Int to)
     {
         Vector3 p = World(to);

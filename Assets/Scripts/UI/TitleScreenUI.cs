@@ -240,7 +240,7 @@ public class TitleScreenUI : MonoBehaviour
             new System.Collections.Generic.KeyValuePair<string, PieceType>("きぷ", PieceType.Kipu),
             new System.Collections.Generic.KeyValuePair<string, PieceType>("ユウ", PieceType.Yuu),
             new System.Collections.Generic.KeyValuePair<string, PieceType>("物鉄", PieceType.Monotetsu),
-            new System.Collections.Generic.KeyValuePair<string, PieceType>("光晴", PieceType.Mitsuharu),
+            new System.Collections.Generic.KeyValuePair<string, PieceType>("光春", PieceType.Mitsuharu),
             new System.Collections.Generic.KeyValuePair<string, PieceType>("ニコ", PieceType.Niko),
             new System.Collections.Generic.KeyValuePair<string, PieceType>("〆鯖", PieceType.Shimesaba),
             new System.Collections.Generic.KeyValuePair<string, PieceType>("翡翠", PieceType.Kawasemi),

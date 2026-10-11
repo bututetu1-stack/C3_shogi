@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 
 /// <summary>
-/// 2026-10-11 に加わった部員の能力: 光晴（裏帳簿・高飛び）、ニコ（タスク処理）、〆鯖（正論パンチ・レスバ・世界が終わる）、翡翠（ジャンク漁り・最強PC）
+/// 2026-10-11 に加わった部員の能力: 光春（裏帳簿・高飛び）、ニコ（タスク処理）、〆鯖（正論パンチ・レスバ・世界が終わる）、翡翠（ジャンク漁り・最強PC）
 /// </summary>
 public partial class AbilitySystem
 {
@@ -12,7 +12,7 @@ public partial class AbilitySystem
     private static readonly Color ArgueWhite = new Color(0.9f, 0.94f, 1f);
     private static readonly Color JadeGreen = new Color(0.36f, 0.88f, 0.78f);
 
-    /// <summary>高飛びして盤外にいる光晴（その局のあいだ）</summary>
+    /// <summary>高飛びして盤外にいる光春（その局のあいだ）</summary>
     private readonly List<PieceInstance> abroad = new List<PieceInstance>();
     /// <summary>ニコの山札（投げられたタスク。古い順）</summary>
     private readonly Dictionary<PieceInstance, List<NikoTask>> nikoDecks = new Dictionary<PieceInstance, List<NikoTask>>();
@@ -74,7 +74,7 @@ public partial class AbilitySystem
     }
 
     // ============================================================
-    // 撃破のたびに: 光晴の裏金、翡翠のパーツ
+    // 撃破のたびに: 光春の裏金、翡翠のパーツ
     // ============================================================
     public void OnPieceKilled(PieceInstance victim, Vector2Int pos)
     {
@@ -83,7 +83,7 @@ public partial class AbilitySystem
         PieceType v = victim.data.pieceType;
         bool fodder = v == PieceType.Chuka || v == PieceType.Dopa;
 
-        // 裏帳簿: 盤にいる光晴（成る前）がいれば、味方が敵を倒すたびに裏金がたまる
+        // 裏帳簿: 盤にいる光春（成る前）がいれば、味方が敵を倒すたびに裏金がたまる
         if (victim.team == Team.Enemy && !fodder && GameManager.Instance != null)
         {
             foreach (var m in AlivePieces(Team.Player, PieceType.Mitsuharu))
@@ -122,10 +122,10 @@ public partial class AbilitySystem
     }
 
     // ============================================================
-    // 光晴: 高飛び（成ると盤外へ）とお土産
+    // 光春: 高飛び（成ると盤外へ）とお土産
     // ============================================================
 
-    /// <summary>成った光晴を盤外へ送る（撃破ではないので数えない。攻撃もされない）</summary>
+    /// <summary>成った光春を盤外へ送る（撃破ではないので数えない。攻撃もされない）</summary>
     public void SendAbroad(PieceInstance m)
     {
         if (m == null || !m.isAlive) return;
@@ -133,12 +133,12 @@ public partial class AbilitySystem
         FloatingText.Spawn(pos, "高飛び", FundGold, 3.8f);
         if (BattleEffects.Instance != null) BattleEffects.Instance.PlayTakeoff(pos);
         if (BattleLogUI.Instance != null)
-            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("光晴", m.team) + " は裏金を持って海外旅行へ旅立った（裏金 " + (GameManager.Instance != null ? GameManager.Instance.SecretFund : 0) + "）");
+            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("光春", m.team) + " は裏金を持って海外旅行へ旅立った（裏金 " + (GameManager.Instance != null ? GameManager.Instance.SecretFund : 0) + "）");
         CombatResolver.RemoveWithExit(m, PieceController.ExitStyle.Retreat);
         abroad.Add(m);
     }
 
-    /// <summary>自軍の手番の初めに、旅費（裏金）がたまった光晴は海外へ旅立ち、盤外の光晴は裏金を使って味方1体にお土産を送る</summary>
+    /// <summary>自軍の手番の初めに、旅費（裏金）がたまった光春は海外へ旅立ち、盤外の光春は裏金を使って味方1体にお土産を送る</summary>
     private IEnumerator SendSouvenirs(Team team)
     {
         if (team != Team.Player || GameManager.Instance == null) yield break;
@@ -211,7 +211,7 @@ public partial class AbilitySystem
                 FloatingText.Spawn(to.boardPosition, "お土産", FundGold, 3.2f, 0.25f);
                 RunRoster.Feat(m);
                 if (BattleLogUI.Instance != null)
-                    BattleLogUI.Instance.AddLog("海外の" + BattleLogUI.ColorName("光晴", m.team) + " から " + BattleLogUI.ColorName(to.DisplayName, to.team) + " にお土産（" + gift + "、裏金 残り" + GameManager.Instance.SecretFund + "）");
+                    BattleLogUI.Instance.AddLog("海外の" + BattleLogUI.ColorName("光春", m.team) + " から " + BattleLogUI.ColorName(to.DisplayName, to.team) + " にお土産（" + gift + "、裏金 残り" + GameManager.Instance.SecretFund + "）");
             }
             yield return new WaitForSeconds(0.3f);
         }
@@ -232,7 +232,7 @@ public partial class AbilitySystem
             FloatingText.Spawn(home.Value, "帰国", FundGold, 3.6f, 0.3f);
             if (BattleEffects.Instance != null) BattleEffects.Instance.PlaySouvenir(home.Value);
             if (BattleLogUI.Instance != null)
-                BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("光晴", team) + " は裏金を使い果たして帰国した");
+                BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("光春", team) + " は裏金を使い果たして帰国した");
             yield return new WaitForSeconds(0.4f);
         }
     }
@@ -756,7 +756,7 @@ public partial class AbilitySystem
         FloatingText.Spawn(k.boardPosition, "呼ばれて来た", JadeGreen, 3f);
     }
 
-    /// <summary>新しい部員が覚醒した瞬間（光晴は世界一周へ出発、成っている〆鯖は世界が終わるまでが縮む）</summary>
+    /// <summary>新しい部員が覚醒した瞬間（光春は世界一周へ出発、成っている〆鯖は世界が終わるまでが縮む）</summary>
     private void OnNewMemberAwakened(PieceInstance p)
     {
         switch (p.data.pieceType)

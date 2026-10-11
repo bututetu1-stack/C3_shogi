@@ -51,7 +51,7 @@ public class GameManager : MonoBehaviour
     // プレイヤーが持っている駒データのリスト(ステージ間で引き継ぎ)
     private readonly List<PieceData> playerOwnedPieces = new List<PieceData>();
     public IList<PieceData> OwnedPieces { get { return playerOwnedPieces.AsReadOnly(); } }
-    /// <summary>光晴の裏帳簿の裏金（周のあいだ残る）</summary>
+    /// <summary>光春の裏帳簿の裏金（周のあいだ残る）</summary>
     public int SecretFund;
     /// <summary>部員の練度と★（周のあいだ残る）</summary>
     public RunRoster Roster { get; } = new RunRoster();
@@ -634,7 +634,7 @@ public class GameManager : MonoBehaviour
         StagesCleared++;
         var survivors = boardManager.GetTeamPieces(Team.Player);
         if (AbilitySystem.Instance != null)
-            foreach (var p in AbilitySystem.Instance.AbroadPieces) { p.isAlive = true; survivors.Add(p); }   // 盤外の光晴も生き残った扱い
+            foreach (var p in AbilitySystem.Instance.AbroadPieces) { p.isAlive = true; survivors.Add(p); }   // 盤外の光春も生き残った扱い
         Roster.OnStageWon(survivors);
 
         if (GameSim.Headless)
@@ -772,7 +772,7 @@ public class GameManager : MonoBehaviour
         FloatingText.Spawn(piece.boardPosition, "成", Palette.GoldLight, 4f);
         SpeechBubble.Say(piece, PieceLines.OnPromote(piece.data.pieceType));
 
-        // 光晴は裏金を持って海外へ（盤外から支援する）、〆鯖は最終兵器の起動
+        // 光春は裏金を持って海外へ（盤外から支援する）、〆鯖は最終兵器の起動
         if (piece.data.pieceType == PieceType.Mitsuharu && AbilitySystem.Instance != null)
         {
             AbilitySystem.Instance.SendAbroad(piece);
