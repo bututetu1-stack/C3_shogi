@@ -838,6 +838,16 @@ public class BattleEffects : MonoBehaviour
         StartCoroutine(AirRaidRoutine(World(from), World(to)));
     }
 
+    /// <summary>爆雷: 潜水艦の上で水柱が上がる（対潜攻撃）</summary>
+    public void PlayDepthCharge(Vector2Int pos)
+    {
+        Vector3 p = World(pos);
+        PlayLimited(torpedoClip, 1.2f, hitClip);
+        StartCoroutine(WaterColumn(p, 18, 1.2f));
+        StartCoroutine(RingWave(p, Color.white, 0.3f, 1.6f, 0.4f));
+        ShakeCamera(0.1f, 0.05f);
+    }
+
     public void PlayTorpedoEffect(Vector2Int from, Vector2Int to)
     {
         PlayLimited(torpedoClip, 1.8f, hitClip);

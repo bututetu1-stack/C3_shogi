@@ -254,8 +254,22 @@ public static class BalanceTuning
     public static int CarrierSplashDamage = 2;
     /// <summary>空母の空爆で巻き込む、狙った深海の周り2マスの敵の数</summary>
     public static int CarrierSplashTargets = 2;
-    /// <summary>夜間作戦航空要員: 改（成った）空母は夜戦でも発艦できる（false なら夜戦では攻撃しない）</summary>
-    public static bool CarrierNightOps = false;
+    /// <summary>制空権確保: 空母（中破していない）が盤にいるあいだ、深海から艦娘へのダメージをこの分減らす（Gemini 第三回）</summary>
+    public static int AirSuperiorityGuard = 1;
+    /// <summary>対潜: 敵の歩兵と香車の通常の攻撃は、潜水艦にも当たる（爆雷。最低1）。ほかの駒の攻撃は今どおり受けない</summary>
+    public static bool EnemyAntiSub = true;
+    /// <summary>
+    /// 陣形（出撃した艦娘が提督から見てどこにいるかで決まる）: 縦の列 = 単縦陣（艦娘の能力ダメージ+FormationLineAheadDamage）、
+    /// 横の列 = 単横陣（艦娘の防御+FormationAbreastDef、潜水艦は対潜を FormationAbreastEvade% で避ける）、それ以外 = 警戒陣（提督の受けるダメージ−FormationVanguardGuard）
+    /// </summary>
+    public static bool FleetFormations = true;
+    public static int FormationLineAheadDamage = 1;
+    public static int FormationAbreastDef = 1;
+    public static int FormationAbreastEvade = 50;
+    public static int FormationVanguardGuard = 1;
+    /// <summary>基地航空隊: S勝利した次の局の初めに、敵（C3以外）LandBaseTargets 体に LandBaseDamage（＋局の攻撃の上乗せ、防御無視）</summary>
+    public static int LandBaseTargets = 3;
+    public static int LandBaseDamage = 1;
     /// <summary>艦娘は提督の周り（入渠できるマス）から出撃する（false なら自陣のどこか）</summary>
     public static bool FleetSortieNearTeitoku = true;
 

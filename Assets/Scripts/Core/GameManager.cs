@@ -530,6 +530,10 @@ public class GameManager : MonoBehaviour
 
         SetPhase(GamePhase.Battle);
 
+        // 基地航空隊（前の局で艦隊がS勝利したとき）
+        if (stageManager != null && stageManager.currentStage == bonusUpgradeStage && AbilitySystem.Instance != null)
+            yield return AbilitySystem.Instance.LandBaseRaid();
+
         // 1手目からターン開始時能力（門人・ヲツ・なこ）を発動
         yield return ExecuteTurnStartThenNotify(Team.Player);
         isTurnProcessing = false;
