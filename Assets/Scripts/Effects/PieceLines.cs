@@ -164,7 +164,7 @@ public static class PieceLines
             case PieceType.Negu: return NeguLines;
             case PieceType.Mitsuharu: return new[] { "行ってきまーす" };
             case PieceType.Niko: return new[] { "もっと投げていいよ" };
-            case PieceType.Shimesaba: return new[] { "最終兵器、起動" };
+            case PieceType.Shimesaba: return new[] { "git push --forceでいいんだよ" };
             case PieceType.Kawasemi: return new[] { "最強PC、完成" };
             case PieceType.Mutou: return new[] { "アセンブル完了" };
             default: return null;
