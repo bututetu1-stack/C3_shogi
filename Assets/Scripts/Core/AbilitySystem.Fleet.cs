@@ -20,6 +20,7 @@ public partial class AbilitySystem
         public bool night;
         public bool shipLost;
         public Formation formation;
+        public bool nightContact;   // 夜間触接（夜戦に入ったとき軽巡か空母がいた）
     }
 
     /// <summary>陣形（出撃した艦娘の位置で決まる）</summary>
@@ -690,6 +691,21 @@ public partial class AbilitySystem
             if (BattleLogUI.Instance != null) BattleLogUI.Instance.AddLog("夜戦突入！ 駆逐・軽巡・潜水の攻撃が2倍になり、空母は攻撃できない");
             if (BattleEffects.Instance != null) BattleEffects.Instance.SetNight(true);
             yield return CutInUI.Play("夜戦突入", "我、夜戦に突入す！", null, CutInUI.Navy, 1.2f);
+            // 夜間触接: 軽巡か空母がいれば夜偵が飛び、夜戦の艦娘の攻撃が上がる
+            if (BalanceTuning.NightContactDamage > 0)
+            {
+                PieceInstance scout = null;
+                foreach (var p in BoardManager.Instance.GetTeamPieces(Team.Player))
+                    if (p.isAlive && (p.data.pieceType == PieceType.KanmusuCL || p.data.pieceType == PieceType.KanmusuCV) && !IsSuppressed(p)) { scout = p; break; }
+                if (scout != null)
+                {
+                    fleet.nightContact = true;
+                    GameSim.RecordFleet("夜間触接", gm.MoveCount - fleet.arrivalMove);
+                    FloatingText.Spawn(scout.boardPosition, "夜間触接", CutInUI.SeaLight, 4f, 0.2f);
+                    if (BattleEffects.Instance != null) BattleEffects.Instance.PlayHaloEffect(scout.boardPosition);
+                    if (BattleLogUI.Instance != null) BattleLogUI.Instance.AddLog("夜間触接！ 夜戦のあいだ艦娘の攻撃+" + BalanceTuning.NightContactDamage);
+                }
+            }
         }
 
         var ships = new List<PieceInstance>();
@@ -715,6 +731,7 @@ public partial class AbilitySystem
         PieceType type = ship.data.pieceType;
         if (fleet != null && fleet.night && (type == PieceType.KanmusuDD || type == PieceType.KanmusuCL || type == PieceType.KanmusuSS))
             damage *= 2;
+        if (fleet != null && fleet.night && fleet.nightContact) damage += BalanceTuning.NightContactDamage;
         return Mathf.Max(1, damage);
     }
 

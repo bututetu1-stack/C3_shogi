@@ -139,7 +139,7 @@ public static class BalanceTuning
     /// 既定は { 450, 150, 8, 3, 3, 4, 300 }。--set AiWeightsEnemy=600,150,8,3,3,4,300 のように試す
     /// </summary>
     public static int[] AiWeightsPlayer = new int[0];
-    public static int[] AiWeightsEnemy = new int[0];
+    public static int[] AiWeightsEnemy = { 450, 150, 8, 3, 6, 8, 300 };   // 前進・接近を2倍（後半ほど C3 に迫る。勝率は同じ）
     /// <summary>覚醒した僕が1体を強化できる量の上限</summary>
     public static int BokuAwakenedCap = 1;
 
@@ -280,6 +280,8 @@ public static class BalanceTuning
     public static int SubOpeningTorpedo = 2;
     /// <summary>ケッコンカッコカリ: 生還した物鉄・改がもう一度敵陣に入ったときの最大体力の上乗せ（体力も全快。0なら起きない）</summary>
     public static int RingMaxHp = 2;
+    /// <summary>夜間触接: 夜戦に入ったとき軽巡か空母がいれば、夜戦のあいだ艦娘の攻撃にこの値を足す（0なら起きない。Gemini 第三回）</summary>
+    public static int NightContactDamage = 0;
     /// <summary>艦娘は提督の周り（入渠できるマス）から出撃する（false なら自陣のどこか）</summary>
     public static bool FleetSortieNearTeitoku = true;
 
