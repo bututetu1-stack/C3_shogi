@@ -92,6 +92,7 @@ public partial class AbilitySystem
                 GameManager.Instance.SecretFund += BalanceTuning.MitsuharuFundPerKill;
                 GameManager.Instance.SecretFund = Mathf.Min(GameManager.Instance.SecretFund, BalanceTuning.MitsuharuFundMax);
                 FloatingText.Spawn(m.boardPosition, "裏金+" + BalanceTuning.MitsuharuFundPerKill, FundGold, 2.8f, 0.2f);
+                SpeechBubble.SayMaybe(m, PieceLines.MitsuharuFund, 0.3f);
                 RunRoster.Feat(m);
                 break;
             }
@@ -111,6 +112,7 @@ public partial class AbilitySystem
                 FloatingText.Spawn(k.boardPosition, "パーツ+1", JadeGreen, 2.8f, 0.3f);
                 if (BattleEffects.Instance != null) BattleEffects.Instance.PlayStream(pos, k.boardPosition, JadeGreen);
                 RunRoster.Feat(k);
+                SpeechBubble.SayMaybe(k, PieceLines.KawasemiScavenge, 0.3f);
             }
         }
     }
@@ -361,6 +363,7 @@ public partial class AbilitySystem
         if (BattleLogUI.Instance != null)
             BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("ニコ", niko.team) + (task.thrower != null ? " が" + name + "のタスクを処理" : " が" + name + "の札を引いて使った"));
         RunRoster.Feat(niko);
+        SpeechBubble.SayMaybe(niko, PieceLines.NikoTask, 0.3f);
         // いつもありがとうございます: 処理したタスクは投げた部員の活躍になる
         if (task.thrower != null && task.thrower.isAlive) RunRoster.Feat(task.thrower);
         return true;
@@ -577,6 +580,7 @@ public partial class AbilitySystem
         if (target.data.pieceType != PieceType.Shimesaba || target.isSealed) return;
         int damage = CombatResolver.AbilityDamage(target, BalanceTuning.ShimesabaRetort + (target.awakened ? BalanceTuning.ShimesabaAwakenedRetortBonus : 0));
         FloatingText.Spawn(target.boardPosition, target.awakened ? "論破" : "レスバ", ArgueWhite, 3.2f);
+        SpeechBubble.SayMaybe(target, PieceLines.ShimesabaRetort, 0.5f);
         if (target.awakened && BattleEffects.Instance != null) BattleEffects.Instance.PlayAwakenBurst("LogicShatter", attacker.boardPosition, target.data.awakenColor);
         if (BattleEffects.Instance != null) BattleEffects.Instance.PlayStream(target.boardPosition, attacker.boardPosition, ArgueWhite);
         if (BattleLogUI.Instance != null)
@@ -755,6 +759,7 @@ public partial class AbilitySystem
         invitesUsed.TryGetValue(k, out used);
         invitesUsed[k] = used + 1;
         FloatingText.Spawn(k.boardPosition, "呼ばれて来た", JadeGreen, 3f);
+        SpeechBubble.Say(k, PieceLines.KawasemiInvited);
     }
 
     /// <summary>新しい部員が覚醒した瞬間（光春は世界一周へ出発、成っている〆鯖は世界が終わるまでが縮む）</summary>

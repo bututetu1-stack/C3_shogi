@@ -228,6 +228,7 @@ public partial class AbilitySystem
         GameManager gm = GameManager.Instance;
         bool learned = gm != null && gm.Roster != null && gm.Roster.OnDied(PieceType.Mutou);
         FloatingText.Spawn(m.boardPosition, "YOU DIED", DiedRed, 4f, 0.1f);
+        SpeechBubble.Say(m, PieceLines.MutouDown);
         if (learned && BattleLogUI.Instance != null)
             BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("無糖", m.team) + " は死んで覚えた（次の局から攻撃+" + gm.Roster.DeathBonus(PieceType.Mutou) + "）");
 

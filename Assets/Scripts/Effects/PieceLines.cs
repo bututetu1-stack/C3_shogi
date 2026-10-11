@@ -69,6 +69,24 @@ public static class PieceLines
     // 寝癖: デイリーの報酬をもらったとき（ときどき）・成ったとき（セリフはユーザーが書いたもの）
     public static readonly string[] NeguLines = { "おお", "うーん", "なんか違う" };
 
+    // ここから下は、セリフをもらっていない部員に説明文から作ったもの（2026-10-11、ユーザーが「適当に作って」）
+    // 光春: 敵を倒して裏金がたまったとき（ときどき）
+    public static readonly string[] MitsuharuFund = { "経費です", "帳簿は合ってます", "計上しときます" };
+
+    // ニコ: タスクを処理したとき（ときどき）
+    public static readonly string[] NikoTask = { "任せて", "処理しておくね", "（ウィンク）" };
+
+    // 〆鯖: レスバで言い返したとき（ときどき）
+    public static readonly string[] ShimesabaRetort = { "それは違いますね", "正論ですが？", "ソースは？" };
+
+    // 翡翠: パーツを拾ったとき（ときどき）／誘われて来たとき
+    public static readonly string[] KawasemiScavenge = { "まだ使える", "ジャンク、もらいます", "CPU高い……" };
+    public static readonly string[] KawasemiInvited = { "呼ばれたので来ました", "行きます" };
+
+    // 無糖: 倒されたとき／ボスを攻撃したとき（ときどき）
+    public static readonly string[] MutouDown = { "もう一回（満面の笑み）", "死んで覚えます", "楽しくなってきた" };
+    public static readonly string[] MutouBoss = { "パターン見えた", "ボス戦は楽しい" };
+
     // 敵
     public static readonly string[] GundaishouRally = { "かかれ！" };
     public static readonly string[] YomigaeruSummon = { "黄泉より来たれ" };
@@ -144,6 +162,11 @@ public static class PieceLines
             case PieceType.Kipu: return new[] { "クカw" };
             case PieceType.RN: return RnLines;
             case PieceType.Negu: return NeguLines;
+            case PieceType.Mitsuharu: return new[] { "行ってきまーす" };
+            case PieceType.Niko: return new[] { "もっと投げていいよ" };
+            case PieceType.Shimesaba: return new[] { "最終兵器、起動" };
+            case PieceType.Kawasemi: return new[] { "最強PC、完成" };
+            case PieceType.Mutou: return new[] { "アセンブル完了" };
             default: return null;
         }
     }

@@ -191,7 +191,11 @@ public static class CombatResolver
         target.currentHP -= damage;
         RefreshHP(target);
         bool parried = blocked > 0 && damage == 0;
-        if (BossBonus(attacker, target) > 0) RunRoster.Feat(attacker);
+        if (BossBonus(attacker, target) > 0)
+        {
+            RunRoster.Feat(attacker);
+            SpeechBubble.SayMaybe(attacker, PieceLines.MutouBoss, 0.5f);
+        }
         // 小錦がいじめられると周りが同情して奮起する
         if (target.data.pieceType == PieceType.Konishiki && AbilitySystem.Instance != null)
         {
