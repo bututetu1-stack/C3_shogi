@@ -82,7 +82,7 @@ public partial class AbilitySystem : MonoBehaviour
             if (!monin.isAlive) continue;
 
             // 成り後は50%で絶起（行動スキップ）
-            if (monin.isPromoted && !monin.awakened && Random.value < 0.5f)
+            if (monin.isPromoted && !monin.awakened && GameRng.value < 0.5f)
             {
                 if (BattleLogUI.Instance != null)
                     BattleLogUI.Instance.AddLog(BattleLogUI.ColorName(monin.DisplayName, monin.team) + " は絶起した！");
@@ -138,7 +138,7 @@ public partial class AbilitySystem : MonoBehaviour
                 }
                 if (emptyPositions.Count > 0)
                 {
-                    Vector2Int spawnPos = emptyPositions[Random.Range(0, emptyPositions.Count)];
+                    Vector2Int spawnPos = emptyPositions[GameRng.Range(0, emptyPositions.Count)];
                     PieceData pawnData = bm.GetPieceDataByType(PieceType.Pawn);
                     if (pawnData != null)
                     {
@@ -180,7 +180,7 @@ public partial class AbilitySystem : MonoBehaviour
                 for (int strike = 0; strike < strikes && targets.Count > 0; strike++)
                 {
                     var source = GameSim.BeginSource(maou);
-                    PieceInstance victim = targets[Random.Range(0, targets.Count)];
+                    PieceInstance victim = targets[GameRng.Range(0, targets.Count)];
                     targets.Remove(victim);
                     int lightning = CombatResolver.AbilityDamage(maou, 1, false);   // 局による強化は足さない
                     if (BattleLogUI.Instance != null)
@@ -427,7 +427,7 @@ public partial class AbilitySystem : MonoBehaviour
             List<StatKind> stats = LowerableStats(target);
             for (int k = 0; k < statCount && stats.Count > 0; k++)
             {
-                int idx = Random.Range(0, stats.Count);
+                int idx = GameRng.Range(0, stats.Count);
                 StatKind stat = stats[idx];
                 stats.RemoveAt(idx);
                 target.Lower(stat);
@@ -601,7 +601,7 @@ public partial class AbilitySystem : MonoBehaviour
         int flipped = 0;
         while (flipped < flipCount && candidates.Count > 0)
         {
-            int idx = Random.Range(0, candidates.Count);
+            int idx = GameRng.Range(0, candidates.Count);
             PieceInstance target = candidates[idx];
             candidates.RemoveAt(idx);
 
@@ -727,8 +727,8 @@ public partial class AbilitySystem : MonoBehaviour
             if (candidates.Count == 0) yield break;
 
             // 覚醒したなこは狙って出す。素のなこも NakoBaseAimPercent の割合で狙う（既定は0＝でたらめ）
-            bool aim = (nako.awakened && BalanceTuning.NakoAwakenedAim) || (BalanceTuning.NakoBaseAimPercent > 0 && Random.Range(0, 100) < BalanceTuning.NakoBaseAimPercent);
-            Vector2Int dopaPos = aim ? AimDopa(nako, candidates) : candidates[Random.Range(0, candidates.Count)];
+            bool aim = (nako.awakened && BalanceTuning.NakoAwakenedAim) || (BalanceTuning.NakoBaseAimPercent > 0 && GameRng.Range(0, 100) < BalanceTuning.NakoBaseAimPercent);
+            Vector2Int dopaPos = aim ? AimDopa(nako, candidates) : candidates[GameRng.Range(0, candidates.Count)];
 
             // ドパ生成（敵チームとして出現）
             PieceData dopaData = bm.GetPieceDataByType(PieceType.Dopa);
@@ -829,7 +829,7 @@ public partial class AbilitySystem : MonoBehaviour
             if (hits > bestHits) { bestHits = hits; best.Clear(); }
             best.Add(c);
         }
-        return bestHits > 0 ? best[Random.Range(0, best.Count)] : candidates[Random.Range(0, candidates.Count)];
+        return bestHits > 0 ? best[GameRng.Range(0, best.Count)] : candidates[GameRng.Range(0, candidates.Count)];
     }
 
     // ============================================================
@@ -880,7 +880,7 @@ public partial class AbilitySystem : MonoBehaviour
             }
         }
         if (emptyPositions.Count == 0) return null;
-        return emptyPositions[Random.Range(0, emptyPositions.Count)];
+        return emptyPositions[GameRng.Range(0, emptyPositions.Count)];
     }
 
     // 指定座標からminDist以上離れた空きマスを探す（Chebyshev距離）
@@ -902,7 +902,7 @@ public partial class AbilitySystem : MonoBehaviour
         // 距離条件を満たすマスがなければ条件なしでフォールバック
         if (emptyPositions.Count == 0)
             return FindEmptyInRange(minY, maxY);
-        return emptyPositions[Random.Range(0, emptyPositions.Count)];
+        return emptyPositions[GameRng.Range(0, emptyPositions.Count)];
     }
 
     private List<PieceInstance> GetEnemiesInRange(Vector2Int center, int range, Team enemyTeam, PieceInstance exclude)
@@ -929,7 +929,7 @@ public partial class AbilitySystem : MonoBehaviour
     {
         for (int i = list.Count - 1; i > 0; i--)
         {
-            int j = Random.Range(0, i + 1);
+            int j = GameRng.Range(0, i + 1);
             PieceInstance temp = list[i];
             list[i] = list[j];
             list[j] = temp;
@@ -958,7 +958,7 @@ public partial class AbilitySystem : MonoBehaviour
             if (anywhere != null)
             {
                 if (anywhere.Count == 0) break;
-                int idx = Random.Range(0, anywhere.Count);
+                int idx = GameRng.Range(0, anywhere.Count);
                 picked = anywhere[idx];
                 anywhere.RemoveAt(idx);
             }
@@ -1014,11 +1014,11 @@ public partial class AbilitySystem : MonoBehaviour
             }
         }
         if (spots.Count == 0)
-            return anyEmpty.Count > 0 ? anyEmpty[Random.Range(0, anyEmpty.Count)] : (Vector2Int?)null;
+            return anyEmpty.Count > 0 ? anyEmpty[GameRng.Range(0, anyEmpty.Count)] : (Vector2Int?)null;
 
         int total = 0;
         foreach (int w in weights) total += w;
-        int roll = Random.Range(0, total);
+        int roll = GameRng.Range(0, total);
         for (int i = 0; i < spots.Count; i++)
         {
             roll -= weights[i];
@@ -1150,12 +1150,12 @@ public partial class AbilitySystem : MonoBehaviour
                 }
             }
             if (!foundC3)
-                bestAttack = BalanceTuning.MoninSmartRush ? PickRushAttack(piece, attackMoves) : attackMoves[Random.Range(0, attackMoves.Count)];
+                bestAttack = BalanceTuning.MoninSmartRush ? PickRushAttack(piece, attackMoves) : attackMoves[GameRng.Range(0, attackMoves.Count)];
             chosen = bestAttack;
         }
         else
         {
-            chosen = BalanceTuning.MoninSmartRush ? PickRushMove(piece, normalMoves) : normalMoves[Random.Range(0, normalMoves.Count)];
+            chosen = BalanceTuning.MoninSmartRush ? PickRushMove(piece, normalMoves) : normalMoves[GameRng.Range(0, normalMoves.Count)];
         }
 
         if (chosen.isAttack) RunRoster.Feat(piece);
@@ -1185,14 +1185,14 @@ public partial class AbilitySystem : MonoBehaviour
             if (score > best) { best = score; top.Clear(); }
             if (score == best) top.Add(m);
         }
-        return top[Random.Range(0, top.Count)];
+        return top[GameRng.Range(0, top.Count)];
     }
 
     /// <summary>攻撃できないときは、相手の C3 にいちばん近づくマスへ（同じならでたらめ）</summary>
     private static MoveValidator.MoveResult PickRushMove(PieceInstance piece, List<MoveValidator.MoveResult> moves)
     {
         PieceInstance c3 = BoardManager.Instance.FindC3(piece.team == Team.Player ? Team.Enemy : Team.Player);
-        if (c3 == null) return moves[Random.Range(0, moves.Count)];
+        if (c3 == null) return moves[GameRng.Range(0, moves.Count)];
         int best = int.MaxValue;
         var top = new List<MoveValidator.MoveResult>();
         foreach (var m in moves)
@@ -1201,7 +1201,7 @@ public partial class AbilitySystem : MonoBehaviour
             if (d < best) { best = d; top.Clear(); }
             if (d == best) top.Add(m);
         }
-        return top[Random.Range(0, top.Count)];
+        return top[GameRng.Range(0, top.Count)];
     }
 
     // ============================================================
@@ -1259,7 +1259,7 @@ public partial class AbilitySystem : MonoBehaviour
                 if (awakenedBuff || ally.turnsNearBoku >= BalanceTuning.BokuBuffTurns)
                 {
                     int buffAmount = awakenedBuff ? 1 : (nearPromotedBoku ? 2 : 1);
-                    bool buffATK = awakenedBuff ? ally.ATK <= ally.DEF : Random.value < 0.5f;
+                    bool buffATK = awakenedBuff ? ally.ATK <= ally.DEF : GameRng.value < 0.5f;
                     ally.bokuStacks += buffAmount;
                     string statName;
                     if (buffATK)

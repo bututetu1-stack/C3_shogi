@@ -210,7 +210,7 @@ public partial class AbilitySystem
             if (m.awakened && BattleEffects.Instance != null) BattleEffects.Instance.PlayAwakenBurst("WorldTrip", allies[0].boardPosition, m.data.awakenColor, true);
             for (int g = 0; g < gifts && allies.Count > 0; g++)
             {
-                int pick = allies == hurt ? 0 : Random.Range(0, allies.Count);
+                int pick = allies == hurt ? 0 : GameRng.Range(0, allies.Count);
                 PieceInstance to = allies[pick];
                 allies.RemoveAt(pick);
                 if (BattleEffects.Instance != null) BattleEffects.Instance.PlaySouvenir(to.boardPosition);
@@ -268,7 +268,7 @@ public partial class AbilitySystem
             var empty = new List<Vector2Int>();
             for (int x = 0; x < size; x++)
                 if (bm.IsEmpty(new Vector2Int(x, y))) empty.Add(new Vector2Int(x, y));
-            if (empty.Count > 0) return empty[Random.Range(0, empty.Count)];
+            if (empty.Count > 0) return empty[GameRng.Range(0, empty.Count)];
         }
         return null;
     }
@@ -379,7 +379,7 @@ public partial class AbilitySystem
             if (d != null && HasCard(d.pieceType) && !pool.Contains(d.pieceType)) pool.Add(d.pieceType);
         for (int i = pool.Count - 1; i > 0; i--)
         {
-            int j = Random.Range(0, i + 1);
+            int j = GameRng.Range(0, i + 1);
             PieceType t = pool[i]; pool[i] = pool[j]; pool[j] = t;
         }
         return pool;
@@ -447,16 +447,16 @@ public partial class AbilitySystem
                 var targets = AdjacentEnemies(niko);
                 targets.RemoveAll(t => LowerableStats(t).Count == 0);
                 if (targets.Count == 0) return false;
-                PieceInstance target = targets[Random.Range(0, targets.Count)];
+                PieceInstance target = targets[GameRng.Range(0, targets.Count)];
                 List<StatKind> stats = LowerableStats(target);
-                StatKind stat = stats[Random.Range(0, stats.Count)];
+                StatKind stat = stats[GameRng.Range(0, stats.Count)];
                 target.Lower(stat);
                 // 覚醒: もう1つ下げる
                 for (int extra = 0; extra < CardBonus(niko); extra++)
                 {
                     List<StatKind> rest = LowerableStats(target);
                     rest.Remove(stat);
-                    if (rest.Count > 0) target.Lower(rest[Random.Range(0, rest.Count)]);
+                    if (rest.Count > 0) target.Lower(rest[GameRng.Range(0, rest.Count)]);
                 }
                 CombatResolver.RefreshStats(target);
                 if (BattleEffects.Instance != null) BattleEffects.Instance.PlayStream(niko.boardPosition, target.boardPosition, BugGreen);
@@ -469,7 +469,7 @@ public partial class AbilitySystem
                 var targets = AdjacentEnemies(niko);
                 targets.RemoveAll(t => t.stunned || !CanEverMove(t));
                 if (targets.Count == 0) return false;
-                PieceInstance target = targets[Random.Range(0, targets.Count)];
+                PieceInstance target = targets[GameRng.Range(0, targets.Count)];
                 target.stunned = true;
                 CombatResolver.RefreshStats(target);
                 if (BattleEffects.Instance != null) BattleEffects.Instance.PlayStream(niko.boardPosition, target.boardPosition, SneerBlue);
@@ -482,7 +482,7 @@ public partial class AbilitySystem
                 var allies = AdjacentAllies(niko);
                 allies.RemoveAll(a => SmallBuffOf(a) >= BalanceTuning.NikoBuffCap + CardBonus(niko));
                 if (allies.Count == 0) return false;
-                PieceInstance ally = allies[Random.Range(0, allies.Count)];
+                PieceInstance ally = allies[GameRng.Range(0, allies.Count)];
                 bool atk = ally.ATK <= ally.DEF;
                 if (atk) ally.bonusATK += 1; else ally.bonusDEF += 1;
                 smallBuffs[ally] = SmallBuffOf(ally) + 1;
@@ -504,7 +504,7 @@ public partial class AbilitySystem
                             candidates.Add(t);
                     }
                 if (candidates.Count == 0) return false;
-                PieceInstance target = candidates[Random.Range(0, candidates.Count)];
+                PieceInstance target = candidates[GameRng.Range(0, candidates.Count)];
                 if (target.isPromoted) { target.Demote(); CombatResolver.PlayFlip(target); }
                 else GameManager.Instance.PromotePiece(target);
                 FloatingText.Spawn(target.boardPosition, "？", new Color(0.8f, 0.6f, 1f), 3.4f, 0.2f);
@@ -516,7 +516,7 @@ public partial class AbilitySystem
                 // 突撃・罵倒: 2マス以内の敵1体に2
                 var targets = GetEnemiesInRange(niko.boardPosition, task.type == PieceType.Nako ? 2 : 1, foe, null);
                 if (targets.Count == 0) return false;
-                PieceInstance target = targets[Random.Range(0, targets.Count)];
+                PieceInstance target = targets[GameRng.Range(0, targets.Count)];
                 if (BattleEffects.Instance != null)
                 {
                     if (task.type == PieceType.Nako) BattleEffects.Instance.PlayDashStreak(niko.boardPosition, target.boardPosition, NakoPink, 0.3f);
@@ -530,7 +530,7 @@ public partial class AbilitySystem
                 // 正論パンチ: 隣の敵1体に2（防御無視）
                 var targets = AdjacentEnemies(niko);
                 if (targets.Count == 0) return false;
-                PieceInstance target = targets[Random.Range(0, targets.Count)];
+                PieceInstance target = targets[GameRng.Range(0, targets.Count)];
                 if (BattleEffects.Instance != null) BattleEffects.Instance.PlayStream(niko.boardPosition, target.boardPosition, ArgueWhite);
                 CombatResolver.ApplyDamage(target, CombatResolver.AbilityDamage(niko, BalanceTuning.NikoStrikeDamage + CardBonus(niko)), true);
                 return true;
@@ -542,7 +542,7 @@ public partial class AbilitySystem
                 foreach (var e in bm.GetTeamPieces(foe))
                     if (IsRandomFleetTarget(e)) targets.Add(e);   // 支援艦隊と同じく、覚醒前のボスは狙わない
                 if (targets.Count == 0) return false;
-                PieceInstance target = targets[Random.Range(0, targets.Count)];
+                PieceInstance target = targets[GameRng.Range(0, targets.Count)];
                 int damage = CombatResolver.AbilityDamage(niko, 1 + CardBonus(niko));
                 if (BattleEffects.Instance == null) { CombatResolver.AbilityHit(target, damage); return true; }
                 // 砲弾が届いてから当てる（ExecuteNikoAbilities が着弾を待つ）
@@ -715,12 +715,12 @@ public partial class AbilitySystem
         foreach (var k in AlivePieces(team, PieceType.Kawasemi))
         {
             if (!k.isAlive || !(k.isPromoted || k.awakened) || IsSuppressed(k)) continue;
-            bool good = k.awakened || Random.value < KawasemiGoodChance(PartsOf(k));
+            bool good = k.awakened || GameRng.value < KawasemiGoodChance(PartsOf(k));
             Team foe = team == Team.Player ? Team.Enemy : Team.Player;
             string what;
             if (good)
             {
-                int roll = Random.Range(0, 3);
+                int roll = GameRng.Range(0, 3);
                 if (roll == 0)
                 {
                     // ベンチマーク: 周り2マスの敵すべてに2
@@ -757,7 +757,7 @@ public partial class AbilitySystem
                 }
                 RunRoster.Feat(k);
             }
-            else if (Random.value < 0.5f)
+            else if (GameRng.value < 0.5f)
             {
                 what = "爆熱";
                 CombatResolver.ApplyDamage(k, 1, true);

@@ -332,7 +332,7 @@ public partial class AbilitySystem
                 var allies = AdjacentAllies(niko);
                 allies.RemoveAll(a => SmallBuffOf(a) >= BalanceTuning.NikoBuffCap + CardBonus(niko));
                 if (allies.Count == 0) return false;
-                PieceInstance ally = allies[Random.Range(0, allies.Count)];
+                PieceInstance ally = allies[GameRng.Range(0, allies.Count)];
                 ally.bonusATK += 1;
                 smallBuffs[ally] = SmallBuffOf(ally) + 1;
                 CombatResolver.RefreshStats(ally);
@@ -346,7 +346,7 @@ public partial class AbilitySystem
                 var targets = AdjacentEnemies(niko);
                 targets.RemoveAll(t => t.staggered);
                 if (targets.Count == 0) return false;
-                PieceInstance target = targets[Random.Range(0, targets.Count)];
+                PieceInstance target = targets[GameRng.Range(0, targets.Count)];
                 target.staggered = true;
                 CombatResolver.RefreshStats(target);
                 if (BattleEffects.Instance != null) BattleEffects.Instance.PlayStream(niko.boardPosition, target.boardPosition, EmberOrange);

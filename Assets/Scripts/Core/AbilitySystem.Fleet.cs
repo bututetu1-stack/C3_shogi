@@ -178,7 +178,7 @@ public partial class AbilitySystem
         var classes = new List<PieceType>(ShipClasses);
         for (int i = classes.Count - 1; i > 0; i--)
         {
-            int j = Random.Range(0, i + 1);
+            int j = GameRng.Range(0, i + 1);
             PieceType tmp = classes[i]; classes[i] = classes[j]; classes[j] = tmp;
         }
         var ships = new List<PieceInstance>();
@@ -397,7 +397,7 @@ public partial class AbilitySystem
     {
         Fleet fleet;
         if (sub.linkedGroupId < 0 || !fleets.TryGetValue(sub.linkedGroupId, out fleet) || fleet.formation != Formation.LineAbreast) return false;
-        return Random.Range(0, 100) < BalanceTuning.FormationAbreastEvade;
+        return GameRng.Range(0, 100) < BalanceTuning.FormationAbreastEvade;
     }
 
     /// <summary>制空権確保: 中破していない空母が盤にいる（結界で止まっていない）</summary>
@@ -481,7 +481,7 @@ public partial class AbilitySystem
                     Vector2Int p = teitoku.boardPosition + new Vector2Int(dx, dy);
                     if ((dx != 0 || dy != 0) && bm.IsInBounds(p) && bm.IsEmpty(p)) spots.Add(p);
                 }
-            if (spots.Count > 0) return spots[Random.Range(0, spots.Count)];
+            if (spots.Count > 0) return spots[GameRng.Range(0, spots.Count)];
         }
         return FindEmptyInRange(0, halfBoard + 1);
     }
@@ -546,8 +546,8 @@ public partial class AbilitySystem
             foreach (var p in bm.GetTeamPieces(Team.Enemy))
                 if (IsRandomFleetTarget(p)) targets.Add(p);
             if (targets.Count == 0) break;
-            PieceInstance target = targets[Random.Range(0, targets.Count)];
-            PieceType cls = supportClasses.Count > 0 ? supportClasses[Random.Range(0, supportClasses.Count)] : PieceType.KanmusuBB;
+            PieceInstance target = targets[GameRng.Range(0, targets.Count)];
+            PieceType cls = supportClasses.Count > 0 ? supportClasses[GameRng.Range(0, supportClasses.Count)] : PieceType.KanmusuBB;
             string kind;
             if (cls == PieceType.KanmusuCV)
             {
@@ -889,7 +889,7 @@ public partial class AbilitySystem
                 LogAttack(ship, "砲撃", target, damage);
                 FleetHit(ship, target, damage);
                 var nearby = GetEnemiesInRange(center, 1, Team.Enemy, target);
-                if (nearby.Count > 0) FleetHit(ship, nearby[Random.Range(0, nearby.Count)], ShipDamage(ship, 2, fleet));
+                if (nearby.Count > 0) FleetHit(ship, nearby[GameRng.Range(0, nearby.Count)], ShipDamage(ship, 2, fleet));
                 break;
             }
         }
@@ -902,9 +902,9 @@ public partial class AbilitySystem
         if (BalanceTuning.FleetEscortsFirst)
         {
             var escorts = abyss.FindAll(s => !s.isFlagship);
-            if (escorts.Count > 0) return escorts[Random.Range(0, escorts.Count)];
+            if (escorts.Count > 0) return escorts[GameRng.Range(0, escorts.Count)];
         }
-        return abyss[Random.Range(0, abyss.Count)];
+        return abyss[GameRng.Range(0, abyss.Count)];
     }
 
     private static void LogAttack(PieceInstance ship, string kind, PieceInstance target, int damage)
@@ -950,7 +950,7 @@ public partial class AbilitySystem
         if (victims.Count == 0)
         {
             var near = GetEnemiesInRange(shinkai.boardPosition, 1, Team.Player, shinkai);
-            if (near.Count > 0) victims.Add(near[Random.Range(0, near.Count)]);
+            if (near.Count > 0) victims.Add(near[GameRng.Range(0, near.Count)]);
             baseDamage = 2;
             count = 1;
         }

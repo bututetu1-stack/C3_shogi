@@ -105,7 +105,7 @@ public partial class AbilitySystem
         int count = Mathf.Min(BalanceTuning.YoukoFoxfires, spots.Count);
         for (int i = 0; i < count; i++)
         {
-            int idx = Random.Range(0, spots.Count);
+            int idx = GameRng.Range(0, spots.Count);
             Vector2Int spot = spots[idx];
             spots.RemoveAt(idx);
             PieceController pc = bm.SpawnPiece(fire, fox.team, spot);

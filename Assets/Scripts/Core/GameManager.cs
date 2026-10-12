@@ -76,7 +76,7 @@ public class GameManager : MonoBehaviour
     {
         stageVariants = new int[StageManager.MaxStages + 1];
         for (int s = 1; s <= StageManager.MaxStages; s++)
-            stageVariants[s] = UnityEngine.Random.Range(0, StageManager.VariantCount(s));
+            stageVariants[s] = GameRng.Range(0, StageManager.VariantCount(s));
     }
 
     /// <summary>強化「歩兵を消す」を取った（次の局から最後まで、自軍の歩兵を置かない）</summary>

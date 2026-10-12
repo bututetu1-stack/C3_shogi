@@ -155,13 +155,13 @@ public static class PiecePool
 
         // 強化カード: ステージ3以降はときどき1枚混ざる
         int upgradeSlots = 0;
-        if (stage >= 3 && Random.value < 0.45f) upgradeSlots = 1;
+        if (stage >= 3 && GameRng.value < 0.45f) upgradeSlots = 1;
         if (!canDeploy) upgradeSlots = count;
 
         // 鍛える札: ★3に届いていない部員がいれば、第三局からときどき1枚混ざる
         List<PieceData> trainable = TrainableMembers(owned, roster);
         int trainSlots = 0;
-        if (stage >= BalanceTuning.TrainFromStage && trainable.Count > 0 && upgradeSlots < count && Random.value < BalanceTuning.TrainSlotChance)
+        if (stage >= BalanceTuning.TrainFromStage && trainable.Count > 0 && upgradeSlots < count && GameRng.value < BalanceTuning.TrainSlotChance)
             trainSlots = 1;
 
         var available = new List<PieceData>();
@@ -187,7 +187,7 @@ public static class PiecePool
         {
             float total = 0f;
             foreach (var p in available) total += GetWeight(p.rarity, stage);
-            float roll = Random.Range(0f, total);
+            float roll = GameRng.Range(0f, total);
             PieceData selected = available[available.Count - 1];
             float cumulative = 0f;
             foreach (var p in available)
@@ -213,7 +213,7 @@ public static class PiecePool
         var upgrades = UpgradeKinds(owned);
         while (result.Count < count && upgrades.Count > 0)
         {
-            int idx = Random.Range(0, upgrades.Count);
+            int idx = GameRng.Range(0, upgrades.Count);
             result.Add(DraftOption.Upgrade(upgrades[idx]));
             upgrades.RemoveAt(idx);
         }
@@ -239,7 +239,7 @@ public static class PiecePool
     {
         float total = 0f;
         foreach (var d in candidates) total += TrainWeight(d.rarity);
-        float roll = Random.Range(0f, total);
+        float roll = GameRng.Range(0f, total);
         foreach (var d in candidates)
         {
             roll -= TrainWeight(d.rarity);
@@ -277,7 +277,7 @@ public static class PiecePool
         var kinds = UpgradeKinds(owned);
         kinds.RemoveAll(k => options.Exists(o => o.IsUpgrade && o.upgrade == k));
         if (kinds.Count == 0) return;
-        DraftOption reward = DraftOption.Upgrade(kinds[Random.Range(0, kinds.Count)]);
+        DraftOption reward = DraftOption.Upgrade(kinds[GameRng.Range(0, kinds.Count)]);
         reward.fleetReward = true;
         options.Add(reward);
     }

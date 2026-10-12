@@ -101,7 +101,7 @@ public static class StageEvents
         var result = new List<StageEventKind>();
         while (result.Count < count && pool.Count > 0)
         {
-            int i = Random.Range(0, pool.Count);
+            int i = GameRng.Range(0, pool.Count);
             result.Add(pool[i]);
             pool.RemoveAt(i);
         }

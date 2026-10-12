@@ -119,6 +119,7 @@ public static class BalanceSimulator
 
         var clock = System.Diagnostics.Stopwatch.StartNew();
         UnityEngine.Random.InitState(seed);
+        GameRng.InitState(seed);   // 勝ち負けに関わる乱数（能力・AI・仲間の候補など）
         var run = new SimRunRecord { seed = seed };
         gm.SimBeginRun();
 
@@ -130,7 +131,7 @@ public static class BalanceSimulator
             List<StageEventKind> events = gm.SimDrawEvents();
             if (events.Count > 0)
             {
-                StageEventKind ev = events[UnityEngine.Random.Range(0, events.Count)];
+                StageEventKind ev = events[GameRng.Range(0, events.Count)];
                 gm.SimApplyEvent(ev);
                 rec.stageEvent = StageEvents.Title(ev);
             }
@@ -142,7 +143,7 @@ public static class BalanceSimulator
                 List<DraftOption> options = gm.SimDrawOptions();
                 if (k == 0) rec.offered = options.Select(OptionName).ToArray();
                 if (options.Count == 0) break;
-                DraftOption pick = BalanceTuning.SimSmartDraft ? SmartPick(options) : options[UnityEngine.Random.Range(0, options.Count)];
+                DraftOption pick = BalanceTuning.SimSmartDraft ? SmartPick(options) : options[GameRng.Range(0, options.Count)];
                 if (k == 0 && simOptions != null && simOptions.forcePick.HasValue && sm.currentStage == 1)
                     pick = DraftOption.Piece(bm.GetPieceDataByType(simOptions.forcePick.Value));
                 if (k == 0) rec.pick = OptionName(pick);
