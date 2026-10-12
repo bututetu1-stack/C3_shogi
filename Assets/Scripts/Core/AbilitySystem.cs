@@ -531,7 +531,7 @@ public partial class AbilitySystem : MonoBehaviour
         var targets = kipu.awakened
             ? GetEnemiesInRange(kipu.boardPosition, BalanceTuning.KipuAwakenedRange, kipu.team == Team.Player ? Team.Enemy : Team.Player, null)
             : AdjacentEnemies(kipu);
-        targets.RemoveAll(target => target.stunned || !CanEverMove(target));
+        targets.RemoveAll(target => target.stunned || !CanEverMove(target) || ResistsBinding(target));
         if (targets.Count == 0) yield break;
         int maxTargets = kipu.isPromoted && !kipu.awakened ? int.MaxValue
             : kipu.awakened ? Mathf.Max(BalanceTuning.KipuAwakenedTargets, kipu.isPromoted ? targets.Count : 0) : BalanceTuning.KipuSneerTargets;
@@ -1308,7 +1308,7 @@ public partial class AbilitySystem : MonoBehaviour
     }
 
     // ============================================================
-    // 髑髏の死亡時爆発（隣接全駒に貫通1ダメージ）
+    // 髑髏の死亡時爆発（隣接全駒に、防御を無視して1ダメージ。がしゃ髑髏は2）
     // ============================================================
     public void OnPieceDeath(PieceInstance piece, Vector2Int deathPos)
     {
@@ -1326,9 +1326,9 @@ public partial class AbilitySystem : MonoBehaviour
         if (BattleEffects.Instance != null)
             BattleEffects.Instance.PlayExplosionEffect(deathPos);
         if (BattleLogUI.Instance != null)
-            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("髑髏", piece.team) + " が爆発！隣の駒に" + (BalanceTuning.LegacyPierce ? "貫通" + blast : (blast + BalanceTuning.PierceCompensation) + "（防御で減る）") + "ダメージ");
+            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("髑髏", piece.team) + " が爆発！隣の駒に防御を無視して" + blast + "ダメージ");
 
-        // 隣接全セルに貫通1ダメージ（攻撃の上乗せぶん増える。C3は能力の影響を受けない）
+        // 隣接全セルに防御を無視して1ダメージ（攻撃の上乗せぶん増える。C3は能力の影響を受けない）
         var victims = new List<PieceInstance>();
         for (int dx = -1; dx <= 1; dx++)
         {
@@ -1345,7 +1345,7 @@ public partial class AbilitySystem : MonoBehaviour
 
         var source = GameSim.BeginSource(piece);
         foreach (var victim in victims)
-            CombatResolver.AbilityHit(victim, blast);
+            CombatResolver.ApplyDamage(victim, blast, true);
         GameSim.EndSource(source);
 
         explodingPositions.Remove(deathPos);

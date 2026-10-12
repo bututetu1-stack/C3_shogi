@@ -13,6 +13,8 @@ public class BoardCell : MonoBehaviour
 {
     public const int TintOrder = 3;
     public const int MarkOrder = 20;
+    /// <summary>四隅の枠（選択・攻撃できる相手）: 駒の本体と文字の上、数字の札（PieceRenderer.OrderBadge）の下</summary>
+    public const int FrameOrder = PieceRenderer.OrderLabel;
 
     public Vector2Int position;
 
@@ -32,7 +34,7 @@ public class BoardCell : MonoBehaviour
         hover = CreateLayer("Hover", SpriteFactory.Pixel, TintOrder + 1, 0.97f);
         hover.color = Palette.HoverTint;
         mark = CreateLayer("Mark", SpriteFactory.Circle, MarkOrder, 0.26f);
-        frame = CreateLayer("Frame", SpriteFactory.CornerBrackets, MarkOrder + 1, 1.02f);
+        frame = CreateLayer("Frame", SpriteFactory.CornerBrackets, FrameOrder, 1.02f);
         frame.color = Palette.SelectedFrame;
         ClearAll();
     }
@@ -55,16 +57,19 @@ public class BoardCell : MonoBehaviour
         switch (m)
         {
             case CellMark.Move:
+                mark.sortingOrder = MarkOrder;
                 mark.sprite = SpriteFactory.Circle;
                 mark.transform.localScale = new Vector3(0.3f, 0.3f, 1f);
                 mark.color = Palette.MoveDot;
                 break;
             case CellMark.MoveDanger:
+                mark.sortingOrder = MarkOrder;
                 mark.sprite = SpriteFactory.Circle;
                 mark.transform.localScale = new Vector3(0.3f, 0.3f, 1f);
                 mark.color = Palette.DangerDot;
                 break;
             case CellMark.Attack:
+                mark.sortingOrder = FrameOrder;
                 mark.sprite = SpriteFactory.CornerBrackets;
                 mark.transform.localScale = new Vector3(1.02f, 1.02f, 1f);
                 mark.color = Palette.AttackRing;

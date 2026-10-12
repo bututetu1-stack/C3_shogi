@@ -78,7 +78,7 @@ public static class MoveValidator
     /// </summary>
     private static void ApplyGrapple(PieceInstance piece, List<MoveResult> results, BoardManager bm)
     {
-        if (AbilitySystem.ResistsAbilities(piece)) return;   // C3・僧兵は組み止められない
+        if (AbilitySystem.ResistsBinding(piece)) return;   // C3・僧兵・レジェンドの駒は組み止められない
         Vector2Int from = piece.boardPosition;
         PieceInstance holder = null;
         for (int dx = -1; dx <= 1 && holder == null; dx++)

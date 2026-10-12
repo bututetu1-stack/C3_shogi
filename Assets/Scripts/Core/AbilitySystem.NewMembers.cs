@@ -484,7 +484,7 @@ public partial class AbilitySystem
             case PieceType.Kipu:
             {
                 var targets = AdjacentEnemies(niko);
-                targets.RemoveAll(t => t.stunned || !CanEverMove(t));
+                targets.RemoveAll(t => t.stunned || !CanEverMove(t) || ResistsBinding(t));
                 if (targets.Count == 0) return false;
                 PieceInstance target = targets[GameRng.Range(0, targets.Count)];
                 target.stunned = true;
