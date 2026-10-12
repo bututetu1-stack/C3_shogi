@@ -44,7 +44,7 @@ public class BattleLogUI : MonoBehaviour
 
         panel.Add(UIFactory.PanelTitle("対局記録"));
 
-        scrollView = new ScrollView(ScrollViewMode.Vertical);
+        scrollView = UIFactory.Scroll();
         scrollView.style.flexGrow = 1;
         scrollView.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
         panel.Add(scrollView);

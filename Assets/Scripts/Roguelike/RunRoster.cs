@@ -162,6 +162,18 @@ public class RunRoster
             + "／鍛える札 +" + BalanceTuning.TrainXp;
     }
 
+    /// <summary>練度のたまり方（1つずつ。箇条書きに使う）</summary>
+    public static string[] XpSourceLines()
+    {
+        return new[]
+        {
+            "敵を倒す +" + BalanceTuning.XpPerKill,
+            "局に勝ったとき盤に残っている +" + BalanceTuning.XpPerStageSurvived,
+            "活躍（能力が決まる）+" + BalanceTuning.XpPerFeat + "（1局に" + BalanceTuning.FeatXpMaxPerStage + "回まで）",
+            "鍛える札 +" + BalanceTuning.TrainXp,
+        };
+    }
+
     /// <summary>★に必要な練度の一覧（"3・7・12"）</summary>
     public static string ThresholdText(Rarity rarity)
     {

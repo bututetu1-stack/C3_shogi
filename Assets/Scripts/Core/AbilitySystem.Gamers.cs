@@ -20,7 +20,9 @@ public partial class AbilitySystem
         switch (p.data.pieceType)
         {
             case PieceType.RN:
-                return "ブロック " + p.block + "（手番の終わりに" + RnBlockOf(p) + "）";
+                return p.block > 0
+                    ? "ブロック " + p.block + "（防御とは別に、受けるダメージをあと" + p.block + "防ぐ。次の自分の手番の初めに消える）"
+                    : "ブロック 0（自分の手番の終わりに" + RnBlockOf(p) + "を得る）";
             case PieceType.Negu:
             {
                 string s = "デイリー " + p.dailyCount + "/" + NeguEveryOf(p) + "（報酬 攻撃+" + p.dailyRewards + "/" + NeguCapOf(p) + "）";
@@ -39,7 +41,7 @@ public partial class AbilitySystem
                 var parts = new List<string>();
                 if (p.posture > 0) parts.Add("体幹 " + p.posture + "/" + PostureMax(p));
                 if (p.staggered) parts.Add("スタッガー（次に受けるダメージ+" + BalanceTuning.MutouStaggerDamage + "）");
-                if (p.block > 0) parts.Add("ブロック " + p.block);
+                if (p.block > 0) parts.Add("ブロック " + p.block + "（受けるダメージをあと" + p.block + "防ぐ。次の自分の手番の初めに消える）");
                 return parts.Count > 0 ? string.Join("　", parts) : null;
             }
         }

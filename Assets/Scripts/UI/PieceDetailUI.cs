@@ -28,7 +28,7 @@ public class PieceDetailUI : MonoBehaviour
         panel.pickingMode = PickingMode.Position;
         root.Add(panel);
 
-        content = new ScrollView(ScrollViewMode.Vertical);
+        content = UIFactory.Scroll();
         content.style.flexGrow = 1;
         content.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
         panel.Add(content);
@@ -135,18 +135,19 @@ public class PieceDetailUI : MonoBehaviour
             var growth = UIFactory.Label("練度 " + PieceSelectionUI.StarText(member.stars) + "　" + RunRoster.XpText(member), 19, Palette.GoldLight, "c3-bold");
             growth.style.marginTop = 10;
             content.Add(growth);
-            int next = RunRoster.NextThreshold(member);
+            // ★ごとに1段ずつ（効果・必要な練度・あといくつ）
+            var ladder = UIFactory.StarLadder(member.rarity, member.xp, 16);
+            ladder.style.marginTop = 4;
+            content.Add(ladder);
+            var srcHead = UIFactory.Label("練度がたまること", 15, Palette.Gold, "c3-bold");
+            srcHead.style.marginTop = 6;
+            content.Add(srcHead);
+            content.Add(UIFactory.Bullets(RunRoster.XpSourceLines(), 15, Palette.TextSub));
             string feat = RunRoster.FeatText(d.pieceType);
-            string guide = (next > 0
-                    ? "次は★" + (member.stars + 1) + "（" + RunRoster.StarEffectText(member.stars + 1) + "）。"
-                    : "★3（いちばん上）。")
-                + "★1 " + RunRoster.StarEffectText(1) + "、★2 " + RunRoster.StarEffectText(2) + "、★3 " + RunRoster.StarEffectText(3)
-                + "（必要な練度 " + RunRoster.ThresholdText(member.rarity) + "）"
-                + "\n練度がたまる: " + RunRoster.XpSourcesText()
-                + "\nこの部員の活躍: " + (feat != null ? feat + "、" : "") + "敵を倒したとき"
-                + (d.pieceType == PieceType.Monotetsu ? "\n★3なら、着任した艦娘が最初から改になる" : "");
-            var effects = UIFactory.Paragraph(guide, 15, Palette.TextSub);
-            content.Add(effects);
+            var featText = UIFactory.Paragraph("この部員の活躍: " + (feat != null ? feat + "、" : "") + "敵を倒したとき"
+                + (d.pieceType == PieceType.Monotetsu ? "\n★3なら、着任した艦娘が最初から改になる" : ""), 15, Palette.TextSub);
+            featText.style.marginTop = 4;
+            content.Add(featText);
             if (d.canAwaken)
             {
                 string name = "覚醒「" + d.awakenedName + "」";
