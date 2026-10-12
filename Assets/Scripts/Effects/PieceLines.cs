@@ -32,7 +32,7 @@ public static class PieceLines
     // 物鉄: 成る前に倒されたとき
     public static readonly string[] MonotetsuDown = { "南無三" };
 
-    // けい・異端: 周りの敵の数値を下げるとき
+    // 鶏炭・異端: 周りの敵の数値を下げるとき
     public static readonly string[] KeiBug = { "それはバグやろ！" };
     public static readonly string[] ItanBug = { "バグ多すぎやろ！" };
 
@@ -117,7 +117,7 @@ public static class PieceLines
             case PieceType.Rihaku: return new CutIn("李白 成る", "相変わらず趣味が悪い", 0x2E2250, 0xB894FF);
             case PieceType.SN: return new CutIn("SN 過労", "過労により死亡した", 0x2A2A2E, 0x9AA0AA);
             case PieceType.Konishiki: return new CutIn("小錦 風邪", "風邪をひいて力尽きた……", 0x1E3550, 0x9FD4FF);
-            case PieceType.Kei: return new CutIn("けい 異端化", "倫理観と人の心とその他諸々を失った", 0x0B2618, 0x5CFF9A);
+            case PieceType.Kei: return new CutIn("鶏炭 異端化", "倫理観と人の心とその他諸々を失った", 0x0B2618, 0x5CFF9A);
             case PieceType.Yuu: return new CutIn("ユウ 加速", "防御力とさらなる機動力を手に入れた", 0x3A1608, 0xFF9A3C);
             case PieceType.Kipu: return new CutIn("へる 降臨", "冷笑を極めた（25連冷笑コンボ）", 0x14202E, 0x9ED8FF);
             case PieceType.Mitsuharu: return new CutIn("光春 高飛び", "とうとう念願の海外旅行へ", 0x1A2A44, 0x7FC8FF);

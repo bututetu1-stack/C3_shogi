@@ -81,6 +81,21 @@ public static class PvpMatch
     public static string SideName(Team team) { return team == Team.Player ? "先手" : "後手"; }
     public static string SideLong(Team team) { return team == Team.Player ? "先手（下）" : "後手（上）"; }
 
+    /// <summary>部員のコストの幅（ルールの説明に出す。盤の駒のデータがまだなければ 0〜0）</summary>
+    public static void MemberCostRange(out int lo, out int hi)
+    {
+        lo = int.MaxValue; hi = 0;
+        foreach (var t in Members)
+        {
+            PieceData d = BoardManager.Instance != null ? BoardManager.Instance.GetPieceDataByType(t) : null;
+            if (d == null) continue;
+            int c = CostOf(d);
+            lo = Mathf.Min(lo, c);
+            hi = Mathf.Max(hi, c);
+        }
+        if (hi == 0) lo = 0;
+    }
+
     /// <summary>駒のコスト</summary>
     public static int CostOf(PieceData d)
     {
@@ -102,12 +117,13 @@ public static class PvpMatch
     /// <summary>
     /// コスト表（ここにない部員はレアリティどおり: ブロンズ4・レア6・激レア9）。
     /// 2026-10-12、AIどうしの対人戦600局ずつで、入っていた側の勝ち点が50%に近づくように決めた叩き台（docs/balance/pvp_stats.js）。
-    /// 僕・光春は対人戦だけの上限（PvpBokuBuffCap・PvpSouvenirCap）を入れたあとの値
+    /// 僕・光春は対人戦だけの上限（PvpBokuBuffCap・PvpSouvenirCap）を入れたあとの値。
+    /// 運営・鯖缶を入れたあと、僕はコスト制で勝ち点40%に下がったので10→9（54%）
     /// </summary>
     private static readonly Dictionary<PieceType, int> CostTable = new Dictionary<PieceType, int>
     {
         // 部員（強い・弱いをレアリティの値から動かした）
-        { PieceType.Boku, 10 }, { PieceType.Mitsuharu, 6 }, { PieceType.Shimesaba, 8 }, { PieceType.Konishiki, 7 },
+        { PieceType.Boku, 9 }, { PieceType.Mitsuharu, 6 }, { PieceType.Shimesaba, 8 }, { PieceType.Konishiki, 7 },
         { PieceType.Nako, 7 }, { PieceType.Kei, 5 }, { PieceType.Kipu, 5 }, { PieceType.RN, 5 }, { PieceType.Negu, 4 },
         { PieceType.Rihaku, 5 }, { PieceType.SN, 6 }, { PieceType.Niko, 8 }, { PieceType.Kawasemi, 8 },
         // 将棋の駒

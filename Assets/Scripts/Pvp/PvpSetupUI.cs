@@ -360,8 +360,10 @@ public class PvpSetupUI : MonoBehaviour
         row.style.flexDirection = FlexDirection.Row;
         row.style.flexWrap = Wrap.Wrap;
         row.style.justifyContent = Justify.Center;
+        int costLo, costHi;
+        PvpMatch.MemberCostRange(out costLo, out costHi);
         row.Add(RuleCard("コスト制", "持ち点" + PvpMatch.Budget + "の中で、部員・将棋の駒・敵の駒・全軍強化を自由に選ぶ。"
-            + "\n部員は4〜11（強さに合わせて決めた）。全軍強化は" + PvpMatch.UpgradeCost + "（" + PvpMatch.MaxUpgrades + "枚まで）。", PvpMatch.Rule.Cost));
+            + "\n部員は" + costLo + "〜" + costHi + "（強さに合わせて決めた）。全軍強化は" + PvpMatch.UpgradeCost + "（" + PvpMatch.MaxUpgrades + "枚まで）。", PvpMatch.Rule.Cost));
         row.Add(RuleCard("ランダム配布", "3枚から1枚を選ぶのを" + PvpMatch.RandomRounds + "回。"
             + "\n2人に同じ候補が出るので、選び方の腕の勝負。", PvpMatch.Rule.Random));
         r.Add(row);

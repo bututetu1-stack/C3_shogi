@@ -54,6 +54,11 @@ public partial class AbilitySystem
     public static string StatusLine(PieceInstance p)
     {
         if (p == null || Instance == null) return null;
+        return WithGroups(p, MemberStatusLine(p));
+    }
+
+    private static string MemberStatusLine(PieceInstance p)
+    {
         switch (p.data.pieceType)
         {
             case PieceType.Mitsuharu:
