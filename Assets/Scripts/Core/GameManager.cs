@@ -55,6 +55,8 @@ public class GameManager : MonoBehaviour
     public int SecretFund;
     /// <summary>この周で艦隊がS勝利した回数（戦果・歴戦の艦隊に使う）</summary>
     public int FleetSWins;
+    /// <summary>ケッコンカッコカリした艦種（周のあいだ残る。その艦種は最初から改二で出撃する）</summary>
+    public readonly List<PieceType> RingedClasses = new List<PieceType>();
     /// <summary>部員の練度と★（周のあいだ残る）</summary>
     public RunRoster Roster { get; } = new RunRoster();
 
@@ -135,6 +137,7 @@ public class GameManager : MonoBehaviour
         PickStageVariants();
         SecretFund = 0;
         FleetSWins = 0;
+        RingedClasses.Clear();
         bonusUpgradeStage = 0;
         pendingExtraPicks = pendingExtraRerolls = pendingEnemyHp = pendingEnemyAtk = 0;
         TotalKills = TotalMoves = StagesCleared = 0;
@@ -443,6 +446,7 @@ public class GameManager : MonoBehaviour
             variants = (int[])stageVariants.Clone(),
             secretFund = SecretFund,
             fleetSWins = FleetSWins,
+            ringedClasses = RingedClasses.ConvertAll(t => t.ToString()).ToArray(),
             bonusUpgradeStage = bonusUpgradeStage,
             enemyHp = phase == "battle" ? pendingEnemyHp : 0,
             enemyAtk = phase == "battle" ? pendingEnemyAtk : 0,
@@ -470,6 +474,12 @@ public class GameManager : MonoBehaviour
         if (data.variants != null && data.variants.Length == stageVariants.Length) stageVariants = (int[])data.variants.Clone();
         SecretFund = data.secretFund;
         FleetSWins = data.fleetSWins;
+        RingedClasses.Clear();
+        foreach (string name in data.ringedClasses ?? new string[0])
+        {
+            PieceType t;
+            if (System.Enum.TryParse(name, out t)) RingedClasses.Add(t);
+        }
         bonusUpgradeStage = data.bonusUpgradeStage;
         pendingEnemyHp = data.phase == "battle" ? data.enemyHp : 0;
         pendingEnemyAtk = data.phase == "battle" ? data.enemyAtk : 0;

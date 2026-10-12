@@ -230,7 +230,7 @@ public class SimpleAI : MonoBehaviour
             for (int i = 0; i < root.Count; i++)
             {
                 MoveEntry e = root[i];
-                int lure = LureBonus(e.piece, e.move);
+                int lure = LureBonus(e.piece, e.move) + (forEnemy ? AggroBonus(e.piece, e.move) : 0);
                 int mark = Simulate(e.piece, e.move);
                 // 最善候補との差を見るため、最善より少し悪い手までは正確に読む
                 int raw = forEnemy
@@ -317,6 +317,20 @@ public class SimpleAI : MonoBehaviour
             if (bonus > best) best = bonus;
         }
         return best;
+    }
+
+    /// <summary>
+    /// 敵が自軍の駒（C3以外）を殴る手に足す点（2026-10-12: 「駒も殴りに来る」）。
+    /// 読みだけだと取り合いを避けて C3 ばかり狙うので、ダメージが通る攻撃を少しひいきする
+    /// </summary>
+    private int AggroBonus(PieceInstance piece, MoveValidator.MoveResult move)
+    {
+        if (BalanceTuning.EnemyAggroAttack <= 0 || !move.isAttack) return 0;
+        PieceInstance t = BoardManager.Instance.GetPieceAt(move.position);
+        if (t == null || t.team == piece.team || t.data.pieceType == PieceType.C3 || AbilitySystem.IsObstacle(t.data.pieceType)) return 0;
+        int dmg = CombatResolver.CalcDamage(piece, t);
+        if (dmg <= 0) return 0;
+        return BalanceTuning.EnemyAggroAttack + BalanceTuning.EnemyAggroPerDamage * Mathf.Min(dmg, t.currentHP);
     }
 
     /// <summary>Alpha-Beta探索（正の値 = AI有利）</summary>
@@ -639,7 +653,7 @@ public class SimpleAI : MonoBehaviour
         return mark;
     }
 
-    /// <summary>探索中の撃破。髑髏なら周囲（C3以外）に貫通1ダメージ（攻撃の上乗せぶん増える）</summary>
+    /// <summary>探索中の撃破。髑髏なら周囲（C3以外）に1ダメージ（攻撃の上乗せぶん増える。防御の扱いは AbilityHit と同じ）</summary>
     private void SimKill(PieceInstance victim, int chain)
     {
         BoardManager bm = BoardManager.Instance;
@@ -658,7 +672,7 @@ public class SimpleAI : MonoBehaviour
                 PieceInstance n = bm.GetPieceAt(new Vector2Int(c.x + dx, c.y + dy));
                 if (n == null || !n.isAlive || n.data.pieceType == PieceType.C3) continue;
                 Save(n);
-                n.currentHP -= blast;
+                n.currentHP -= CombatResolver.AbilityHitPreview(n, blast);
                 if (n.currentHP <= 0) SimKill(n, chain + 1);
             }
         }
@@ -916,7 +930,7 @@ public class SimpleAI : MonoBehaviour
                 if (p.team == Team.Player && p.data.pieceType != PieceType.C3)
                 {
                     s += 20;
-                    if (p.currentHP <= CombatResolver.AbilityDamage(archer, BalanceTuning.YumiheiDamage)) s += PieceValue(p) / 2;
+                    if (p.currentHP <= CombatResolver.AbilityHitPreview(p, CombatResolver.AbilityDamage(archer, BalanceTuning.YumiheiDamage))) s += PieceValue(p) / 2;
                 }
                 break;
             }

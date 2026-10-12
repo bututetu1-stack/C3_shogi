@@ -111,13 +111,14 @@ public static class PiecePool
         int s = Mathf.Max(0, stage - 1);
         switch (rarity)
         {
-            // 序盤はブロンズ中心、局が進むほどレア・激レアが出やすくなる。
-            // （部員だけのとき、第一局の1枠あたり: ブロンズ約43% / レア約43% / 激レア約13%。部員の数で変わる）
+            // 序盤はブロンズ中心、局が進むほどレア・激レアが出やすくなる（2026-10-12: 序盤のレア・激レアを下げた）。
+            // （部員だけのとき、1枠あたり: 第一局 ブロンズ約65% / レア約30% / 激レア約5%、第七局 約43% / 41% / 16%、
+            //   第十三局 約28% / 49% / 23%。部員の数で変わる）
             // ノーマルは素の将棋駒で、いまは仲間の候補に出ない（BalanceTuning.DraftStandardPieces）
             case Rarity.Normal: return Mathf.Max(4f, 10f * (1f - 0.04f * s));
             case Rarity.Bronze: return Mathf.Max(12f, 30f * (1f - 0.035f * s));
-            case Rarity.Rare: return 12f * (1f + 0.12f * s);
-            case Rarity.SuperRare: return 4.5f * (1f + 0.3f * s);
+            case Rarity.Rare: return BalanceTuning.DraftRareBase * (1f + BalanceTuning.DraftRareGrowth * s);
+            case Rarity.SuperRare: return BalanceTuning.DraftSuperRareBase * (1f + BalanceTuning.DraftSuperRareGrowth * s);
             case Rarity.Legend: return 2f * (1f + 0.3f * s);
             default: return 10f;
         }

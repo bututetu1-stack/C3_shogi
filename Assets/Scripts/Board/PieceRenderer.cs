@@ -44,6 +44,10 @@ public class PieceRenderer : MonoBehaviour
     private float auraPhase;
     private Sprite auraArt;          // 深海棲姫の妖気（Resources/Effects/HimeAura.png があるとき）
     private SpriteRenderer flagRenderer;   // 深海の旗艦の旗
+    private SpriteRenderer ringRenderer;   // ケッコンカッコカリした艦娘の指輪
+    private SpriteRenderer ringGem;
+    private SpriteRenderer sealRenderer;   // 能力が止まっている駒に重ねる鎖（画像 SealChains があるとき）
+    private bool shownSuppressed;
     private SpriteRenderer fireRenderer;   // 大破した艦娘の炎
     private Sprite fireArt;
     private bool fireIsMuzzle;
@@ -161,6 +165,32 @@ public class PieceRenderer : MonoBehaviour
         flagRenderer = flagObj.gameObject.AddComponent<SpriteRenderer>();
         flagRenderer.sortingOrder = OrderBadge;
         flagRenderer.enabled = false;
+
+        // 能力が止まっている駒に重ねる鎖（画像があるときだけ）
+        var sealObj = CreateChild("SealChains", transform);
+        sealObj.localScale = new Vector3(0.95f, 0.95f, 1f);
+        sealRenderer = sealObj.gameObject.AddComponent<SpriteRenderer>();
+        sealRenderer.sortingOrder = OrderBadge - 1;
+        sealRenderer.enabled = false;
+
+        // ケッコンカッコカリした艦娘の指輪（駒から見て左下。艦娘は部員ではないので★と重ならない）
+        var ringMark = CreateChild("RingMark", transform);
+        ringMark.localPosition = new Vector3(-0.32f, -0.34f, 0f) * flip;
+        ringMark.localScale = new Vector3(0.3f, 0.3f, 1f);
+        ringRenderer = ringMark.gameObject.AddComponent<SpriteRenderer>();
+        ringRenderer.sprite = SpriteFactory.Ring;
+        ringRenderer.color = new Color(1f, 0.82f, 0.36f);
+        ringRenderer.sortingOrder = OrderBadge;
+        ringRenderer.enabled = false;
+        // 指輪の石（ピンク）
+        var gem = CreateChild("Gem", ringMark);
+        gem.localPosition = new Vector3(0f, 0.42f, 0f);
+        gem.localScale = new Vector3(0.42f, 0.42f, 1f);
+        ringGem = gem.gameObject.AddComponent<SpriteRenderer>();
+        ringGem.sprite = SpriteFactory.Circle;
+        ringGem.color = new Color(1f, 0.5f, 0.7f);
+        ringGem.sortingOrder = OrderBadge + 1;
+        ringGem.enabled = false;
 
         // 練度の★（自軍の部員だけ。駒から見て左下の空いた角に並べる）
         starRoot = CreateChild("Stars", transform);
@@ -382,6 +412,22 @@ public class PieceRenderer : MonoBehaviour
         UpdateRestTint();
     }
 
+    /// <summary>能力が止まっているあいだは鎖を重ね（画像があるとき）、戻った瞬間に鎖が砕ける演出を出す</summary>
+    private void UpdateSeal()
+    {
+        bool suppressed = pieceInstance.data.pieceType != PieceType.C3 && AbilitySystem.IsSuppressed(pieceInstance);
+        if (suppressed != shownSuppressed)
+        {
+            if (!suppressed && BattleEffects.Instance != null) BattleEffects.Instance.PlaySealBreak(pieceInstance.boardPosition);
+            shownSuppressed = suppressed;
+            Sprite art = suppressed ? EffectArt.Get("SealChains") : null;
+            sealRenderer.sprite = art;
+            sealRenderer.enabled = art != null;
+        }
+        if (sealRenderer.enabled)
+            sealRenderer.color = new Color(1f, 1f, 1f, 0.7f + 0.2f * Mathf.Sin(Time.time * 2f + auraPhase));
+    }
+
     /// <summary>ブロックが変わったら盾の数字を出し直す（0なら隠す）</summary>
     private void UpdateBlock()
     {
@@ -401,6 +447,7 @@ public class PieceRenderer : MonoBehaviour
     private void UpdateRestTint()
     {
         if (bodyRenderer == null || pieceInstance == null || !pieceInstance.isAlive) return;
+        UpdateSeal();
         Color rest = BodyRestColor;
         if (rest == appliedRest) return;
         bool flashing = bodyRenderer.color != appliedRest;
@@ -444,7 +491,7 @@ public class PieceRenderer : MonoBehaviour
             case PieceType.Raitei: return p.awakened ? EffectArt.Get("RaiteiAura") : null;
             case PieceType.Ryuujin: return p.awakened ? EffectArt.Get("RyuujinAura") : null;
             case PieceType.Maou: return p.awakened ? EffectArt.Get("MaouAura") : null;
-            default: return null;
+            default: return p.data.isTauntPiece ? EffectArt.Get("TauntAura") : null;   // 挑発の気（小錦・潜水艦・傀儡）
         }
     }
 
@@ -473,6 +520,14 @@ public class PieceRenderer : MonoBehaviour
         }
 
         bool ship = alive && PieceTypes.IsKanmusu(pieceInstance.data.pieceType);
+        bool ring = ship && pieceInstance.ringed;
+        if (ringRenderer.enabled != ring) { ringRenderer.enabled = ring; ringGem.enabled = ring; }
+        if (ring)
+        {
+            // 指輪の石がゆっくりきらめく
+            float g = 0.5f + 0.5f * Mathf.Sin(Time.time * 2.6f + auraPhase);
+            ringGem.color = Color.Lerp(new Color(1f, 0.45f, 0.66f), new Color(1f, 0.85f, 0.92f), g);
+        }
         bool damaged = ship && AbilitySystem.IsDamaged(pieceInstance);
         bool heavy = damaged && AbilitySystem.IsHeavilyDamaged(pieceInstance);
         if (fireRenderer.enabled != heavy)

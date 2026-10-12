@@ -180,7 +180,6 @@ public static class CombatResolver
         else if (AbilitySystem.Instance != null)
         {
             AbilitySystem.Instance.CheckKai2(piece, from);   // 改のまま敵陣を出た艦娘は改二
-            AbilitySystem.Instance.CheckRing(piece, from);   // 生還した物鉄・改がもう一度敵陣に入るとケッコンカッコカリ
         }
         if (!piece.isAlive) yield break;
 
@@ -286,6 +285,23 @@ public static class CombatResolver
     public static readonly Color HealColor = new Color(0.5f, 0.95f, 0.55f);
 
     /// <summary>能力によるダメージ。piercing=trueでDEFを無視。撃破したらtrue</summary>
+    /// <summary>
+    /// 防御無視でなくなった能力のダメージを当てる（防御が効き、PierceCompensation を足す。LegacyPierce なら昔どおり防御無視）。
+    /// 撃破したら true
+    /// </summary>
+    public static bool AbilityHit(PieceInstance target, int amount)
+    {
+        if (BalanceTuning.LegacyPierce) return ApplyDamage(target, amount, true);
+        return ApplyDamage(target, amount + BalanceTuning.PierceCompensation, false);
+    }
+
+    /// <summary>AbilityHit で実際に通るダメージ（ブロックなどの前。記録の文に使う）</summary>
+    public static int AbilityHitPreview(PieceInstance target, int amount)
+    {
+        if (BalanceTuning.LegacyPierce || target == null) return amount;
+        return Mathf.Max(0, amount + BalanceTuning.PierceCompensation - target.DEF);
+    }
+
     public static bool ApplyDamage(PieceInstance target, int amount, bool piercing)
     {
         if (target == null || !target.isAlive) return false;
