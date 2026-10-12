@@ -16,6 +16,7 @@ public class RunSaveData
     public bool noPawns;            // 強化「歩兵を消す」
     public int[] variants;          // 局ごとの布陣の型（周の初めに決めたもの）
     public int secretFund;          // 光春の裏金
+    public int fleetSWins;          // この周で艦隊がS勝利した回数
     public int bonusUpgradeStage;
     public int enemyHp, enemyAtk;   // 強敵に挑む: この局の敵の体力・攻撃の上乗せ（"battle" のときだけ）
     public int totalKills, totalMoves, stagesCleared;

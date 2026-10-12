@@ -11,9 +11,23 @@ foreach (var g in AssetDatabase.FindAssets("t:PieceData")) {
     + ",\"moves\":" + Dirs(p.moveDirections) + ",\"pmoves\":" + Dirs(p.promotedMoveDirections)
     + ",\"immovable\":" + (p.isImmovable ? "true" : "false") + ",\"immovablePromoted\":" + (p.isImmovableWhenPromoted ? "true" : "false")
     + ",\"auto\":" + (p.isAutoMove ? "true" : "false") + ",\"manual\":" + (p.isManualControllable ? "true" : "false") + ",\"noDraft\":" + (p.excludeFromDraft ? "true" : "false")
+    + ",\"flavor\":\"" + Esc(p.flavor) + "\",\"pflavor\":\"" + Esc(p.promotedFlavor) + "\""
     + ",\"desc\":\"" + Esc(p.description) + "\",\"pdesc\":\"" + Esc(p.promotedDescription) + "\",\"vdesc\":\"" + Esc(p.veteranDescription) + "\",\"vmoves\":" + Dirs(p.veteranMoveDirections)
     + ",\"canAwaken\":" + (p.canAwaken ? "true" : "false") + ",\"aname\":\"" + Esc(p.awakenedName) + "\",\"adesc\":\"" + Esc(p.awakenedDescription) + "\",\"acap\":\"" + Esc(p.awakenCaption) + "\""
     + ",\"aatk\":" + p.awakenedATK + ",\"adef\":" + p.awakenedDEF + ",\"ahp\":" + p.awakenedHP + ",\"amoves\":" + Dirs(p.awakenedMoveDirections) + "}");
 }
 System.IO.File.WriteAllText(System.IO.Path.Combine(Application.dataPath, "../BalanceReports/pieces_dump.json"), "[" + string.Join(",\n", items) + "]", new System.Text.UTF8Encoding(false));
-return items.Count;
+
+// 局ごと・布陣の型ごとの敵の並び（駒一覧の「登場する局」に使う）: [{"stage":1,"variant":0,"name":"岩場","types":["Pawn",…]}, …]
+var layouts = new System.Collections.Generic.List<string>();
+for (int stage = 1; stage <= StageManager.MaxStages; stage++)
+{
+    int size = StageManager.GetBoardSizeForStage(stage);
+    for (int v = 0; v < StageManager.VariantCount(stage); v++)
+    {
+        var types = StageManager.GetEnemyLayout(stage, size, v).Select(pl => "\"" + pl.type + "\"");
+        layouts.Add("{\"stage\":" + stage + ",\"variant\":" + v + ",\"name\":\"" + Esc(StageManager.VariantName(stage, v)) + "\",\"types\":[" + string.Join(",", types) + "]}");
+    }
+}
+System.IO.File.WriteAllText(System.IO.Path.Combine(Application.dataPath, "../BalanceReports/layouts_dump.json"), "[" + string.Join(",\n", layouts) + "]", new System.Text.UTF8Encoding(false));
+return items.Count + " pieces, " + layouts.Count + " layouts";

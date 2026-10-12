@@ -142,7 +142,7 @@ public static class BalanceSimulator
                 List<DraftOption> options = gm.SimDrawOptions();
                 if (k == 0) rec.offered = options.Select(OptionName).ToArray();
                 if (options.Count == 0) break;
-                DraftOption pick = options[UnityEngine.Random.Range(0, options.Count)];
+                DraftOption pick = BalanceTuning.SimSmartDraft ? SmartPick(options) : options[UnityEngine.Random.Range(0, options.Count)];
                 if (k == 0 && simOptions != null && simOptions.forcePick.HasValue && sm.currentStage == 1)
                     pick = DraftOption.Piece(bm.GetPieceDataByType(simOptions.forcePick.Value));
                 if (k == 0) rec.pick = OptionName(pick);
@@ -223,6 +223,38 @@ public static class BalanceSimulator
         bm.ClearAll();
         run.seconds = (float)clock.Elapsed.TotalSeconds;
         return run;
+    }
+
+    // 考えて選ぶ自動プレイ（SimSmartDraft）: 2026-10-12 未明に測った強さの順に部員を選び、なければ強化・鍛えるの順
+    private static readonly Dictionary<PieceType, float> PieceScore = new Dictionary<PieceType, float>
+    {
+        { PieceType.SN, 10.65f }, { PieceType.Yuu, 10.54f }, { PieceType.Niko, 10.46f }, { PieceType.Rihaku, 10.45f },
+        { PieceType.Kawasemi, 10.37f }, { PieceType.Negu, 10.33f }, { PieceType.Kei, 10.31f }, { PieceType.RN, 10.31f },
+        { PieceType.Mitsuharu, 10.04f }, { PieceType.Mutou, 10.01f }, { PieceType.Wotsu, 9.9f }, { PieceType.Monotetsu, 9.86f },
+        { PieceType.Konishiki, 9.65f }, { PieceType.Shimesaba, 9.62f }, { PieceType.Kipu, 9.61f }, { PieceType.Monin, 9.35f },
+        { PieceType.Nako, 9.19f }, { PieceType.Boku, 8.8f },
+    };
+
+    private static float OptionScore(DraftOption o)
+    {
+        if (o.piece != null) { float s; return PieceScore.TryGetValue(o.piece.pieceType, out s) ? s : 9.5f; }
+        if (o.train != null) return 9.7f;
+        switch (o.upgrade)
+        {
+            case UpgradeKind.AllATK: return 10.2f;
+            case UpgradeKind.AllHP: return 10.0f;
+            case UpgradeKind.AllDEF: return 9.8f;
+            case UpgradeKind.C3HP: return 9.5f;
+            case UpgradeKind.DamageControl: return 9.0f;
+            default: return 8.5f;
+        }
+    }
+
+    private static DraftOption SmartPick(List<DraftOption> options)
+    {
+        DraftOption best = options[0];
+        foreach (var o in options) if (OptionScore(o) > OptionScore(best)) best = o;
+        return best;
     }
 
     private static string OptionName(DraftOption option)

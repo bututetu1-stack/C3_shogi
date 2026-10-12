@@ -13,9 +13,17 @@ public static class CombatResolver
     /// </summary>
     public static int CalcDamage(PieceInstance attacker, PieceInstance target)
     {
-        // 潜水艦は通常の攻撃を受けない（能力の攻撃は受ける）
-        if (target.data.pieceType == PieceType.KanmusuSS) return 0;
+        // 潜水艦は通常の攻撃を受けない（能力の攻撃は受ける）。対潜を持つ敵（歩兵・香車）の爆雷は当たる
+        if (target.data.pieceType == PieceType.KanmusuSS) return AntiSub(attacker, target) ? AfterGuard(target, Mathf.Max(1, RawDamage(attacker, target))) : 0;
         return AfterGuard(target, RawDamage(attacker, target));
+    }
+
+    /// <summary>対潜: 敵の歩兵・香車の通常の攻撃は、潜水艦にも当たる</summary>
+    public static bool AntiSub(PieceInstance attacker, PieceInstance target)
+    {
+        if (!BalanceTuning.EnemyAntiSub || attacker.team == target.team || attacker.team != Team.Enemy) return false;
+        PieceType t = attacker.data.pieceType;
+        return (t == PieceType.Pawn || t == PieceType.Lance) && !AbilitySystem.IsSuppressed(attacker);
     }
 
     /// <summary>ブロック・スタッガーを数える前の通常攻撃のダメージ</summary>
@@ -45,6 +53,7 @@ public static class CombatResolver
     public static int AfterGuard(PieceInstance target, int damage)
     {
         if (target.staggered) damage += BalanceTuning.MutouStaggerDamage;
+        damage -= AbilitySystem.FormationGuard(target);   // 警戒陣の提督
         return Mathf.Max(0, damage - target.block);
     }
 
@@ -169,7 +178,10 @@ public static class CombatResolver
         if (gm != null && gm.ShouldPromote(piece, from))
             yield return gm.PromoteRoutine(piece);
         else if (AbilitySystem.Instance != null)
+        {
             AbilitySystem.Instance.CheckKai2(piece, from);   // 改のまま敵陣を出た艦娘は改二
+            AbilitySystem.Instance.CheckRing(piece, from);   // 生還した物鉄・改がもう一度敵陣に入るとケッコンカッコカリ
+        }
         if (!piece.isAlive) yield break;
 
         // 李白の裏返し能力（移動後に発動）
@@ -196,7 +208,19 @@ public static class CombatResolver
 
         int runUp = RunUpBonus(attacker, target);
         int damage = CalcDamage(attacker, target);
-        int raw = target.data.pieceType == PieceType.KanmusuSS ? 0 : RawDamage(attacker, target);
+        bool depthCharge = target.data.pieceType == PieceType.KanmusuSS && AntiSub(attacker, target);
+        int raw = target.data.pieceType != PieceType.KanmusuSS ? RawDamage(attacker, target) : depthCharge ? Mathf.Max(1, RawDamage(attacker, target)) : 0;
+        if (depthCharge)
+        {
+            if (BattleEffects.Instance != null) BattleEffects.Instance.PlayDepthCharge(target.boardPosition);
+            // 単横陣の潜水艦はときどき避ける
+            if (AbilitySystem.Instance != null && AbilitySystem.Instance.SubEvades(target))
+            {
+                damage = 0;
+                raw = 0;
+                FloatingText.Spawn(target.boardPosition, "回避", new Color(0.6f, 0.85f, 1f), 3f, 0.1f);
+            }
+        }
         int blocked = ConsumeGuard(target, raw);
         target.currentHP -= damage;
         RefreshHP(target);

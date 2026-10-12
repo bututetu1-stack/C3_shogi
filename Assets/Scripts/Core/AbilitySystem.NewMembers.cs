@@ -128,6 +128,23 @@ public partial class AbilitySystem
     // 光春: 高飛び（成ると盤外へ）とお土産
     // ============================================================
 
+    /// <summary>
+    /// 光春が旅立てるか: 盤にほかの部員・駒（C3・歩兵・中華などの呼び出したものを除く）がいるとき。
+    /// ひとりだと残った歩兵だけで戦うことになり、第一局「岩場」では負けが 26周中12周になっていた
+    /// </summary>
+    public static bool MitsuharuHasCompany(PieceInstance m)
+    {
+        if (BoardManager.Instance == null) return true;
+        foreach (var p in BoardManager.Instance.GetTeamPieces(m.team))
+        {
+            if (p == m || !p.isAlive) continue;
+            PieceType t = p.data.pieceType;
+            if (t == PieceType.C3 || t == PieceType.Pawn || t == PieceType.Chuka || t == PieceType.Dopa) continue;
+            return true;
+        }
+        return false;
+    }
+
     /// <summary>成った光春を盤外へ送る（撃破ではないので数えない。攻撃もされない）</summary>
     public void SendAbroad(PieceInstance m)
     {
@@ -154,7 +171,7 @@ public partial class AbilitySystem
                 GameManager.Instance.SecretFund = Mathf.Min(BalanceTuning.MitsuharuFundMax, GameManager.Instance.SecretFund + BalanceTuning.MitsuharuFundPerTurn);
                 FloatingText.Spawn(m.boardPosition, "裏金+" + BalanceTuning.MitsuharuFundPerTurn, FundGold, 2.6f);
             }
-            if (GameManager.Instance.SecretFund < BalanceTuning.MitsuharuTripCost) continue;
+            if (GameManager.Instance.SecretFund < BalanceTuning.MitsuharuTripCost || !MitsuharuHasCompany(m)) continue;
             FloatingText.Spawn(m.boardPosition, "旅費がたまった", FundGold, 3.2f);
             yield return GameManager.Instance.PromoteRoutine(m);
         }
@@ -523,7 +540,7 @@ public partial class AbilitySystem
                 // 支援砲撃: 盤のどこかの敵1体に1（防御無視）
                 var targets = new List<PieceInstance>();
                 foreach (var e in bm.GetTeamPieces(foe))
-                    if (e.isAlive && e.data.pieceType != PieceType.C3) targets.Add(e);
+                    if (IsRandomFleetTarget(e)) targets.Add(e);   // 支援艦隊と同じく、覚醒前のボスは狙わない
                 if (targets.Count == 0) return false;
                 PieceInstance target = targets[Random.Range(0, targets.Count)];
                 int damage = CombatResolver.AbilityDamage(niko, 1 + CardBonus(niko));

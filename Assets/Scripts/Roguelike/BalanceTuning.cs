@@ -10,7 +10,7 @@ public static class BalanceTuning
     public static int EnemyAtkDelay = 0;
     /// <summary>敵の駒（C3・深海を除く）に局の上乗せが付き始める局。前半は上乗せせず、敵の種類と布陣で難しさを作る（第9版）。
     /// 上乗せは「この局を1とした局の数」を、下の割る数で割った値</summary>
-    public static int EnemyScaleFromStage = 8;
+    public static int EnemyScaleFromStage = 9;
     /// <summary>後半の敵の駒の上乗せ: 体力 = (局 − 7) ÷ この値、攻撃 = (局 − 7) ÷ EnemyLateAtkDivisor（第八局から。第十五局で体力+8・攻撃+4）。
     /// 深海・艦娘の上乗せは EnemyAtkDivisor（局 ÷ 4）のまま</summary>
     public static int EnemyLateHpDivisor = 1;
@@ -110,6 +110,10 @@ public static class BalanceTuning
     public static int NakoChainMax = 2;
     /// <summary>覚醒したなこ: ドパを、通り道に敵がいちばん多く並ぶ向きに出す（false なら覚醒前と同じくでたらめな向き）</summary>
     public static bool NakoAwakenedAim = true;
+    /// <summary>素のなこがドパを「通り道に敵がいちばん多い向き」に出す割合（%）。0 ならでたらめ（夜の改善ループで相談用に作った。既定は0）</summary>
+    public static int NakoBaseAimPercent = 0;
+    /// <summary>門人の突進を少し考えさせる（倒せる相手・ダメージの大きい相手を狙い、攻撃できなければ相手の C3 に近づく）。false ならでたらめ（夜の改善ループで相談用に作った。既定は false）</summary>
+    public static bool MoninSmartRush = false;
     /// <summary>覚醒したヲツが作る中華の数と、その中華の満腹の上限（1体あたり）</summary>
     public static int WotsuAwakenedChukaCount = 4;
     public static int WotsuAwakenedFullMax = 2;
@@ -134,6 +138,14 @@ public static class BalanceTuning
     /// </summary>
     public static int AiFeaturesPlayer = 10;
     public static int AiFeaturesEnemy = 14;
+    /// <summary>
+    /// AI の評価の重み（陣営ごと。空なら既定）: [C3 への脅威1つ, C3 の隣の味方1体, 取れる駒の値打ち×/10, 取られそうな駒×/10, 1段の前進, 相手 C3 へ1マス, C3 の体力1]。
+    /// 既定は { 450, 150, 8, 3, 3, 4, 300 }。--set AiWeightsEnemy=600,150,8,3,3,4,300 のように試す
+    /// </summary>
+    public static int[] AiWeightsPlayer = new int[0];
+    /// <summary>自動プレイ専用: 仲間選択をでたらめではなく、測った強さの順に選ぶ（人が考えて選んだときの目安を出すため。既定は false）</summary>
+    public static bool SimSmartDraft = false;
+    public static int[] AiWeightsEnemy = { 450, 150, 8, 3, 6, 8, 300 };   // 前進・接近を2倍（後半ほど C3 に迫る。勝率は同じ）
     /// <summary>覚醒した僕が1体を強化できる量の上限</summary>
     public static int BokuAwakenedCap = 1;
 
@@ -254,8 +266,33 @@ public static class BalanceTuning
     public static int CarrierSplashDamage = 2;
     /// <summary>空母の空爆で巻き込む、狙った深海の周り2マスの敵の数</summary>
     public static int CarrierSplashTargets = 2;
-    /// <summary>夜間作戦航空要員: 改（成った）空母は夜戦でも発艦できる（false なら夜戦では攻撃しない）</summary>
-    public static bool CarrierNightOps = false;
+    /// <summary>制空権確保: 空母（中破していない）が盤にいるあいだ、深海から艦娘へのダメージをこの分減らす（Gemini 第三回）</summary>
+    public static int AirSuperiorityGuard = 1;
+    /// <summary>対潜: 敵の歩兵と香車の通常の攻撃は、潜水艦にも当たる（爆雷。最低1）。ほかの駒の攻撃は今どおり受けない</summary>
+    public static bool EnemyAntiSub = true;
+    /// <summary>
+    /// 陣形（出撃した艦娘が提督から見てどこにいるかで決まる）: 縦の列 = 単縦陣（艦娘の能力ダメージ+FormationLineAheadDamage）、
+    /// 横の列 = 単横陣（艦娘の防御+FormationAbreastDef、潜水艦は対潜を FormationAbreastEvade% で避ける）、それ以外 = 警戒陣（提督の受けるダメージ−FormationVanguardGuard）
+    /// </summary>
+    public static bool FleetFormations = true;
+    public static int FormationLineAheadDamage = 1;
+    public static int FormationAbreastDef = 1;
+    public static int FormationAbreastEvade = 50;
+    public static int FormationVanguardGuard = 1;
+    /// <summary>基地航空隊: S勝利した次の局の初めに、敵（C3以外）LandBaseTargets 体に LandBaseDamage（＋局の攻撃の上乗せ、防御無視）</summary>
+    public static int LandBaseTargets = 3;
+    public static int LandBaseDamage = 1;
+    /// <summary>開幕雷撃: 改で出撃した潜水艦（練度★3の提督）が着任のときに撃つ雷撃の元の値（0なら撃たない。Gemini 第三回）</summary>
+    public static int SubOpeningTorpedo = 2;
+    /// <summary>ケッコンカッコカリ: 生還した物鉄・改がもう一度敵陣に入ったときの最大体力の上乗せ（体力も全快。0なら起きない）</summary>
+    public static int RingMaxHp = 2;
+    /// <summary>夜間触接: 夜戦に入ったとき軽巡か空母がいれば、夜戦のあいだ艦娘の攻撃にこの値を足す（0なら起きない。Gemini 第三回）</summary>
+    public static int NightContactDamage = 0;
+    /// <summary>戦果（夜の改善ループの案、既定はオフ）: 艦隊がS勝利するたびに、その周のあいだ自軍全員の体力にこの値を足す（FleetSpoilsMax 回まで）</summary>
+    public static int FleetSpoilsHp = 0;
+    public static int FleetSpoilsMax = 3;
+    /// <summary>歴戦の艦隊（夜の改善ループの案、既定はオフ）: その周で一度でもS勝利していれば、次からの着任で艦娘が最初から改で出撃する（練度★3と同じ）</summary>
+    public static bool FleetVeteranKai = false;
     /// <summary>艦娘は提督の周り（入渠できるマス）から出撃する（false なら自陣のどこか）</summary>
     public static bool FleetSortieNearTeitoku = true;
 

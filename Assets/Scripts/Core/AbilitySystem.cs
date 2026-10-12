@@ -726,7 +726,9 @@ public partial class AbilitySystem : MonoBehaviour
 
             if (candidates.Count == 0) yield break;
 
-            Vector2Int dopaPos = nako.awakened && BalanceTuning.NakoAwakenedAim ? AimDopa(nako, candidates) : candidates[Random.Range(0, candidates.Count)];
+            // 覚醒したなこは狙って出す。素のなこも NakoBaseAimPercent の割合で狙う（既定は0＝でたらめ）
+            bool aim = (nako.awakened && BalanceTuning.NakoAwakenedAim) || (BalanceTuning.NakoBaseAimPercent > 0 && Random.Range(0, 100) < BalanceTuning.NakoBaseAimPercent);
+            Vector2Int dopaPos = aim ? AimDopa(nako, candidates) : candidates[Random.Range(0, candidates.Count)];
 
             // ドパ生成（敵チームとして出現）
             PieceData dopaData = bm.GetPieceDataByType(PieceType.Dopa);
@@ -1148,12 +1150,12 @@ public partial class AbilitySystem : MonoBehaviour
                 }
             }
             if (!foundC3)
-                bestAttack = attackMoves[Random.Range(0, attackMoves.Count)];
+                bestAttack = BalanceTuning.MoninSmartRush ? PickRushAttack(piece, attackMoves) : attackMoves[Random.Range(0, attackMoves.Count)];
             chosen = bestAttack;
         }
         else
         {
-            chosen = normalMoves[Random.Range(0, normalMoves.Count)];
+            chosen = BalanceTuning.MoninSmartRush ? PickRushMove(piece, normalMoves) : normalMoves[Random.Range(0, normalMoves.Count)];
         }
 
         if (chosen.isAttack) RunRoster.Feat(piece);
@@ -1168,6 +1170,38 @@ public partial class AbilitySystem : MonoBehaviour
             FloatingText.Spawn(piece.boardPosition, "免許皆伝", piece.data.awakenColor, 3.4f);
             yield return ExecuteAutoMove(piece, false);
         }
+    }
+
+    /// <summary>突き進む先を少し考える（MoninSmartRush）: 倒せる相手 → ダメージの大きい相手。同じならでたらめ</summary>
+    private static MoveValidator.MoveResult PickRushAttack(PieceInstance piece, List<MoveValidator.MoveResult> attacks)
+    {
+        int best = int.MinValue;
+        var top = new List<MoveValidator.MoveResult>();
+        foreach (var m in attacks)
+        {
+            PieceInstance t = BoardManager.Instance.GetPieceAt(m.position);
+            int dmg = t != null ? CombatResolver.CalcDamage(piece, t) : 0;
+            int score = t != null && dmg >= t.currentHP ? 1000 + t.MaxHP : dmg * 10;
+            if (score > best) { best = score; top.Clear(); }
+            if (score == best) top.Add(m);
+        }
+        return top[Random.Range(0, top.Count)];
+    }
+
+    /// <summary>攻撃できないときは、相手の C3 にいちばん近づくマスへ（同じならでたらめ）</summary>
+    private static MoveValidator.MoveResult PickRushMove(PieceInstance piece, List<MoveValidator.MoveResult> moves)
+    {
+        PieceInstance c3 = BoardManager.Instance.FindC3(piece.team == Team.Player ? Team.Enemy : Team.Player);
+        if (c3 == null) return moves[Random.Range(0, moves.Count)];
+        int best = int.MaxValue;
+        var top = new List<MoveValidator.MoveResult>();
+        foreach (var m in moves)
+        {
+            int d = Mathf.Max(Mathf.Abs(m.position.x - c3.boardPosition.x), Mathf.Abs(m.position.y - c3.boardPosition.y));
+            if (d < best) { best = d; top.Clear(); }
+            if (d == best) top.Add(m);
+        }
+        return top[Random.Range(0, top.Count)];
     }
 
     // ============================================================

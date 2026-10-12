@@ -19,6 +19,22 @@ public partial class AbilitySystem
         public int arrivalMove;
         public bool night;
         public bool shipLost;
+        public Formation formation;
+        public bool nightContact;   // 夜間触接（夜戦に入ったとき軽巡か空母がいた）
+    }
+
+    /// <summary>陣形（出撃した艦娘の位置で決まる）</summary>
+    public enum Formation { None, LineAhead, LineAbreast, Vanguard }
+
+    private static string FormationName(Formation f)
+    {
+        switch (f)
+        {
+            case Formation.LineAhead: return "単縦陣";
+            case Formation.LineAbreast: return "単横陣";
+            case Formation.Vanguard: return "警戒陣";
+            default: return "";
+        }
     }
 
     private readonly Dictionary<int, Fleet> fleets = new Dictionary<int, Fleet>();
@@ -178,8 +194,9 @@ public partial class AbilitySystem
             GameManager.Instance.ApplySummonBonuses(ship);
             ship.linkedGroupId = groupId;
             ships.Add(ship);
-            // 練度★3の提督の艦娘は、最初から改で出撃する
-            if (GameManager.Instance.Roster.StarsOf(teitoku.data.pieceType) >= 3 && !ship.isPromoted)
+            // 練度★3の提督の艦娘は、最初から改で出撃する（歴戦の艦隊: その周で一度S勝利していても）
+            bool veteranFleet = BalanceTuning.FleetVeteranKai && GameManager.Instance.FleetSWins > 0;
+            if ((GameManager.Instance.Roster.StarsOf(teitoku.data.pieceType) >= 3 || veteranFleet) && !ship.isPromoted)
             {
                 ship.Promote();
                 CombatResolver.PlayFlip(ship);
@@ -191,6 +208,8 @@ public partial class AbilitySystem
             yield return new WaitForSeconds(0.3f);
         }
         RecordSortie(ships, teitoku);
+        yield return DecideFormation(fleet, ships, teitoku);
+        yield return AnnounceAirSuperiority(ships);
 
         // 開幕航空戦: 空母がいれば、深海すべてに先制の航空攻撃
         foreach (var carrier in ships)
@@ -209,6 +228,29 @@ public partial class AbilitySystem
             foreach (var s in abyss) FleetHit(carrier, s, ShipDamage(carrier, BalanceTuning.CarrierOpeningDamage, fleet));
             GameSim.EndSource(source);
             yield return new WaitForSeconds(0.4f);
+        }
+
+        // 開幕雷撃: 改で出撃した潜水艦（練度★3の提督）は、着任のときに先制の雷撃（直線上の最初の敵に、いなければ深海に）
+        foreach (var sub in ships)
+        {
+            if (sub.data.pieceType != PieceType.KanmusuSS || !sub.isAlive || !sub.isPromoted || BalanceTuning.SubOpeningTorpedo <= 0) continue;
+            var abyss = AliveShinkai();
+            if (abyss.Count == 0) break;
+            PieceInstance target = PickShipTarget(abyss);
+            PieceInstance hit = FirstEnemyOnLine(sub, target) ?? target;
+            if (BattleLogUI.Instance != null) BattleLogUI.Instance.AddLog("開幕雷撃！");
+            if (fx != null)
+            {
+                FloatingText.Spawn(sub.boardPosition, "開幕雷撃", CutInUI.SeaLight, 3.6f, 0.2f);
+                fx.PlayTorpedoEffect(sub.boardPosition, hit.boardPosition);
+                yield return new WaitForSeconds(BattleEffects.TorpedoImpactTime);
+            }
+            var source = GameSim.BeginSource(sub);
+            int damage = ShipDamage(sub, BalanceTuning.SubOpeningTorpedo, fleet);
+            LogAttack(sub, "開幕雷撃", hit, damage);
+            FleetHit(sub, hit, damage);
+            GameSim.EndSource(source);
+            yield return new WaitForSeconds(0.3f);
         }
     }
 
@@ -307,6 +349,122 @@ public partial class AbilitySystem
         }
     }
 
+    private static readonly Color AirGreen = new Color(0.55f, 0.95f, 0.6f);
+
+    /// <summary>
+    /// 陣形を決める: 艦娘が提督の縦の列にいる → 単縦陣、横の列にいる → 単横陣、両方か斜めだけ → 警戒陣。
+    /// 単横陣は艦娘の防御を上げる（ほかの効果は ShipDamage・FormationGuard・SubEvades で見る）
+    /// </summary>
+    private IEnumerator DecideFormation(Fleet fleet, List<PieceInstance> ships, PieceInstance teitoku)
+    {
+        if (!BalanceTuning.FleetFormations || ships.Count == 0 || !teitoku.isAlive) yield break;
+        int column = 0, row = 0;
+        foreach (var ship in ships)
+        {
+            Vector2Int d = ship.boardPosition - teitoku.boardPosition;
+            if (d.x == 0) column++;
+            else if (d.y == 0) row++;
+        }
+        fleet.formation = column > 0 && row == 0 ? Formation.LineAhead
+            : row > 0 && column == 0 ? Formation.LineAbreast : Formation.Vanguard;
+        string name = FormationName(fleet.formation);
+        string effect = fleet.formation == Formation.LineAhead ? "艦娘の攻撃+" + BalanceTuning.FormationLineAheadDamage
+            : fleet.formation == Formation.LineAbreast ? "艦娘の防御+" + BalanceTuning.FormationAbreastDef + "・潜水艦は爆雷を避けやすい"
+            : "提督の受けるダメージ−" + BalanceTuning.FormationVanguardGuard;
+        if (fleet.formation == Formation.LineAbreast)
+            foreach (var ship in ships) { ship.bonusDEF += BalanceTuning.FormationAbreastDef; CombatResolver.RefreshStats(ship); }
+        GameSim.RecordFleet("陣形:" + name, 0);
+        FloatingText.Spawn(teitoku.boardPosition, name, CutInUI.SeaLight, 4.2f, 0.25f);
+        if (BattleEffects.Instance != null)
+            foreach (var ship in ships) BattleEffects.Instance.PlayStream(teitoku.boardPosition, ship.boardPosition, CutInUI.SeaLight);
+        if (BattleLogUI.Instance != null) BattleLogUI.Instance.AddLog("陣形: " + name + "（" + effect + "）");
+        yield return new WaitForSeconds(0.5f);
+    }
+
+    /// <summary>警戒陣の提督は、受けるダメージが減る（CombatResolver.AfterGuard から）</summary>
+    public static int FormationGuard(PieceInstance target)
+    {
+        if (Instance == null || target.data.pieceType != PieceType.Monotetsu || !target.isPromoted || target.linkedGroupId < 0) return 0;
+        Fleet fleet;
+        return Instance.fleets.TryGetValue(target.linkedGroupId, out fleet) && fleet.formation == Formation.Vanguard ? BalanceTuning.FormationVanguardGuard : 0;
+    }
+
+    /// <summary>単横陣の潜水艦は、爆雷をときどき避ける</summary>
+    public bool SubEvades(PieceInstance sub)
+    {
+        Fleet fleet;
+        if (sub.linkedGroupId < 0 || !fleets.TryGetValue(sub.linkedGroupId, out fleet) || fleet.formation != Formation.LineAbreast) return false;
+        return Random.Range(0, 100) < BalanceTuning.FormationAbreastEvade;
+    }
+
+    /// <summary>制空権確保: 中破していない空母が盤にいる（結界で止まっていない）</summary>
+    private static bool HasAirSuperiority()
+    {
+        if (BalanceTuning.AirSuperiorityGuard <= 0) return false;
+        foreach (var p in BoardManager.Instance.GetTeamPieces(Team.Player))
+            if (p.data.pieceType == PieceType.KanmusuCV && p.isAlive && !IsDamaged(p) && !IsSuppressed(p)) return true;
+        return false;
+    }
+
+    private IEnumerator AnnounceAirSuperiority(List<PieceInstance> ships)
+    {
+        PieceInstance carrier = ships.Find(s => s.data.pieceType == PieceType.KanmusuCV && s.isAlive);
+        if (carrier == null || BalanceTuning.AirSuperiorityGuard <= 0) yield break;
+        FloatingText.Spawn(carrier.boardPosition, "制空権確保！", AirGreen, 4.2f, 0.25f);
+        if (BattleLogUI.Instance != null)
+            BattleLogUI.Instance.AddLog("制空権確保！ 空母がいるあいだ、深海から艦娘へのダメージ−" + BalanceTuning.AirSuperiorityGuard);
+        yield return new WaitForSeconds(0.4f);
+    }
+
+    /// <summary>
+    /// 基地航空隊: 艦隊がS勝利した次の局の初めに、盤の外から敵（C3・地形を除く）を爆撃する。
+    /// ダメージは支援艦隊と同じく、元の値＋局の攻撃の上乗せ（防御無視）
+    /// </summary>
+    public IEnumerator LandBaseRaid()
+    {
+        if (BalanceTuning.LandBaseTargets <= 0) yield break;
+        BoardManager bm = BoardManager.Instance;
+        BattleEffects fx = BattleEffects.Instance;
+        var targets = new List<PieceInstance>();
+        foreach (var p in bm.GetTeamPieces(Team.Enemy))
+            if (IsRandomFleetTarget(p)) targets.Add(p);
+        if (targets.Count == 0) yield break;
+        ShuffleList(targets);
+        if (targets.Count > BalanceTuning.LandBaseTargets) targets.RemoveRange(BalanceTuning.LandBaseTargets, targets.Count - BalanceTuning.LandBaseTargets);
+
+        int stage = StageManager.Instance != null ? StageManager.Instance.currentStage : 1;
+        int damage = BalanceTuning.LandBaseDamage + StageManager.EnemyStageAtk(stage);
+        if (BattleLogUI.Instance != null) BattleLogUI.Instance.AddLog("基地航空隊、発進！（前の局の艦隊のS勝利）");
+        if (fx != null)
+        {
+            Vector2Int origin = new Vector2Int(bm.CurrentBoardSize / 2, -2);
+            foreach (var t in targets) fx.PlayAirRaidEffect(origin, t.boardPosition, true);
+            FloatingText.Spawn(new Vector2Int(bm.CurrentBoardSize / 2, bm.CurrentBoardSize / 2), "基地航空隊", AirGreen, 4.6f, 0.3f);
+            yield return new WaitForSeconds(BattleEffects.AirRaidImpactTime);
+        }
+        var source = GameSim.BeginSource(null);
+        int hit = 0;
+        foreach (var t in targets)
+        {
+            if (!t.isAlive) continue;
+            CombatResolver.ApplyDamage(t, damage, true);
+            hit++;
+        }
+        GameSim.EndSource(source);
+        GameSim.RecordFleet("基地航空隊", hit);
+        if (fx != null) yield return new WaitForSeconds(0.3f);
+    }
+
+    /// <summary>
+    /// 盤の外からの爆撃・支援射撃が狙う敵: C3・地形と、まだ覚醒していないボス（雷帝・龍神・魔王）は狙わない。
+    /// ボスを削ると早く第二形態になって、かえって負けやすくなったため（第十局の雷帝の覚醒が 39/85 → 70/98、中央13手 → 9手）
+    /// </summary>
+    private static bool IsRandomFleetTarget(PieceInstance p)
+    {
+        if (p == null || !p.isAlive || p.data.pieceType == PieceType.C3 || IsObstacle(p.data.pieceType)) return false;
+        return !(p.team == Team.Enemy && p.data.canAwaken && !p.awakened);
+    }
+
     /// <summary>艦娘の出撃位置: 提督の周り（入渠できるマス）。空いていなければ、または FleetSortieNearTeitoku でなければ自陣のどこか</summary>
     private Vector2Int? PickSortieSpot(PieceInstance teitoku, int halfBoard)
     {
@@ -383,7 +541,7 @@ public partial class AbilitySystem
         {
             var targets = new List<PieceInstance>();
             foreach (var p in bm.GetTeamPieces(Team.Enemy))
-                if (p.isAlive && p.data.pieceType != PieceType.C3) targets.Add(p);
+                if (IsRandomFleetTarget(p)) targets.Add(p);
             if (targets.Count == 0) break;
             PieceInstance target = targets[Random.Range(0, targets.Count)];
             PieceType cls = supportClasses.Count > 0 ? supportClasses[Random.Range(0, supportClasses.Count)] : PieceType.KanmusuBB;
@@ -467,6 +625,30 @@ public partial class AbilitySystem
     }
 
     /// <summary>改のまま敵陣を出た艦娘は改二になる（攻撃+1・防御+1・体力1回復）</summary>
+    private static readonly Color RingPink = new Color(1f, 0.72f, 0.82f);
+
+    /// <summary>
+    /// ケッコンカッコカリ（Gemini 第三回）: 作戦を終えて生還した物鉄・改が、もう一度敵陣に入る（出る）と、
+    /// 体力が全快して最大体力が上がる。1局に1回のめったに起きない演出
+    /// </summary>
+    public void CheckRing(PieceInstance piece, Vector2Int from)
+    {
+        if (BalanceTuning.RingMaxHp <= 0 || piece == null || !piece.isAlive || piece.ringed || !piece.IsVeteran
+            || piece.data.pieceType != PieceType.Monotetsu || IsSuppressed(piece)) return;
+        int size = BoardManager.Instance.CurrentBoardSize;
+        if (!InEnemyCamp(piece.team, from.y, size) && !InEnemyCamp(piece.team, piece.boardPosition.y, size)) return;
+        piece.ringed = true;
+        piece.AddMaxHP(BalanceTuning.RingMaxHp);
+        piece.currentHP = piece.MaxHP;
+        CombatResolver.RefreshStats(piece);
+        RunRoster.Feat(piece);
+        GameSim.RecordFleet("ケッコン", GameManager.Instance != null ? GameManager.Instance.MoveCount : 0);
+        FloatingText.Spawn(piece.boardPosition, "ケッコンカッコカリ", RingPink, 4.4f, 0.3f);
+        if (BattleEffects.Instance != null) BattleEffects.Instance.PlayRing(piece.boardPosition);
+        if (BattleLogUI.Instance != null)
+            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("物鉄・改", piece.team) + " がケッコンカッコカリ！ 体力が全快し、最大体力+" + BalanceTuning.RingMaxHp);
+    }
+
     public void CheckKai2(PieceInstance ship, Vector2Int from)
     {
         if (ship == null || !ship.isAlive || ship.kai2 || !ship.isPromoted || !PieceTypes.IsKanmusu(ship.data.pieceType)) return;
@@ -503,9 +685,24 @@ public partial class AbilitySystem
             if (fleet.night || gm == null || gm.MoveCount - fleet.arrivalMove < BalanceTuning.FleetNightAfterMoves) continue;
             fleet.night = true;
             GameSim.RecordFleet("夜戦", gm.MoveCount - fleet.arrivalMove);
-            if (BattleLogUI.Instance != null) BattleLogUI.Instance.AddLog("夜戦突入！ 駆逐・軽巡・潜水の攻撃が2倍になり、" + (BalanceTuning.CarrierNightOps ? "空母は改だけ発艦できる" : "空母は攻撃できない"));
+            if (BattleLogUI.Instance != null) BattleLogUI.Instance.AddLog("夜戦突入！ 駆逐・軽巡・潜水の攻撃が2倍になり、空母は攻撃できない");
             if (BattleEffects.Instance != null) BattleEffects.Instance.SetNight(true);
             yield return CutInUI.Play("夜戦突入", "我、夜戦に突入す！", null, CutInUI.Navy, 1.2f);
+            // 夜間触接: 軽巡か空母がいれば夜偵が飛び、夜戦の艦娘の攻撃が上がる
+            if (BalanceTuning.NightContactDamage > 0)
+            {
+                PieceInstance scout = null;
+                foreach (var p in BoardManager.Instance.GetTeamPieces(Team.Player))
+                    if (p.isAlive && (p.data.pieceType == PieceType.KanmusuCL || p.data.pieceType == PieceType.KanmusuCV) && !IsSuppressed(p)) { scout = p; break; }
+                if (scout != null)
+                {
+                    fleet.nightContact = true;
+                    GameSim.RecordFleet("夜間触接", gm.MoveCount - fleet.arrivalMove);
+                    FloatingText.Spawn(scout.boardPosition, "夜間触接", CutInUI.SeaLight, 4f, 0.2f);
+                    if (BattleEffects.Instance != null) BattleEffects.Instance.PlayHaloEffect(scout.boardPosition);
+                    if (BattleLogUI.Instance != null) BattleLogUI.Instance.AddLog("夜間触接！ 夜戦のあいだ艦娘の攻撃+" + BalanceTuning.NightContactDamage);
+                }
+            }
         }
 
         var ships = new List<PieceInstance>();
@@ -526,10 +723,12 @@ public partial class AbilitySystem
     private static int ShipDamage(PieceInstance ship, int baseDamage, Fleet fleet)
     {
         int damage = CombatResolver.AbilityDamage(ship, baseDamage) + (ship.isPromoted ? 1 : 0) + BalanceTuning.FleetDamageBonus;
+        if (fleet != null && fleet.formation == Formation.LineAhead) damage += BalanceTuning.FormationLineAheadDamage;
         if (IsDamaged(ship)) damage -= 1;
         PieceType type = ship.data.pieceType;
         if (fleet != null && fleet.night && (type == PieceType.KanmusuDD || type == PieceType.KanmusuCL || type == PieceType.KanmusuSS))
             damage *= 2;
+        if (fleet != null && fleet.night && fleet.nightContact) damage += BalanceTuning.NightContactDamage;
         return Mathf.Max(1, damage);
     }
 
@@ -582,8 +781,7 @@ public partial class AbilitySystem
         var abyss = AliveShinkai();
         if (abyss.Count == 0 || IsHeavilyDamaged(ship)) yield break;   // 大破は攻撃しない
         PieceType type = ship.data.pieceType;
-        // 空母は中破・夜戦で発艦できない（夜間作戦航空要員がいれば、改の空母は夜戦でも発艦できる）
-        if (type == PieceType.KanmusuCV && (IsDamaged(ship) || (fleet != null && fleet.night && !(BalanceTuning.CarrierNightOps && ship.isPromoted)))) yield break;
+        if (type == PieceType.KanmusuCV && (IsDamaged(ship) || (fleet != null && fleet.night))) yield break;   // 空母は中破・夜戦で発艦できない
 
         BoardManager bm = BoardManager.Instance;
         BattleEffects fx = BattleEffects.Instance;
@@ -746,7 +944,13 @@ public partial class AbilitySystem
             if (BattleEffects.Instance != null)
                 BattleEffects.Instance.PlayAbyssStrike(shinkai.boardPosition, victim.boardPosition);
             yield return new WaitForSeconds(0.3f);
-            CombatResolver.ApplyDamage(victim, damage, false);
+            int dealt = damage;
+            if (PieceTypes.IsKanmusu(victim.data.pieceType) && HasAirSuperiority())
+            {
+                dealt = Mathf.Max(0, damage - BalanceTuning.AirSuperiorityGuard);
+                FloatingText.Spawn(victim.boardPosition, "制空権", AirGreen, 2.6f, 0.1f);
+            }
+            CombatResolver.ApplyDamage(victim, dealt, false);
             yield return new WaitForSeconds(0.2f);
         }
     }
