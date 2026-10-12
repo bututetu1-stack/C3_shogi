@@ -109,7 +109,9 @@ public class InputManager : MonoBehaviour
             return;
         }
 
-        bool isPlayerTurn = (GameManager.Instance.currentTurn == Team.Player);
+        // 人が動かせる手番か（1人用は自軍の番、対人戦は両方の番）
+        Team turn = GameManager.Instance.currentTurn;
+        bool isPlayerTurn = GameManager.Instance.IsHumanTeam(turn);
         PieceInstance clickedPiece = BoardManager.Instance.GetPieceAt(boardPos);
 
         // 駒が選択済みの場合(プレイヤーターン中のみ移動可能)
@@ -142,7 +144,7 @@ public class InputManager : MonoBehaviour
 
         // 再行動中は、その駒しか動かせない
         PieceInstance only = GameManager.Instance.ActiveBonusPiece;
-        if (clickedPiece.team == Team.Player && isPlayerTurn && (only == null || clickedPiece == only))
+        if (clickedPiece.team == turn && isPlayerTurn && (only == null || clickedPiece == only))
             SelectPiece(clickedPiece);
         else
             ViewPiece(clickedPiece); // 敵駒 or プレイヤーターン外: 閲覧のみ

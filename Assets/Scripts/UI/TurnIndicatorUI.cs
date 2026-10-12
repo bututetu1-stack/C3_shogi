@@ -10,6 +10,7 @@ public class TurnIndicatorUI : MonoBehaviour
     private Label turnLabel;
     private Label moveCountLabel;
     private VisualElement buttonContainer;
+    private Button suspendButton;
     private VisualElement bar;
     private bool isSubscribed;
 
@@ -75,7 +76,8 @@ public class TurnIndicatorUI : MonoBehaviour
         buttonContainer.pickingMode = PickingMode.Ignore;
         buttonContainer.Add(UIFactory.Button("駒一覧", PieceCatalogUI.Open));
         buttonContainer.Add(UIFactory.Button("設定", SettingsUI.Open));
-        buttonContainer.Add(UIFactory.Button("中断", () => { if (GameManager.Instance != null) GameManager.Instance.SuspendToTitle(); }));
+        suspendButton = UIFactory.Button("中断", () => { if (GameManager.Instance != null) GameManager.Instance.SuspendToTitle(); });
+        buttonContainer.Add(suspendButton);
         buttonContainer.Add(UIFactory.Button("パス", OnPassClicked));
         buttonContainer.Add(UIFactory.Button("投了", OnResignClicked, "c3-button--danger"));
         bar.Add(buttonContainer);
@@ -119,7 +121,12 @@ public class TurnIndicatorUI : MonoBehaviour
         if (turnLabel == null || GameManager.Instance == null) return;
 
         StageManager sm = StageManager.Instance;
-        if (sm != null)
+        if (PvpMatch.Active)
+        {
+            stageNumberLabel.text = "対人戦";
+            stageNameLabel.text = PvpMatch.CurrentRule == PvpMatch.Rule.Cost ? "コスト制" : "ランダム配布";
+        }
+        else if (sm != null)
         {
             stageNumberLabel.text = "第" + UIFactory.Kanji(sm.currentStage) + "局";
             stageNameLabel.text = sm.GetStageName(sm.currentStage);
@@ -130,7 +137,13 @@ public class TurnIndicatorUI : MonoBehaviour
         bar.style.display = phase == GamePhase.Title ? DisplayStyle.None : DisplayStyle.Flex;
         turnBadge.style.display = battle ? DisplayStyle.Flex : DisplayStyle.None;
 
-        if (team == Team.Player)
+        if (PvpMatch.Active)
+        {
+            turnLabel.text = PvpMatch.SideLong(team) + "の番";
+            Color c = team == Team.Player ? Palette.Player : Palette.Enemy;
+            turnBadge.style.backgroundColor = new Color(c.r, c.g, c.b, 0.9f);
+        }
+        else if (team == Team.Player)
         {
             turnLabel.text = "あなたの番";
             turnBadge.style.backgroundColor = new Color(Palette.Player.r, Palette.Player.g, Palette.Player.b, 0.9f);
@@ -145,20 +158,23 @@ public class TurnIndicatorUI : MonoBehaviour
         moveCountLabel.text = GameManager.Instance.MoveCount + "手目" + (remaining <= 30 ? "（残り" + remaining + "手）" : "");
         moveCountLabel.style.color = remaining <= 30 ? new Color(1f, 0.85f, 0.5f) : new Color(1f, 1f, 1f, 0.75f);
 
-        buttonContainer.style.display = (battle && team == Team.Player) ? DisplayStyle.Flex : DisplayStyle.None;
+        buttonContainer.style.display = (battle && GameManager.Instance.IsHumanTeam(team)) ? DisplayStyle.Flex : DisplayStyle.None;
+        if (suspendButton != null) suspendButton.style.display = PvpMatch.Active ? DisplayStyle.None : DisplayStyle.Flex;
     }
 
     private void OnPassClicked()
     {
         GameManager gm = GameManager.Instance;
-        if (gm == null || gm.currentTurn != Team.Player || gm.currentPhase != GamePhase.Battle || gm.IsTurnProcessing) return;
+        if (gm == null || !gm.IsHumanTeam(gm.currentTurn) || gm.currentPhase != GamePhase.Battle || gm.IsTurnProcessing) return;
         if (InputManager.Instance != null)
         {
             if (InputManager.Instance.IsBusy) return;
             InputManager.Instance.ClearSelection();
         }
         if (BattleLogUI.Instance != null)
-            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("あなた", Team.Player) + " はパスした");
+            BattleLogUI.Instance.AddLog(PvpMatch.Active
+                ? BattleLogUI.ColorName(PvpMatch.SideName(gm.currentTurn), gm.currentTurn) + " はパスした"
+                : BattleLogUI.ColorName("あなた", Team.Player) + " はパスした");
         gm.EndTurn();
     }
 

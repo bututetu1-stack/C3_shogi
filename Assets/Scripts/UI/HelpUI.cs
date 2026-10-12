@@ -293,6 +293,20 @@ public static class HelpUI
         });
         list.Add(new Page
         {
+            title = "対人戦", image = null,
+            lines = new[]
+            {
+                "タイトルの「対人戦（2人で）」から。いまは1台で2人が交代で指す（オンラインは準備中）。",
+                "先手は盤の下、後手は盤の上。後手は1手遅いぶん C3 の体力+" + PvpMatch.SecondC3Bonus + "。",
+                "コスト制: 持ち点" + PvpMatch.Budget + "の中で、部員（ブロンズ4・レア6・激レア9）・将棋の駒・敵の駒・全軍強化を選ぶ。",
+                "ランダム配布: 3枚から1枚を選ぶのを" + PvpMatch.RandomRounds + "回。2人に同じ候補が出る。",
+                "編成のあと、交代で自陣（手前の3段）の並べ方を決める。並べているあいだ、相手の駒は見えない。",
+                "練度・覚醒はない。提督の艦隊は深海なしで相手の駒を撃ち、" + BalanceTuning.PvpFleetMoves + "手で帰投する。",
+                "勝ち負けは1人用と同じ（相手の C3 を倒す。" + GameManager.MoveLimit + "手で判定、同じ強さなら引き分け）。",
+            }
+        });
+        list.Add(new Page
+        {
             title = "部の時間と中断", image = null,
             lines = new[]
             {

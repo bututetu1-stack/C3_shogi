@@ -48,7 +48,7 @@ public partial class AbilitySystem : MonoBehaviour
         BeginGamerTurn(team);
 
         // 艦隊の入渠（提督の隣の艦娘が回復）
-        if (team == Team.Player) DockShips();
+        if (team == Team.Player || PvpMatch.Active) DockShips(team);
 
         // 盤外の光春からのお土産
         yield return SendSouvenirs(team);
@@ -305,11 +305,11 @@ public partial class AbilitySystem : MonoBehaviour
             yield return ExecuteRaiteiThunder();
         }
 
-        // 艦娘の攻撃 (プレイヤーターン終了時)
-        if (team == Team.Player)
+        // 艦娘の攻撃 (プレイヤーターン終了時。対人戦は両方の手番の終わり)
+        if (team == Team.Player || PvpMatch.Active)
         {
-            yield return ExecuteKanmusuAbilities();
-            yield return SupportFleetFire();
+            yield return ExecuteKanmusuAbilities(team);
+            if (!PvpMatch.Active) yield return SupportFleetFire();
         }
 
         // けい・異端のバグ修正、きぷ・へるの冷笑、小錦（横綱）の押し出し
