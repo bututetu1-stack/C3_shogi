@@ -101,12 +101,13 @@ public static class PvpMatch
 
     /// <summary>
     /// コスト表（ここにない部員はレアリティどおり: ブロンズ4・レア6・激レア9）。
-    /// 2026-10-12、AIどうしの対人戦600局ずつで、入っていた側の勝ち点が50%に近づくように決めた叩き台（docs/balance/pvp_stats.js）
+    /// 2026-10-12、AIどうしの対人戦600局ずつで、入っていた側の勝ち点が50%に近づくように決めた叩き台（docs/balance/pvp_stats.js）。
+    /// 僕・光春は対人戦だけの上限（PvpBokuBuffCap・PvpSouvenirCap）を入れたあとの値
     /// </summary>
     private static readonly Dictionary<PieceType, int> CostTable = new Dictionary<PieceType, int>
     {
         // 部員（強い・弱いをレアリティの値から動かした）
-        { PieceType.Boku, 11 }, { PieceType.Mitsuharu, 8 }, { PieceType.Shimesaba, 7 }, { PieceType.Konishiki, 7 },
+        { PieceType.Boku, 10 }, { PieceType.Mitsuharu, 6 }, { PieceType.Shimesaba, 8 }, { PieceType.Konishiki, 7 },
         { PieceType.Nako, 7 }, { PieceType.Kei, 5 }, { PieceType.Kipu, 5 }, { PieceType.RN, 5 }, { PieceType.Negu, 4 },
         { PieceType.Rihaku, 5 }, { PieceType.SN, 6 }, { PieceType.Niko, 8 }, { PieceType.Kawasemi, 8 },
         // 将棋の駒

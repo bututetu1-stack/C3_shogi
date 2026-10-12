@@ -318,6 +318,9 @@ public static class BalanceTuning
     public static int PvpSecondC3Bonus = 0;   // 2026-10-12: AIどうしでは後手のほうが勝つ（上乗せなしで57%）ので0。人どうしの手ごたえで決め直す
     /// <summary>対人戦のコストの上書き（"Boku:8,Mitsuharu:6" の形。空ならコスト表どおり。AIどうしの自動プレイで決める）</summary>
     public static string PvpCostOverrides = "";
+    /// <summary>対人戦だけの上限（2026-10-12 ユーザー決定。長い対局ほど効きすぎるため）: 僕の強化は1体この回数まで、光春のお土産は1局この回数まで（0なら上限なし）</summary>
+    public static int PvpBokuBuffCap = 3;
+    public static int PvpSouvenirCap = 3;
     /// <summary>対人戦の自動プレイの実験: 後手を先手と同じ編成にする・後手から指す（ふだんは false）</summary>
     public static bool PvpSimMirror = false;
     public static bool PvpSimSecondFirst = false;

@@ -653,6 +653,14 @@ public class PvpSetupUI : MonoBehaviour
             add.style.marginTop = 10;
             detail.Add(add);
             detail.Add(UIFactory.PieceText(UIFactory.FlavorOf(d, false), d.description, 17));
+            string pvpRule = d.pieceType == PieceType.Boku ? "対人戦では、強化は1体" + BalanceTuning.PvpBokuBuffCap + "回まで"
+                : d.pieceType == PieceType.Mitsuharu ? "対人戦では、お土産は1局" + BalanceTuning.PvpSouvenirCap + "回まで" : null;
+            if (pvpRule != null)
+            {
+                var note = UIFactory.Label(pvpRule, 17, Palette.EnemyLight, "c3-bold");
+                note.style.marginTop = 6;
+                detail.Add(note);
+            }
         }
         else if (focusUpgrade.HasValue)
         {

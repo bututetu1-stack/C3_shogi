@@ -31,8 +31,12 @@ public partial class AbilitySystem
         public PieceInstance thrower;   // 自分で引いたときは null
     }
 
+    // 対人戦だけ: この局で光春が送ったお土産の回数（陣営ごと。上限 PvpSouvenirCap）
+    private readonly int[] souvenirsSent = new int[2];
+
     private void ResetNewMembers()
     {
+        souvenirsSent[0] = souvenirsSent[1] = 0;
         abroad.Clear();
         nikoDecks.Clear();
         doomCountdown.Clear();
@@ -180,6 +184,7 @@ public partial class AbilitySystem
         foreach (var m in abroad)
         {
             if (m.team != team) continue;
+            if (PvpMatch.Active && BalanceTuning.PvpSouvenirCap > 0 && souvenirsSent[(int)team] >= BalanceTuning.PvpSouvenirCap) break;
             if (GameManager.Instance.GetFund(team) <= 0) break;
             // お土産は部員を優先（傷ついた部員 → 部員 → ほかの駒）
             var allies = new List<PieceInstance>();
@@ -208,6 +213,7 @@ public partial class AbilitySystem
             }
             if (allies.Count == 0) yield break;
             GameManager.Instance.SetFund(team, GameManager.Instance.GetFund(team) - 1);
+            souvenirsSent[(int)team]++;
             int gifts = m.awakened ? BalanceTuning.MitsuharuAwakenedTargets : BalanceTuning.MitsuharuSouvenirTargets;
             if (m.awakened && BattleEffects.Instance != null) BattleEffects.Instance.PlayAwakenBurst("WorldTrip", allies[0].boardPosition, m.data.awakenColor, true);
             for (int g = 0; g < gifts && allies.Count > 0; g++)
