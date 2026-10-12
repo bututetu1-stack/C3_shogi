@@ -223,8 +223,14 @@ public static class BalanceTuning
     public static int NeguPromotedDailyEvery = 2;
     public static int NeguDailyCap = 3;
     public static int NeguAwakenedDailyCap = 5;
-    /// <summary>寝癖: えちち連合（物鉄が同じ盤にいるあいだ）の攻撃の上乗せ</summary>
+    /// <summary>
+    /// えちち連合（2026-10-12 ユーザー決定。会長 寝癖・副会長 物鉄、会員 小錦・RN・翡翠・ヲツ・無糖・僕）。
+    /// 会長: 盤にいる仲間1人につき寝癖の攻撃+NeguAllianceATK（副会長の物鉄は2人分）、NeguAllianceCap まで。
+    /// 同志: 連合の部員は、周り1マスに仲間がいると防御+AllianceComradeDEF
+    /// </summary>
     public static int NeguAllianceATK = 1;
+    public static int NeguAllianceCap = 2;
+    public static int AllianceComradeDEF = 1;
     /// <summary>外跳: 跳ね飛ばした敵が何かにぶつかったときのダメージの元の値（防御無視）</summary>
     public static int NeguBounceWallDamage = 2;
     /// <summary>無糖: 死んで覚える（倒されるたびに周のあいだ攻撃+1）の上限、ボスへの攻撃の上乗せ</summary>
