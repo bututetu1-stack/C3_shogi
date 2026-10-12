@@ -59,6 +59,7 @@ public partial class GameManager
         ViewFlip.Set(PvpMatch.Online && PvpMatch.LocalTeam == Team.Enemy);
         isGameOver = false;
         PvpDraw = false;
+        if (!GameSim.Headless) PvpClock.Ensure();
         currentTurn = Team.Player;
         playerOwnedPieces.Clear();
         Roster.Clear();

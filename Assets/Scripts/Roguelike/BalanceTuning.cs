@@ -311,6 +311,9 @@ public static class BalanceTuning
     /// <summary>対人戦の艦隊: 深海がいないので、着任からこの手数（両軍の合計）で作戦完了・帰投する。艦娘の能力のダメージの増減</summary>
     public static int PvpFleetMoves = 10;
     public static int PvpShipDamageDelta = -1;
+    /// <summary>対人戦の持ち時間: 1手の秒数（0なら持ち時間なし）と、続けて時間切れになると負けになる回数</summary>
+    public static int PvpTurnSeconds = 60;
+    public static int PvpTimeoutsToLose = 3;
     /// <summary>艦娘は提督の周り（入渠できるマス）から出撃する（false なら自陣のどこか）</summary>
     public static bool FleetSortieNearTeitoku = true;
 

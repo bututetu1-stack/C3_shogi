@@ -304,6 +304,7 @@ public static class HelpUI
                 "編成のあと、交代で自陣（手前の3段）の並べ方を決める。並べているあいだ、相手の駒は見えない。",
                 "練度・覚醒はない。提督の艦隊は深海なしで相手の駒を撃ち、" + BalanceTuning.PvpFleetMoves + "手で帰投する。",
                 "勝ち負けは1人用と同じ（相手の C3 を倒す。" + GameManager.MoveLimit + "手で判定、同じ強さなら引き分け）。",
+                "持ち時間は1手" + BalanceTuning.PvpTurnSeconds + "秒（画面の上に残りが出る）。過ぎると自動でパスになり、続けて" + BalanceTuning.PvpTimeoutsToLose + "回で負け。",
             }
         });
         list.Add(new Page

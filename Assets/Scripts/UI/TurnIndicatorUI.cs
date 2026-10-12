@@ -89,6 +89,17 @@ public class TurnIndicatorUI : MonoBehaviour
     {
         // GameManager生成前にStartが走った場合の遅延登録
         if (!isSubscribed) SubscribeEvents();
+
+        // 対人戦: 持ち時間の残り（10秒を切ったら目立たせる）
+        GameManager gm = GameManager.Instance;
+        if (PvpMatch.Active && PvpClock.Instance != null && moveCountLabel != null && gm != null && gm.currentPhase == GamePhase.Battle)
+        {
+            int r = PvpClock.Instance.Remaining;
+            moveCountLabel.text = gm.MoveCount + "手目" + (r >= 0 ? "　残り" + r + "秒" : "");
+            moveCountLabel.style.fontSize = 16;
+            moveCountLabel.style.color = r >= 0 && r <= 10 ? new Color(1f, 0.95f, 0.45f) : new Color(1f, 1f, 1f, 0.85f);
+            moveCountLabel.style.unityFontStyleAndWeight = r >= 0 && r <= 10 ? FontStyle.Bold : FontStyle.Normal;
+        }
     }
 
     private void SubscribeEvents()
