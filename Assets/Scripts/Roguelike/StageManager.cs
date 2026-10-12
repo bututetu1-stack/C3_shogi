@@ -87,13 +87,13 @@ public class StageManager : MonoBehaviour
         new[] { null, "猪突の突撃", "妖狐の森" },   // 4
         new string[] { null },                      // 5 将棋の陣は本将棋のまま
         new[] { null, "大盾の構え", "結界の陣" },   // 6
-        new[] { null, "影と狐", "影と弓" },         // 7
-        new[] { null, "岩の城", "結界と傀儡" },     // 8
+        new[] { null, "影と狐", "影と弓", "亡霊の夜" },   // 7
+        new[] { null, "岩の城", "結界と傀儡", "僧兵の寺" },   // 8
         new[] { null, "天狗と弓", "天狗と猪" },     // 9
         new[] { null, "結界の護り", "弓と盾" },     // 10
-        new[] { null, "狐と骨", "結界の風" },       // 11
+        new[] { null, "狐と骨", "結界の風", "亡霊と僧兵" },   // 11
         new[] { null, "龍の結界", "猪と盾" },       // 12
-        new[] { null, "傀儡の門", "狐と結界" },     // 13
+        new[] { null, "傀儡の門", "狐と結界", "破魔の陣" },   // 13
         new[] { null, "盾と弓", "結界の審判" },     // 14
         new string[] { null },                      // 15 魔王降臨はそのまま
     };
@@ -431,6 +431,18 @@ public class StageManager : MonoBehaviour
                 Replace(list, size - 3, top - 2, PieceType.Yumihei);
                 list.Add(new Placement(PieceType.Kyogan, c, c));
                 break;
+            case 73: // 亡霊の夜（通常の攻撃をすり抜ける亡霊が桂馬の位置に）
+                list.Add(new Placement(PieceType.C3, c, top));
+                AddStandardArmy(list, size, PieceType.Bourei, PieceType.Bourei, PieceType.Kagenin, PieceType.Lance);
+                list.Add(new Placement(PieceType.Kyogan, c, c));
+                break;
+            case 83: // 僧兵の寺（能力を受けない僧兵が金の位置に）
+                list.Add(new Placement(PieceType.C3, c, top));
+                AddStandardArmy(list, size, PieceType.Kishou, PieceType.Kishou, PieceType.Lance, PieceType.Lance);
+                Replace(list, c - 1, top, PieceType.Souhei);
+                Replace(list, c + 1, top, PieceType.Souhei);
+                list.Add(new Placement(PieceType.Teppeki, c, top - 1));
+                break;
             case 81: // 岩の城
                 list.Add(new Placement(PieceType.C3, c, top));
                 AddStandardArmy(list, size, PieceType.Kishou, PieceType.Kishou, PieceType.Lance, PieceType.Lance);
@@ -497,6 +509,15 @@ public class StageManager : MonoBehaviour
                         Remove(list, size - 1, top - 2);
                         Replace(list, c - 2, top, PieceType.Ootate);
                         Replace(list, c + 2, top, PieceType.Ootate);
+                        break;
+                    case 113: // 亡霊と僧兵
+                        Replace(list, 0, top - 1, PieceType.Bourei);
+                        Replace(list, size - 1, top - 1, PieceType.Souhei);
+                        break;
+                    case 133: // 破魔の陣（結界の周りを僧兵が固める）
+                        Replace(list, c + 1, top - 1, PieceType.Kekkai);
+                        Replace(list, 0, top - 1, PieceType.Souhei);
+                        Replace(list, size - 1, top - 1, PieceType.Souhei);
                         break;
                     case 131: // 傀儡の門
                         Replace(list, 0, top - 1, PieceType.Kugutsu);

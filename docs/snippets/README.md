@@ -23,6 +23,9 @@
 | `cap_frames_setup.cs` → `cap_frame.cs`（くり返す）→ `cap_frames_teardown.cs` | サムネイルの GIF 用のコマ撮り。1フレームを 1/30 秒に固定して、`play_mode_step --count 3` と `cap_frame.cs` をくり返す（10コマ/秒。`Builds/Media/frames` に 640x360、10コマごとに `Builds/Media/stills` に 1920x1080 の写真）。呼び出しが速すぎると Windows の通信の口が足りなくなる（NoBufferSpaceAvailable）ので、300コマくらいまでにする。GIF は `node docs/media/make_gif.js Builds/Media/frames 出力.gif 52-78,120-200` |
 | `visual_autoplay_core.cs` | ゲームの基本の流れを撮る（`cap_frames_setup.cs` のあと。第六局で自軍も AI が指し、1手ごとに駒を選んだ状態を見せてから指す。物鉄なし）。コマ撮りはゲームの中で自動でするので、`play_mode_step --seconds 34 --wait-timeout 600` を1回だけ。盤を正方形に切り抜いた 512x512 のコマも残す（unityroom のアイコンは正方形に近く 512KB 以下がよいとされる） |
 | `cap_still.cs` | いまの画面を `Builds/Media/stills/NAME.png`（1920x1080）に保存する（`cap_frames_setup.cs` のあと。NAME を置き換える） |
+| `make_enemy_promotions.cs` | 亡霊・僧兵のアセットを作り、敵専用の駒に成った姿を付け、龍神をレジェンドにする（何度流しても同じ） |
+| `test_enemy_new.cs` | プレイ中に盤を用意して、亡霊のすり抜けと押し返し・僧兵の破魔（能力・弱体・挑発・組み止め）・敵の成り（鬼将→鬼神、鉄大盾の軽減）を確かめる |
+| `test_ai_freeloss.cs` | 第一〜四局の初めの局面で、敵の AI がただで取られる手を選ぶ回数を、`AiAvoidFreeLoss` を切ったときと入れたときで数える（どの手もそうなる局面では直しは効かない） |
 | `dump_pieces.cs` | 駒のデータ（数値・動き・説明・覚醒）を `BalanceReports/pieces_dump.json` に書き出す。駒一覧のページ（https://claude.ai/artifact/FQyUcJnkbyCc9NGA14utpw）を作り直すときに使う |
 
 画面の確認の流れ（PowerShell）:

@@ -13,6 +13,8 @@ public static class CombatResolver
     /// </summary>
     public static int CalcDamage(PieceInstance attacker, PieceInstance target)
     {
+        // 亡霊は通常の攻撃をすり抜ける（能力のダメージは受ける）
+        if (AbilitySystem.IsPhantom(target)) return 0;
         // 潜水艦は通常の攻撃を受けない（能力の攻撃は受ける）。対潜を持つ敵（歩兵・香車）の爆雷は当たる
         if (target.data.pieceType == PieceType.KanmusuSS) return AntiSub(attacker, target) ? AfterGuard(target, Mathf.Max(1, RawDamage(attacker, target))) : 0;
         return AfterGuard(target, RawDamage(attacker, target));
@@ -38,6 +40,8 @@ public static class CombatResolver
     {
         if (target.data.pieceType != PieceType.Ootate || target.isSealed) return 0;
         bool front = target.team == Team.Enemy ? attacker.boardPosition.y < target.boardPosition.y : attacker.boardPosition.y > target.boardPosition.y;
+        // 鉄大盾（成った大盾）は正面をさらに固め、横や後ろからも少し減らす
+        if (target.isPromoted) return front ? BalanceTuning.OotatePromotedGuard : BalanceTuning.OotatePromotedSideGuard;
         return front ? BalanceTuning.OotateGuard : 0;
     }
 
@@ -81,7 +85,9 @@ public static class CombatResolver
         if (AbilitySystem.IsSuppressed(attacker)) return 0;
         Vector2Int d = target.boardPosition - attacker.boardPosition;
         int distance = Mathf.Max(Mathf.Abs(d.x), Mathf.Abs(d.y));
-        return Mathf.Max(0, distance - 1) * BalanceTuning.YuuRunUpPerSquare;
+        // 猛猪（成った猪突）は助走が強い
+        int per = attacker.data.pieceType == PieceType.Chototsu && attacker.isPromoted ? BalanceTuning.ChototsuPromotedRunUp : BalanceTuning.YuuRunUpPerSquare;
+        return Mathf.Max(0, distance - 1) * per;
     }
 
     /// <summary>
@@ -205,6 +211,15 @@ public static class CombatResolver
         if (BattleEffects.Instance != null)
             BattleEffects.Instance.PlaySlash(target.boardPosition, attacker.boardPosition);
 
+        // 亡霊: 通常の攻撃をすり抜けて、押し返される
+        if (AbilitySystem.IsPhantom(target))
+        {
+            FloatingText.Spawn(target.boardPosition, "すり抜け", new Color(0.7f, 0.85f, 1f), 3.2f);
+            Log(Name(attacker) + " の攻撃は " + Name(target) + " をすり抜けた");
+            AbilitySystem.PushBackPhantom(target, attacker);
+            return false;
+        }
+
         int runUp = RunUpBonus(attacker, target);
         int damage = CalcDamage(attacker, target);
         bool depthCharge = target.data.pieceType == PieceType.KanmusuSS && AntiSub(attacker, target);
@@ -305,6 +320,12 @@ public static class CombatResolver
     public static bool ApplyDamage(PieceInstance target, int amount, bool piercing)
     {
         if (target == null || !target.isAlive) return false;
+        // 僧兵は能力のダメージを受けない（C3 は能力の的にそもそも選ばれない）
+        if (target.data.pieceType == PieceType.Souhei && AbilitySystem.ResistsAbilities(target))
+        {
+            FloatingText.Spawn(target.boardPosition, "無効", Palette.TextSub, 3f);
+            return false;
+        }
 
         int raw = piercing ? amount : Mathf.Max(0, amount - target.DEF);
         int damage = AfterGuard(target, raw);

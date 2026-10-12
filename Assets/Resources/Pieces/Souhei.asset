@@ -1,0 +1,94 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01e8fb0f6e3e9d54297b027b2b9c6457, type: 3}
+  m_Name: Souhei
+  m_EditorClassIdentifier: Shogi::PieceData
+  pieceType: 60
+  displayName: "\u50E7\u5175"
+  pieceName: "\u50E7\u5175"
+  flavor: "\u6CD5\u529B\u3067\u8EAB\u3092\u5B88\u308B\u4FEE\u884C\u50E7\u3002\u8853\u306F\u901A\u3058\u306A\u3044\u304C\u3001\u5200\u306F\u901A\u308B\u3002"
+  description: "\u7834\u9B54: \u76F8\u624B\u306E\u80FD\u529B\u306E\u30C0\u30E1\u30FC\u30B8\u3084\u52B9\u679C\uFF08\u5F31\u4F53\u30FB\u51B7\u7B11\u30FB\u62BC\u3057\u51FA\u3057\u30FB\u88CF\u8FD4\u3057\u30FB\u6311\u767A\u30FB\u7D44\u307F\u6B62\u3081\u306A\u3069\uFF09\u3092\u53D7\u3051\u306A\u3044\u3002\u901A\u5E38\u306E\u653B\u6483\u306F\u666E\u901A\u306B\u53D7\u3051\u308B\u3002"
+  baseATK: 2
+  baseDEF: 1
+  baseHP: 3
+  rarity: 1
+  moveDirections:
+  - direction: {x: 0, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 1, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: -1, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 1, y: 0}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: -1, y: 0}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 0, y: -1}
+    maxDistance: 1
+    canJump: 0
+  canPromote: 1
+  promotedDisplayName: "\u6CD5\u5E2B"
+  promotedName: "\u6CD5\u5E2B"
+  promotedFlavor: 
+  promotedDescription: "\u50E7\u5175\u304C\u6210\u3063\u305F\u59FF\u3002\u7834\u9B54\u306F\u305D\u306E\u307E\u307E\u3002\u653B\u6483\u3068\u9632\u5FA1\u304C\u3055\u3089\u306B\u9AD8\u3044\u3002"
+  promotedATK: 3
+  promotedDEF: 2
+  promotedHP: 3
+  promotedMoveDirections:
+  - direction: {x: 0, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 1, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: -1, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 1, y: 0}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: -1, y: 0}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 0, y: -1}
+    maxDistance: 1
+    canJump: 0
+  canAwaken: 0
+  awakenedName: 
+  awakenedDescription: 
+  awakenCaption: 
+  awakenColor: {r: 1, g: 0.8, b: 0.35, a: 1}
+  awakenedATK: 0
+  awakenedDEF: 0
+  awakenedHP: 0
+  awakenedMoveDirections: []
+  veteranName: 
+  veteranDescription: 
+  veteranMoveDirections: []
+  hasPromotedRarity: 0
+  promotedRarity: 0
+  isAutoMove: 0
+  isManualControllable: 1
+  excludeFromDraft: 1
+  isImmovable: 0
+  immuneToFlip: 1
+  losesHPOnMove: 0
+  diesOnPromotion: 0
+  isImmovableWhenPromoted: 0
+  isTauntPiece: 0
+  portrait: {fileID: 0}
+  promotedPortrait: {fileID: 0}

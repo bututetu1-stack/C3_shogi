@@ -265,6 +265,15 @@ public class SimpleAI : MonoBehaviour
         LastCompletedDepth = completedDepth;
         if (best == null || best.Count == 0) return root[0];
 
+        // ただで取られる手は選ばない（2026-10-12）。序盤の手加減のばらつきでも、動いた駒がただで取られる手は候補から外す。
+        // 勝ちが見えている手と、どの手もそうなる局面ではそのまま
+        if (forEnemy && !PvpMatch.Active && BalanceTuning.AiAvoidFreeLoss && best[0].score < WinScore / 2)
+        {
+            var safe = new List<MoveEntry>(best.Count);
+            foreach (var e in best) if (!LosesForFree(e, team, opponent)) safe.Add(e);
+            if (safe.Count > 0) best = safe;
+        }
+
         // ほぼ同点の手からランダムに選ぶ。読みの窓の端（ちょうど top − 幅）の点は「それ以下」という見積もりなので入れない
         int top = best[0].score;
         int count = 1;
@@ -284,6 +293,64 @@ public class SimpleAI : MonoBehaviour
                 + " candidates=" + best.Count + "/" + root.Count + " best=" + top + " ties=" + count
                 + " -> " + chosen.piece.DisplayName + " " + chosen.move.position);
         return chosen;
+    }
+
+    /// <summary>
+    /// ただで取られる手か: 動いた駒が相手の次の手で倒され、取り返せない（または取り返しても損が AiFreeLossThreshold 点以上）。
+    /// その手で相手の駒を倒していれば、その値打ちを差し引く。その場から攻撃して動かない手は数えない
+    /// </summary>
+    private bool LosesForFree(MoveEntry e, Team us, Team them)
+    {
+        BoardManager bm = BoardManager.Instance;
+        PieceInstance mover = e.piece;
+        Vector2Int from = mover.boardPosition;
+        PieceInstance victim = e.move.isAttack ? bm.GetPieceAt(e.move.position) : null;
+        int victimValue = victim != null && victim.team == them ? PieceValue(victim) : 0;
+        int moverValue = PieceValue(mover);
+        int mark = Simulate(mover, e.move);
+        bool free = false;
+        if (mover.isAlive && mover.boardPosition != from && bm.GetPieceAt(mover.boardPosition) == mover)
+        {
+            int net = moverValue - (victim != null && !victim.isAlive ? victimValue : 0);
+            if (net >= BalanceTuning.AiFreeLossThreshold)
+            {
+                foreach (var q in bm.GetTeamPieces(them))
+                {
+                    if (!q.isAlive || CombatResolver.CalcDamage(q, mover) < mover.currentHP) continue;
+                    MoveValidator.MoveResult hit;
+                    if (!FindAttack(q, mover.boardPosition, out hit)) continue;
+                    if (net - RecaptureValue(q, hit, us) >= BalanceTuning.AiFreeLossThreshold) { free = true; break; }
+                }
+            }
+        }
+        Restore(mark);
+        return free;
+    }
+
+    /// <summary>q が pos を攻撃できる手</summary>
+    private static bool FindAttack(PieceInstance q, Vector2Int pos, out MoveValidator.MoveResult hit)
+    {
+        foreach (var m in MoveValidator.GetValidMoves(q))
+            if (m.isAttack && m.position == pos) { hit = m; return true; }
+        hit = default(MoveValidator.MoveResult);
+        return false;
+    }
+
+    /// <summary>q が取りに来たあと、こちらが q を倒し返せれば q の値打ち（できなければ 0）</summary>
+    private int RecaptureValue(PieceInstance q, MoveValidator.MoveResult hit, Team us)
+    {
+        BoardManager bm = BoardManager.Instance;
+        int qValue = PieceValue(q);
+        int mark = Simulate(q, hit);
+        int value = 0;
+        if (q.isAlive)
+            foreach (var r in bm.GetTeamPieces(us))
+            {
+                MoveValidator.MoveResult back;
+                if (r.isAlive && CombatResolver.CalcDamage(r, q) >= q.currentHP && FindAttack(r, q.boardPosition, out back)) { value = qValue; break; }
+            }
+        Restore(mark);
+        return value;
     }
 
     private static bool SameMove(MoveEntry a, MoveEntry b)
