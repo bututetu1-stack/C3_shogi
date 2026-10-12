@@ -468,7 +468,7 @@ public partial class AbilitySystem
     /// </summary>
     private static bool IsRandomFleetTarget(PieceInstance p)
     {
-        if (p == null || !p.isAlive || p.data.pieceType == PieceType.C3 || IsObstacle(p.data.pieceType)) return false;
+        if (p == null || !p.isAlive || ResistsAbilities(p) || IsObstacle(p.data.pieceType)) return false;
         return !(p.team == Team.Enemy && p.data.canAwaken && !p.awakened);
     }
 
@@ -791,7 +791,7 @@ public partial class AbilitySystem
         var list = new List<PieceInstance>();
         Team foe = shipTeam == Team.Player ? Team.Enemy : Team.Player;
         foreach (var p in BoardManager.Instance.GetTeamPieces(foe))
-            if (p.isAlive && p.data.pieceType != PieceType.C3 && !IsObstacle(p.data.pieceType)) list.Add(p);
+            if (p.isAlive && !ResistsAbilities(p) && !IsObstacle(p.data.pieceType)) list.Add(p);
         return list;
     }
 
@@ -851,7 +851,7 @@ public partial class AbilitySystem
         foreach (var pos in GetBresenhamLine(ship.boardPosition, target.boardPosition))
         {
             PieceInstance p = bm.GetPieceAt(pos);
-            if (p != null && p.team != ship.team && p.isAlive && p.data.pieceType != PieceType.C3) return p;
+            if (p != null && p.team != ship.team && p.isAlive && !ResistsAbilities(p)) return p;
         }
         return null;
     }

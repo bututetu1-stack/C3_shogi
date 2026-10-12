@@ -87,6 +87,12 @@ public static class PieceSkin
             case PieceType.Maou: SetAura(ref look, new Color(0.62f, 0.3f, 0.95f), false); break;
             case PieceType.Raitei: SetAura(ref look, new Color(1f, 0.88f, 0.35f), false); break;
             case PieceType.Ryuujin: SetAura(ref look, new Color(0.4f, 0.85f, 1f), false); break;
+            case PieceType.Bourei:
+                // 亡霊: 浮かんだ青白い駒
+                look.floating = true;
+                SetAura(ref look, new Color(0.62f, 0.8f, 1f), false);
+                break;
+            case PieceType.Souhei: SetAura(ref look, Palette.GoldLight, false); break;   // 僧兵: 破魔の金の光
         }
 
         if (PieceTypes.IsKanmusu(data.pieceType))
