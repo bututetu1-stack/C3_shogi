@@ -123,6 +123,7 @@ public partial class GameManager : MonoBehaviour
         else
         {
             PvpMatch.End();
+            ViewFlip.Set(false);
             SetPhase(GamePhase.Title);
             TitleScreenUI.Show(StartNewGame, ContinueRun, BeginPvp);
         }
@@ -631,6 +632,8 @@ public partial class GameManager : MonoBehaviour
         if (isGameOver || CheckGameOver()) yield break;
 
         if (OnTurnChanged != null && !GameSim.Headless) OnTurnChanged(currentTurn);
+        // オンラインの対人戦: 手番が変わるたびに盤の要約を送り合ってずれを見つける
+        if (PvpMatch.Online && PvpOnline.Instance != null) PvpOnline.Instance.OnTurnChanged();
     }
 
     /// <summary>決着がついているか（CheckGameOver と同じ条件。勝敗の処理はしない）</summary>
@@ -983,8 +986,9 @@ public partial class GameManager : MonoBehaviour
         isTurnProcessing = false;
         if (PvpMatch.Active)
         {
-            // 対人戦は手番の側が投了する
-            Team loser = currentTurn;
+            // 対人戦は手番の側が投了する（オンラインは自分）
+            Team loser = PvpMatch.Online ? PvpMatch.LocalTeam : currentTurn;
+            if (PvpMatch.Online && PvpOnline.Instance != null) PvpOnline.Instance.SendResign();
             if (BattleLogUI.Instance != null)
                 BattleLogUI.Instance.AddLog(BattleLogUI.ColorName(PvpMatch.SideName(loser), loser) + " は投了した");
             EndPvp(loser == Team.Player ? Team.Enemy : Team.Player, "投了");

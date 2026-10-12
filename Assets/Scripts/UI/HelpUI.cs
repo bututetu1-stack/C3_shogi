@@ -296,13 +296,16 @@ public static class HelpUI
             title = "対人戦", image = null,
             lines = new[]
             {
-                "タイトルの「対人戦（2人で）」から。いまは1台で2人が交代で指す（オンラインは準備中）。",
-                "先手は盤の下、後手は盤の上。後手は1手遅いぶん C3 の体力+" + PvpMatch.SecondC3Bonus + "。",
-                "コスト制: 持ち点" + PvpMatch.Budget + "の中で、部員（ブロンズ4・レア6・激レア9）・将棋の駒・敵の駒・全軍強化を選ぶ。",
+                "タイトルの「対人戦（2人で）」から。1台で2人が交代で指すか、オンライン（部屋を作る・部屋に入る。4桁の部屋コード）で遊ぶ。",
+                "オンラインの後手の画面では、盤が180度回って自分の駒が手前に来る。サーバーの置き方は server/README.md。",
+                "先手は盤の下、後手は盤の上。" + (PvpMatch.SecondC3Bonus > 0 ? "後手は1手遅いぶん C3 の体力+" + PvpMatch.SecondC3Bonus + "。" : "先手・後手は対局の前にランダムで決まる（オンライン）。"),
+                "コスト制: 持ち点" + PvpMatch.Budget + "の中で、部員（4〜11）・将棋の駒（1〜5）・敵の駒（2〜4）・全軍強化（5）を選ぶ。コストは強さに合わせて決めた（編成の画面の札に出る）。",
                 "ランダム配布: 3枚から1枚を選ぶのを" + PvpMatch.RandomRounds + "回。2人に同じ候補が出る。",
                 "編成のあと、交代で自陣（手前の3段）の並べ方を決める。並べているあいだ、相手の駒は見えない。",
                 "練度・覚醒はない。提督の艦隊は深海なしで相手の駒を撃ち、" + BalanceTuning.PvpFleetMoves + "手で帰投する。",
+                "対人戦だけの決まり: 僕の強化は1体" + BalanceTuning.PvpBokuBuffCap + "回まで、光春のお土産は1局" + BalanceTuning.PvpSouvenirCap + "回まで。",
                 "勝ち負けは1人用と同じ（相手の C3 を倒す。" + GameManager.MoveLimit + "手で判定、同じ強さなら引き分け）。",
+                "持ち時間は1手" + BalanceTuning.PvpTurnSeconds + "秒（画面の上に残りが出る）。過ぎると自動でパスになり、続けて" + BalanceTuning.PvpTimeoutsToLose + "回で負け。",
             }
         });
         list.Add(new Page

@@ -20,6 +20,9 @@ public class PvpSetupUI : MonoBehaviour
     private UpgradeKind? focusUpgrade;
     // ランダム配布の候補（2人に同じものを出す）
     private List<List<DraftOption>> rounds;
+    // オンライン: 部屋を作るとき（ルールを選んでから部屋を作る）
+    private bool hostOnline;
+    private string serverText;
 
     /// <summary>ルールを選ぶ画面から</summary>
     public static void Show(Action onDone, Action onBack)
@@ -27,7 +30,19 @@ public class PvpSetupUI : MonoBehaviour
         Ensure();
         instance.onDone = onDone;
         instance.onBack = onBack;
-        instance.RuleScreen();
+        instance.ModeScreen();
+    }
+
+    /// <summary>待っているあいだの画面（相手の並べ方など。ほかの画面から使う）</summary>
+    public static void ShowWaiting(string text)
+    {
+        Ensure();
+        instance.Waiting(text, null);
+    }
+
+    public static void HideWaiting()
+    {
+        if (instance != null) instance.Close();
     }
 
     /// <summary>ルールを決めた状態で、先手の編成から（決着画面の「もう一度」）</summary>
@@ -62,9 +77,14 @@ public class PvpSetupUI : MonoBehaviour
         root.Clear();
         root.pickingMode = PickingMode.Position;
         root.style.backgroundColor = new Color(0.03f, 0.025f, 0.02f, 1f);
-        root.style.alignItems = Align.Center;
-        root.style.justifyContent = Justify.Center;
-        return root;
+        // 画面ごとに中身の入れ物を作る（画面を切り替えると、その画面の見張り（schedule）も一緒に止まる）
+        var screen = new VisualElement();
+        screen.style.position = Position.Absolute;
+        screen.style.left = screen.style.right = screen.style.top = screen.style.bottom = 0;
+        screen.style.alignItems = Align.Center;
+        screen.style.justifyContent = Justify.Center;
+        root.Add(screen);
+        return screen;
     }
 
     private void Close()
@@ -81,13 +101,258 @@ public class PvpSetupUI : MonoBehaviour
     // ルールを選ぶ
     // ------------------------------------------------------------
 
+    // ------------------------------------------------------------
+    // 1台で2人か、オンラインか
+    // ------------------------------------------------------------
+
+    private void ModeScreen()
+    {
+        hostOnline = false;
+        VisualElement r = NewScreen();
+        var title = UIFactory.Label("対人戦", 64, Palette.Text, "c3-mincho");
+        title.style.letterSpacing = 16;
+        r.Add(title);
+        var sub = UIFactory.Label("部員どうしで対局します。", 20, Palette.TextSub);
+        sub.style.marginBottom = 24;
+        r.Add(sub);
+
+        var row = new VisualElement();
+        row.style.flexDirection = FlexDirection.Row;
+        row.style.flexWrap = Wrap.Wrap;
+        row.style.justifyContent = Justify.Center;
+        row.Add(ModeCard("1台で2人", "同じパソコンで、交代で指す。", "これで遊ぶ", () => RuleScreen()));
+        row.Add(ModeCard("部屋を作る", "オンラインで遊ぶ。ルールを選ぶと4桁の部屋コードが出るので、相手に伝える。", "部屋を作る", () =>
+        {
+            if (!ReadServer()) return;
+            hostOnline = true;
+            RuleScreen();
+        }));
+        row.Add(ModeCard("部屋に入る", "相手から聞いた部屋コードで入る。ルールは部屋を作った人が決める。", "部屋に入る", () =>
+        {
+            if (!ReadServer()) return;
+            JoinScreen();
+        }));
+        r.Add(row);
+
+        // サーバーのアドレス（オンラインだけ。前に入れたものを覚えておく）
+        var server = new VisualElement();
+        server.style.flexDirection = FlexDirection.Row;
+        server.style.alignItems = Align.Center;
+        server.style.marginTop = 22;
+        server.Add(UIFactory.Label("オンラインのサーバー", 17, Palette.TextSub));
+        var field = new TextField();
+        field.name = "pvp-server";
+        field.value = string.IsNullOrEmpty(serverText) ? PvpNet.SavedServer : serverText;
+        field.style.width = 560;
+        field.style.marginLeft = 12;
+        field.style.fontSize = 17;
+        field.RegisterValueChangedCallback(e => serverText = e.newValue);
+        serverText = field.value;
+        server.Add(field);
+        r.Add(server);
+        var hint = UIFactory.Label("ふつうはこのままでよい（部の中継サーバー）。手元で試すときは ws://localhost:8787", 14, Palette.TextSub);
+        hint.style.marginTop = 4;
+        r.Add(hint);
+        statusLabel = UIFactory.Label("", 17, Palette.EnemyLight);
+        statusLabel.style.marginTop = 6;
+        r.Add(statusLabel);
+
+        var back = UIFactory.Button("タイトルへ戻る", () => { Close(); if (onBack != null) onBack(); });
+        back.style.marginTop = 18;
+        r.Add(back);
+    }
+
+    private Label statusLabel;
+
+    private bool ReadServer()
+    {
+        string url = (serverText ?? "").Trim();
+        if (!(url.StartsWith("ws://") || url.StartsWith("wss://") || url.StartsWith("http://") || url.StartsWith("https://")))
+        {
+            if (statusLabel != null) statusLabel.text = "サーバーのアドレスを入れてください（wss:// で始まるもの）";
+            return false;
+        }
+        PvpNet.SavedServer = url;
+        return true;
+    }
+
+    private VisualElement ModeCard(string name, string text, string button, Action onClick)
+    {
+        var card = UIFactory.Panel();
+        card.style.width = 340;
+        card.style.marginLeft = card.style.marginRight = 12;
+        card.style.paddingTop = 20;
+        card.style.paddingBottom = 20;
+        card.style.paddingLeft = card.style.paddingRight = 20;
+        card.style.alignItems = Align.Center;
+        card.Add(UIFactory.Label(name, 30, Palette.GoldLight, "c3-mincho"));
+        var p = UIFactory.Paragraph(text, 18, Palette.Text);
+        p.style.marginTop = 8;
+        p.style.marginBottom = 14;
+        p.style.width = 290;
+        card.Add(p);
+        card.Add(UIFactory.Button(button, onClick, "c3-button--primary"));
+        return card;
+    }
+
+    // ------------------------------------------------------------
+    // オンライン: 部屋に入る・待つ
+    // ------------------------------------------------------------
+
+    private void JoinScreen()
+    {
+        VisualElement r = NewScreen();
+        r.Add(UIFactory.Label("部屋に入る", 48, Palette.Text, "c3-mincho"));
+        var sub = UIFactory.Label("相手から聞いた4桁の部屋コードを入れてください", 20, Palette.TextSub);
+        sub.style.marginTop = 8;
+        sub.style.marginBottom = 16;
+        r.Add(sub);
+        var field = new TextField();
+        field.name = "pvp-code";
+        field.maxLength = 8;
+        field.style.width = 240;
+        field.style.fontSize = 40;
+        r.Add(field);
+        var status = UIFactory.Label("", 18, Palette.EnemyLight);
+        status.style.marginTop = 8;
+        r.Add(status);
+        var go = UIFactory.Button("入る", () =>
+        {
+            string code = (field.value ?? "").Trim().ToUpperInvariant();
+            if (code.Length < 4) { status.text = "部屋コードは4桁です"; return; }
+            Connect(code);
+            Waiting("部屋 " + code + " に入っています…", () =>
+            {
+                var online = PvpOnline.Instance;
+                if (online != null && online.Setup != null) { StartOnline(); return true; }
+                return false;
+            });
+        }, "c3-button--primary", "c3-button--big");
+        go.style.marginTop = 12;
+        r.Add(go);
+        var back = UIFactory.Button("戻る", ModeScreen);
+        back.style.marginTop = 16;
+        r.Add(back);
+    }
+
+    private void Connect(string code)
+    {
+        var net = PvpNet.Ensure();
+        PvpOnline.Ensure(net);
+        net.Connect(PvpNet.SavedServer, code);
+    }
+
+    /// <summary>待つ画面。check が true を返したら次へ進む（check は自分で次の画面を出す）</summary>
+    private void Waiting(string text, Func<bool> check)
+    {
+        VisualElement r = NewScreen();
+        var label = UIFactory.Label(text, 30, Palette.Text, "c3-mincho");
+        r.Add(label);
+        var status = UIFactory.Label("", 18, Palette.TextSub);
+        status.style.marginTop = 10;
+        r.Add(status);
+        var back = UIFactory.Button("やめてタイトルへ戻る", () =>
+        {
+            if (PvpOnline.Instance != null) PvpOnline.Instance.Leave();
+            Close();
+            if (onBack != null) onBack();
+        });
+        back.style.marginTop = 24;
+        r.Add(back);
+        IVisualElementScheduledItem watch = null;
+        watch = r.schedule.Execute(() =>
+        {
+            var net = PvpNet.Instance;
+            if (net != null)
+            {
+                status.text = !string.IsNullOrEmpty(net.LastError) && !net.Connected ? "つながりません: " + net.LastError
+                    : !net.Connected ? "サーバーにつないでいます…"
+                    : net.PeerConnected ? "相手とつながっています" : "相手を待っています";
+            }
+            if (check != null && check()) watch.Pause();   // 次へ進んだら見張りをやめる
+        }).Every(200);
+    }
+
+    private void HostWaiting(PvpMatch.Rule rule)
+    {
+        string code = PvpNet.NewRoomCode();
+        Connect(code);
+        VisualElement r = NewScreen();
+        r.Add(UIFactory.Label("部屋コード", 28, Palette.TextSub, "c3-mincho"));
+        var codeLabel = UIFactory.Label(code, 120, Palette.GoldLight, "c3-mincho");
+        codeLabel.style.letterSpacing = 24;
+        r.Add(codeLabel);
+        var how = UIFactory.Label("このコードを相手に伝えて、「部屋に入る」で入ってもらってください（ルール: "
+            + (rule == PvpMatch.Rule.Cost ? "コスト制" : "ランダム配布") + "）", 20, Palette.Text);
+        how.style.marginTop = 6;
+        r.Add(how);
+        var status = UIFactory.Label("サーバーにつないでいます…", 18, Palette.TextSub);
+        status.style.marginTop = 12;
+        r.Add(status);
+        var back = UIFactory.Button("やめてタイトルへ戻る", () =>
+        {
+            if (PvpOnline.Instance != null) PvpOnline.Instance.Leave();
+            Close();
+            if (onBack != null) onBack();
+        });
+        back.style.marginTop = 24;
+        r.Add(back);
+        bool sent = false;
+        IVisualElementScheduledItem watch = null;
+        watch = r.schedule.Execute(() =>
+        {
+            if (sent) { watch.Pause(); return; }
+            var net = PvpNet.Instance;
+            var online = PvpOnline.Instance;
+            if (net == null || online == null || sent) return;
+            status.text = !net.Connected ? (!string.IsNullOrEmpty(net.LastError) ? "つながりません: " + net.LastError : "サーバーにつないでいます…")
+                : net.PeerConnected ? "相手が入りました" : "相手を待っています";
+            if (net.Connected && net.Seat == 0 && net.PeerConnected)
+            {
+                sent = true;
+                online.SendSetup(rule);
+                StartOnline();
+            }
+            else if (net.Seat == 1 && online.Setup != null)
+            {
+                sent = true;   // 同じコードの部屋がすでにあった（入る側になった）
+                StartOnline();
+            }
+        }).Every(200);
+    }
+
+    /// <summary>ルール・種・先手が決まったら、自分の編成へ</summary>
+    private void StartOnline()
+    {
+        var net = PvpNet.Instance;
+        var online = PvpOnline.Instance;
+        PvpNet.Msg setup = online.Setup;
+        PvpMatch.Rule rule = setup.rule == "Random" ? PvpMatch.Rule.Random : PvpMatch.Rule.Cost;
+        Team local = net.Seat == setup.first ? Team.Player : Team.Enemy;
+        PvpMatch.BeginOnline(rule, setup.seed, local);
+        if (rule == PvpMatch.Rule.Random) BuildRounds();
+        Team foe = local == Team.Player ? Team.Enemy : Team.Player;
+        BuildSide(local, () =>
+        {
+            online.SendTeam(PvpMatch.SideOf(local));
+            Waiting("相手の編成を待っています", () =>
+            {
+                if (online.PeerTeam == null) return false;
+                PvpOnline.ApplyTeam(online.PeerTeam, PvpMatch.SideOf(foe));
+                Summary();
+                return true;
+            });
+        });
+    }
+
     private void RuleScreen()
     {
         VisualElement r = NewScreen();
         var title = UIFactory.Label("対人戦", 64, Palette.Text, "c3-mincho");
         title.style.letterSpacing = 16;
         r.Add(title);
-        var sub = UIFactory.Label("1台で2人が交代で指します。先手は盤の下、後手は盤の上。", 20, Palette.TextSub);
+        var sub = UIFactory.Label(hostOnline ? "ルールを選ぶと部屋ができます。先手と後手は、相手が入ったときにランダムで決まります。"
+            : "1台で2人が交代で指します。先手は盤の下、後手は盤の上。", 20, Palette.TextSub);
         sub.style.marginBottom = 28;
         r.Add(sub);
 
@@ -96,12 +361,12 @@ public class PvpSetupUI : MonoBehaviour
         row.style.flexWrap = Wrap.Wrap;
         row.style.justifyContent = Justify.Center;
         row.Add(RuleCard("コスト制", "持ち点" + PvpMatch.Budget + "の中で、部員・将棋の駒・敵の駒・全軍強化を自由に選ぶ。"
-            + "\n部員は激レア9・レア6・ブロンズ4。全軍強化は" + PvpMatch.UpgradeCost + "（" + PvpMatch.MaxUpgrades + "枚まで）。", PvpMatch.Rule.Cost));
+            + "\n部員は4〜11（強さに合わせて決めた）。全軍強化は" + PvpMatch.UpgradeCost + "（" + PvpMatch.MaxUpgrades + "枚まで）。", PvpMatch.Rule.Cost));
         row.Add(RuleCard("ランダム配布", "3枚から1枚を選ぶのを" + PvpMatch.RandomRounds + "回。"
             + "\n2人に同じ候補が出るので、選び方の腕の勝負。", PvpMatch.Rule.Random));
         r.Add(row);
 
-        var back = UIFactory.Button("タイトルへ戻る", () => { Close(); if (onBack != null) onBack(); });
+        var back = UIFactory.Button("戻る", ModeScreen);
         back.style.marginTop = 24;
         r.Add(back);
     }
@@ -121,7 +386,7 @@ public class PvpSetupUI : MonoBehaviour
         p.style.marginBottom = 16;
         p.style.width = 360;
         card.Add(p);
-        card.Add(UIFactory.Button("このルールで遊ぶ", () => BeginRule(rule), "c3-button--primary", "c3-button--big"));
+        card.Add(UIFactory.Button("このルールで遊ぶ", () => { if (hostOnline) HostWaiting(rule); else BeginRule(rule); }, "c3-button--primary", "c3-button--big"));
         return card;
     }
 
@@ -388,6 +653,14 @@ public class PvpSetupUI : MonoBehaviour
             add.style.marginTop = 10;
             detail.Add(add);
             detail.Add(UIFactory.PieceText(UIFactory.FlavorOf(d, false), d.description, 17));
+            string pvpRule = d.pieceType == PieceType.Boku ? "対人戦では、強化は1体" + BalanceTuning.PvpBokuBuffCap + "回まで"
+                : d.pieceType == PieceType.Mitsuharu ? "対人戦では、お土産は1局" + BalanceTuning.PvpSouvenirCap + "回まで" : null;
+            if (pvpRule != null)
+            {
+                var note = UIFactory.Label(pvpRule, 17, Palette.EnemyLight, "c3-bold");
+                note.style.marginTop = 6;
+                detail.Add(note);
+            }
         }
         else if (focusUpgrade.HasValue)
         {
@@ -426,21 +699,7 @@ public class PvpSetupUI : MonoBehaviour
 
     private void BuildRounds()
     {
-        rounds = new List<List<DraftOption>>();
-        var offered = new List<PieceData>();   // 同じ部員が2回出ないように
-        PieceData[] all = BoardManager.Instance != null ? BoardManager.Instance.allPieceData : new PieceData[0];
-        for (int r = 0; r < PvpMatch.RandomRounds; r++)
-        {
-            var options = PiecePool.DrawOptions(all, 3, offered, PvpMatch.RandomDraftStage, true, null);
-            // 対人戦で使わない強化（応急修理・歩兵を消す）は、使える強化に差し替える
-            for (int i = 0; i < options.Count; i++)
-            {
-                if (options[i].piece != null) { offered.Add(options[i].piece); continue; }
-                if (options[i].train != null || Array.IndexOf(PvpMatch.Upgrades, options[i].upgrade) < 0)
-                    options[i] = DraftOption.Upgrade(PvpMatch.Upgrades[GameRng.Range(0, PvpMatch.Upgrades.Length)]);
-            }
-            rounds.Add(options);
-        }
+        rounds = PvpMatch.BuildRandomRounds();
     }
 
     private void RandomDraft(Team team, int round, Action next)
@@ -474,7 +733,7 @@ public class PvpSetupUI : MonoBehaviour
     private void Summary()
     {
         VisualElement r = NewScreen();
-        var t = UIFactory.Label("2人の編成がそろいました", 40, Palette.Text, "c3-mincho");
+        var t = UIFactory.Label(PvpMatch.Online ? "2人の編成がそろいました（あなたは" + PvpMatch.SideLong(PvpMatch.LocalTeam) + "）" : "2人の編成がそろいました", 40, Palette.Text, "c3-mincho");
         t.style.marginBottom = 18;
         r.Add(t);
         foreach (var side in new[] { PvpMatch.First, PvpMatch.Second })
@@ -493,7 +752,7 @@ public class PvpSetupUI : MonoBehaviour
             }
             r.Add(row);
         }
-        var start = UIFactory.Button("対局を始める", () =>
+        var start = UIFactory.Button(PvpMatch.Online ? "並べ方へ" : "対局を始める", () =>
         {
             Close();
             if (onDone != null) onDone();

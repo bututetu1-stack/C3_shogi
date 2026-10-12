@@ -31,6 +31,7 @@ public class PieceInstance
     public int awakenCharge;        // この局の活躍の数（覚醒まで）
     public bool isSealed;             // けいの「デバッグ完了」で能力を封じられた（その局のあいだ）
     public int bokuStacks;          // 僕に強化された量（覚醒した僕の強化の上限）
+    public int bokuBuffs;           // 僕に強化された回数（対人戦の上限 PvpBokuBuffCap）
     public bool substituteUsed;     // 覚醒した僕が身代わりを使った（1局に1回）
     public int posture;             // 体幹（成った・覚醒した RN に防がれるとたまる。最大体力に届くと忍殺）
     public bool stunHeld;           // 相手の手番のうちに動けなくなった（その手番の終わりには解かず、次の手番を動けずに過ごす）

@@ -35,6 +35,11 @@ public static class PvpMatch
     public static Side Second = new Side { team = Team.Enemy };
     /// <summary>この対局の乱数の種（巨岩の置き場所・ランダム配布の候補など。オンラインでは2人で同じ種を使う）</summary>
     public static int Seed;
+    /// <summary>オンラインの対人戦か（false なら1台で2人）</summary>
+    public static bool Online;
+    /// <summary>オンラインで、この画面の人が動かす陣営</summary>
+    public static Team LocalTeam = Team.Player;
+
     /// <summary>決着画面の「もう一度」で、同じルールの対人戦から始め直す（場面を読み直しても残る）</summary>
     public static bool RestartPending;
 
@@ -46,8 +51,8 @@ public static class PvpMatch
     /// <summary>ランダム配布の候補のレアの出方（1人用の第七局と同じ）</summary>
     public const int RandomDraftStage = 7;
     public const int BoardSize = 9;
-    /// <summary>後手の C3 の体力の上乗せ（先手が1手早いぶんの埋め合わせ）</summary>
-    public const int SecondC3Bonus = 1;
+    /// <summary>後手の C3 の体力の上乗せ（BalanceTuning.PvpSecondC3Bonus）</summary>
+    public static int SecondC3Bonus { get { return BalanceTuning.PvpSecondC3Bonus; } }
 
     /// <summary>コスト制で選べる部員（仲間の候補に出る18人）</summary>
     public static readonly PieceType[] Members =
@@ -80,21 +85,10 @@ public static class PvpMatch
     public static int CostOf(PieceData d)
     {
         if (d == null) return 0;
-        switch (d.pieceType)
-        {
-            case PieceType.Pawn: return 1;
-            case PieceType.Lance:
-            case PieceType.Knight: return 2;
-            case PieceType.Silver:
-            case PieceType.Gold: return 3;
-            case PieceType.Bishop:
-            case PieceType.Rook: return 5;
-            case PieceType.Kugutsu:
-            case PieceType.Ootate: return 2;
-            case PieceType.Yumihei:
-            case PieceType.Dokuro: return 3;
-            case PieceType.Kekkai: return 6;
-        }
+        int over;
+        if (Overrides().TryGetValue(d.pieceType, out over)) return over;
+        int cost;
+        if (CostTable.TryGetValue(d.pieceType, out cost)) return cost;
         switch (d.rarity)
         {
             case Rarity.Bronze: return 4;
@@ -103,6 +97,55 @@ public static class PvpMatch
             case Rarity.Legend: return 9;
             default: return 3;
         }
+    }
+
+    /// <summary>
+    /// コスト表（ここにない部員はレアリティどおり: ブロンズ4・レア6・激レア9）。
+    /// 2026-10-12、AIどうしの対人戦600局ずつで、入っていた側の勝ち点が50%に近づくように決めた叩き台（docs/balance/pvp_stats.js）。
+    /// 僕・光春は対人戦だけの上限（PvpBokuBuffCap・PvpSouvenirCap）を入れたあとの値
+    /// </summary>
+    private static readonly Dictionary<PieceType, int> CostTable = new Dictionary<PieceType, int>
+    {
+        // 部員（強い・弱いをレアリティの値から動かした）
+        { PieceType.Boku, 10 }, { PieceType.Mitsuharu, 6 }, { PieceType.Shimesaba, 8 }, { PieceType.Konishiki, 7 },
+        { PieceType.Nako, 7 }, { PieceType.Kei, 5 }, { PieceType.Kipu, 5 }, { PieceType.RN, 5 }, { PieceType.Negu, 4 },
+        { PieceType.Rihaku, 5 }, { PieceType.SN, 6 }, { PieceType.Niko, 8 }, { PieceType.Kawasemi, 8 },
+        // 将棋の駒
+        { PieceType.Pawn, 1 }, { PieceType.Lance, 2 }, { PieceType.Knight, 2 }, { PieceType.Silver, 2 }, { PieceType.Gold, 2 },
+        { PieceType.Bishop, 4 }, { PieceType.Rook, 5 },
+        // 敵の駒
+        { PieceType.Kugutsu, 2 }, { PieceType.Ootate, 2 }, { PieceType.Yumihei, 4 }, { PieceType.Dokuro, 3 }, { PieceType.Kekkai, 3 },
+    };
+
+    private static string parsedOverrides;
+    private static readonly Dictionary<PieceType, int> overrides = new Dictionary<PieceType, int>();
+
+    /// <summary>BalanceTuning.PvpCostOverrides（"Boku:8,Mitsuharu:6"）を読む</summary>
+    private static Dictionary<PieceType, int> Overrides()
+    {
+        string text = BalanceTuning.PvpCostOverrides ?? "";
+        if (text == parsedOverrides) return overrides;
+        parsedOverrides = text;
+        overrides.Clear();
+        foreach (string item in text.Split(','))
+        {
+            string[] kv = item.Split(':');
+            PieceType t;
+            int cost;
+            if (kv.Length == 2 && System.Enum.TryParse(kv[0].Trim(), out t) && int.TryParse(kv[1].Trim(), out cost)) overrides[t] = cost;
+        }
+        return overrides;
+    }
+
+    /// <summary>
+    /// 人が手で動かせる駒か。1人用は isManualControllable どおり（敵専用の駒は AI が動かす）。
+    /// 対人戦は敵専用の駒（髑髏など）も持ち主が動かせる（自動で動く駒・動けない駒は別）
+    /// </summary>
+    public static bool CanMoveByHand(PieceData d)
+    {
+        if (d == null) return false;
+        if (d.isManualControllable) return true;
+        return Active && !d.isAutoMove && !d.isImmovable;
     }
 
     /// <summary>同じ陣営に1枚までの駒（部員と結界）</summary>
@@ -135,6 +178,7 @@ public static class PvpMatch
     public static void Begin(Rule rule)
     {
         Active = true;
+        Online = false;
         CurrentRule = rule;
         First = new Side { team = Team.Player };
         Second = new Side { team = Team.Enemy };
@@ -142,9 +186,30 @@ public static class PvpMatch
         GameRng.InitState(Seed);
     }
 
+    /// <summary>オンラインの対局を始める（種と先手は部屋を作った人が決めて、2人で同じものを使う）</summary>
+    public static void BeginOnline(Rule rule, int seed, Team localTeam)
+    {
+        Active = true;
+        Online = true;
+        LocalTeam = localTeam;
+        CurrentRule = rule;
+        First = new Side { team = Team.Player };
+        Second = new Side { team = Team.Enemy };
+        Seed = seed;
+        GameRng.InitState(Seed);
+    }
+
     public static void End()
     {
         Active = false;
+        Online = false;
+    }
+
+    /// <summary>この画面の人の陣営の呼び方（オンラインは「あなた／相手」）</summary>
+    public static string WhoName(Team team)
+    {
+        if (!Online) return SideName(team);
+        return team == LocalTeam ? "あなた" : "相手";
     }
 
     /// <summary>
@@ -168,6 +233,49 @@ public static class PvpMatch
         if (team == Team.Enemy)
             for (int i = 0; i < order.Count; i++) order[i] = new Vector2Int(BoardSize - 1 - order[i].x, BoardSize - 1 - order[i].y);
         return order;
+    }
+
+    /// <summary>ランダム配布の候補（RandomRounds 回ぶん。同じ部員は2回出ない。2人に同じものを出す。GameRng を使う）</summary>
+    public static List<List<DraftOption>> BuildRandomRounds()
+    {
+        var rounds = new List<List<DraftOption>>();
+        var offered = new List<PieceData>();
+        PieceData[] all = BoardManager.Instance != null ? BoardManager.Instance.allPieceData : new PieceData[0];
+        for (int r = 0; r < RandomRounds; r++)
+        {
+            var options = PiecePool.DrawOptions(all, 3, offered, RandomDraftStage, true, null);
+            // 対人戦で使わない強化（応急修理・歩兵を消す）は、使える強化に差し替える
+            for (int i = 0; i < options.Count; i++)
+            {
+                if (options[i].piece != null) { offered.Add(options[i].piece); continue; }
+                if (options[i].train != null || System.Array.IndexOf(Upgrades, options[i].upgrade) < 0)
+                    options[i] = DraftOption.Upgrade(Upgrades[GameRng.Range(0, Upgrades.Length)]);
+            }
+            rounds.Add(options);
+        }
+        return rounds;
+    }
+
+    /// <summary>コスト制の編成をランダムに作る（自動プレイ用。持ち点に収まる札を、選べなくなるまで1枚ずつ足す）</summary>
+    public static void RandomCostBuild(Side side)
+    {
+        BoardManager bm = BoardManager.Instance;
+        for (int guard = 0; guard < 100; guard++)
+        {
+            var pieces = new List<PieceData>();
+            foreach (var group in new[] { Members, StandardPieces, EnemyPieces })
+                foreach (var t in group)
+                {
+                    PieceData d = bm.GetPieceDataByType(t);
+                    if (d != null && CannotAdd(side, d) == null) pieces.Add(d);
+                }
+            bool upgradeOk = CannotAddUpgrade(side) == null;
+            int total = pieces.Count + (upgradeOk ? Upgrades.Length : 0);
+            if (total == 0) return;
+            int pick = GameRng.Range(0, total);
+            if (pick < pieces.Count) side.pieces.Add(pieces[pick]);
+            else side.upgrades.Add(Upgrades[pick - pieces.Count]);
+        }
     }
 
     /// <summary>巨岩の置き場所（盤の中心で点対称に2〜4個。中段の3段のどこか）</summary>

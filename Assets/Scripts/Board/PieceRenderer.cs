@@ -260,6 +260,7 @@ public class PieceRenderer : MonoBehaviour
         badge.root = new GameObject(name);
         badge.root.transform.SetParent(stats, false);
         badge.root.transform.localPosition = pos;
+        ViewFlip.Upright(badge.root.transform);   // 盤を回して見るときも数字は正立
 
         var iconObj = new GameObject("Icon");
         iconObj.transform.SetParent(badge.root.transform, false);

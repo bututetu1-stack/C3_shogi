@@ -9,6 +9,7 @@ using UnityEngine;
 /// 起動は docs/balance/run_parallel.js から。
 ///
 ///   -c3sim -runs 10 -seed 1 -out 出力.jsonl [-think 150] [-force Monin] [-teitoku] [-awaken]
+///          [-pvp Cost|Random]   対人戦（AIどうし）を回す
 ///          [-set 名前=値]...        BalanceTuning の値を変える（int / float / bool / int[] はカンマ区切り、空なら空配列）
 ///          [-piece 駒=JSON]...      PieceData の一部を JsonUtility の形で上書き（例: C3={"baseHP":10}）
 /// 終了コード: 0 = 回し終えた、1 = 失敗（理由は標準エラーとログ）
@@ -49,7 +50,11 @@ public class SimCommandLine : MonoBehaviour
                 else if (args[i] == "-piece") SetPiece(args[i + 1]);
             }
 
-            int done = BalanceSimulator.RunBatch(runs, seed, think, output, null, options);
+            // 対人戦の自動プレイ（-pvp Cost か -pvp Random）
+            string pvp = Arg(args, "-pvp", null);
+            int done = !string.IsNullOrEmpty(pvp)
+                ? PvpSimulator.RunBatch((PvpMatch.Rule)Enum.Parse(typeof(PvpMatch.Rule), pvp), runs, seed, think, output)
+                : BalanceSimulator.RunBatch(runs, seed, think, output, null, options);
             Console.Out.WriteLine("c3sim done=" + done);
         }
         catch (Exception e)
@@ -79,6 +84,7 @@ public class SimCommandLine : MonoBehaviour
         else if (field.FieldType == typeof(bool)) field.SetValue(null, bool.Parse(value));
         else if (field.FieldType == typeof(int[]))
             field.SetValue(null, value.Length == 0 ? new int[0] : Array.ConvertAll(value.Split(','), int.Parse));
+        else if (field.FieldType == typeof(string)) field.SetValue(null, value);
         else throw new ArgumentException(name + " の型には対応していません");
     }
 

@@ -45,7 +45,11 @@
   - 歴戦の艦隊・なこが4回に1回狙う・門人が倒せる相手を狙う・僕は1手番で強化、を入れた。
   - 能力無効（結界・封印）で止まるのは、その駒自身の能力だけ。ほかの駒からもらった効果は効いたまま。
   - 駒の説明は、すべてその駒から見た書き方（敵の駒なら「相手の駒」がプレイヤーの駒）。
-  - 対人戦（ミニPCのサーバーでオンライン、編成はコスト制とランダム配布を選べる、艦隊・全軍強化・敵専用の駒や地形を使う、覚醒なし）を作る。案: https://claude.ai/artifact/LAJyfC8RrBM5g4djYrc95D
+  - 対人戦（オンライン、編成はコスト制とランダム配布を選べる、艦隊・全軍強化・敵専用の駒や地形を使う、覚醒なし）を作る。案: https://claude.ai/artifact/LAJyfC8RrBM5g4djYrc95D
+    - 中継サーバーは Cloudflare Workers の無料の枠（マンションでポート開放ができず、Tailscale も手間のため。ミニPCは使わない）。置き方は `server/README.md`。
+    - 対人戦の艦隊は深海なしで、艦娘が相手の駒を直接撃つ。ランダム配布は2人に同じ候補。敵専用の駒は編成で選べ、巨岩は点対称にランダム。
+    - 対人戦だけの決まり（2026-10-12）: 僕の強化は1体3回まで・光春のお土産は1局3回まで（長い対局ほど効きすぎたため。1人用は変えない）。持ち時間は1手60秒（3回続けて時間切れで負け）。コストは AI どうしの自動プレイで、札の勝ち点が50%に近づくように決める（`PvpMatch.CostTable`）。ケッコンの条件は「改二の MVP」のまま。
+    - コードは `Assets/Scripts/Pvp/`（状態・編成・並べ方・通信）と `Core/GameManager.Pvp.cs`。先手は Team.Player（下）、後手は Team.Enemy（上）。オンラインの後手の画面は盤を180度回す（`ViewFlip`）。2人のゲームは同じ種の `GameRng` で同じ手を再生する。
 
 ## バランステスト（自動プレイ）
 - `GameSim.Headless` の間は、本番のロジックを演出・待ち時間なしで回す。`BalanceSimulator.RunBatch(周回数, 最初の種, 思考ms, 出力jsonl, null, SimOptions)`。
@@ -54,7 +58,7 @@
   1. コードか駒のデータを変えたら、メニュー「C3将棋 > 自動プレイ用のビルドを作る」（または `isuzu-unity-cli call execute_code --code 'return SimBuild.Build();'`。プレイ中はできない）。`Builds/Sim/` に出る。
   2. 速報: `node docs/balance/run_parallel.js`（通常40周）。本番: `--full`（通常300周＋駒ごとの実験。仲間が部員だけになって1周が長くなり、1時間ほどかかる）。候補を試すときは `--out BalanceReports/候補名 --set EnemyAtkDivisor=6` のように、ビルドし直さずに `BalanceTuning` や駒のデータ（`--piece C3={"baseHP":10}`）を変えられる。
   3. 部員の強さは `--jobs base,force_Boku,awaken_Boku` のように、`force_X`（第一局から持つ）と `awaken_X`（局の初めから覚醒）を同じ種で比べる。
-  4. 集計は `node docs/balance/aggregate.js out.json BalanceReports/exp`（駒ごと。覚醒の回数も出る）、`node docs/balance/growth_stats.js 記録.jsonl`（練度）、`node docs/balance/fleet_stats.js 記録.jsonl`（艦隊戦）、`node docs/balance/compare.js <フォルダ> 名前…`（局ごとの勝率を並べる）、`node docs/balance/aggro_stats.js 記録.jsonl…`（敵に倒された自軍の駒・候補のレアの割合）。60周の全クリアは ±6ポイントほど揺れるので、難しさを決めるときは120周以上で比べる。
+  4. 集計は `node docs/balance/aggregate.js out.json BalanceReports/exp`（駒ごと。覚醒の回数も出る）、`node docs/balance/growth_stats.js 記録.jsonl`（練度）、`node docs/balance/fleet_stats.js 記録.jsonl`（艦隊戦）、`node docs/balance/compare.js <フォルダ> 名前…`（局ごとの勝率を並べる）、`node docs/balance/aggro_stats.js 記録.jsonl…`（敵に倒された自軍の駒・候補のレアの割合）。60周の全クリアは ±6ポイントほど揺れるので、難しさを決めるときは120周以上で比べる。対人戦（AIどうし）は `--jobs pvp_cost,pvp_random` で回し、`node docs/balance/pvp_stats.js` で集計する（コストは `--set PvpCostOverrides=Boku:11,…` で試せる）。
   5. デバッグと AI の比べ方（2026-10-12）: `node docs/balance/sanity.js 記録.jsonl`（時間切れ・手数の上限・記録の食い違いと、AI の読みの深さ・局面数・時間）、`node docs/balance/paired.js A.jsonl B.jsonl`（同じ種どうしの差と揺れ）、`node docs/balance/stage_margin.js A.jsonl B.jsonl`（局ごとの勝率・勝つまでの手数・自軍 C3 の残り体力。周の結果より揺れが小さいので、AI の強さはこちらで見る）。`run_parallel.js` はビルドのログに例外があれば `<out>/logs` に残して知らせる。並列の数は `--chunk`（1本が回す周）で決まるので、`周 ÷ chunk` が `--workers` 以上になるようにする。
   6. AI の読みの工夫は陣営ごとに `BalanceTuning.AiFeaturesPlayer` / `AiFeaturesEnemy`（ビットの和: 1 深く読む・2 手の順・4 取り合いの延長・8 能力の分かる評価）。`--set AiFeaturesEnemy=15` のように新旧を対戦させて測る。読みの中身は `docs/snippets/test_ai_tactics.cs`（`SimpleAI.dumpRoot`）、速さは `docs/snippets/bench_ai.cs`。
 - **確認は短く**: 変えた駒・設定だけを、同じ種で60周の速報（数分）で確かめるのが基本。全部まとめた確認は頼まれたときだけにして、回すときも裏に回して待たずに話を進める（ユーザーは長い待ち時間を嫌う。2026-10-10 に2回止められた）。回す前に時間を見積もり、10分を超えそうなら先に短い案を出す。

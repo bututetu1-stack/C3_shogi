@@ -12,7 +12,7 @@ public class FloatingText : MonoBehaviour
 
     public static void Spawn(Vector2Int boardPos, string message, Color color, float size = 3.2f, float delay = 0f)
     {
-        Spawn(new Vector3(boardPos.x, boardPos.y + 0.15f, 0f), message, color, size, delay);
+        Spawn(new Vector3(boardPos.x, boardPos.y, 0f) + ViewFlip.Up * 0.15f, message, color, size, delay);
     }
 
     public static void Spawn(Vector3 worldPos, string message, Color color, float size = 3.2f, float delay = 0f)
@@ -21,6 +21,7 @@ public class FloatingText : MonoBehaviour
         var obj = new GameObject("FloatingText");
         if (BattleEffects.Instance != null) obj.transform.SetParent(BattleEffects.Instance.EffectsRoot, false);
         obj.transform.position = worldPos;
+        ViewFlip.Upright(obj.transform);
 
         var ft = obj.AddComponent<FloatingText>();
         ft.text = obj.AddComponent<TextMeshPro>();
@@ -53,7 +54,7 @@ public class FloatingText : MonoBehaviour
         // ぽんと出て、ふわっと上がって消える
         float pop = t < 0.15f ? Ease.OutBack(t / 0.15f) : 1f;
         transform.localScale = Vector3.one * Mathf.Lerp(0.6f, 1f, pop);
-        transform.position = start + new Vector3(0f, Ease.OutCubic(t) * 0.55f, 0f);
+        transform.position = start + ViewFlip.Up * (Ease.OutCubic(t) * 0.55f);
         Color c = color;
         c.a = t < 0.7f ? 1f : 1f - (t - 0.7f) / 0.3f;
         text.color = c;

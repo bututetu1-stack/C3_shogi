@@ -63,7 +63,8 @@ public class PvpPlacement : MonoBehaviour
         panel = UIFactory.Panel();
         panel.style.position = Position.Absolute;
         // 案内は相手の陣の側に出す（自分の自陣に重ならないように）
-        if (team == Team.Player) panel.style.top = 96; else panel.style.bottom = 20;
+        bool campAtBottom = (team == Team.Player) != ViewFlip.Flipped;
+        if (campAtBottom) panel.style.top = 96; else panel.style.bottom = 20;
         panel.style.left = Length.Percent(50);
         panel.style.translate = new Translate(Length.Percent(-50), 0);
         panel.style.flexDirection = FlexDirection.Row;

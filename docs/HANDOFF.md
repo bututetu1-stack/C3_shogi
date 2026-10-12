@@ -33,6 +33,22 @@ PR #16〜#21 はユーザーの指示で順に main にマージした。その�
   - 両方の陣営で動くように直したもの: 光春の裏金（`GameManager.GetFund/SetFund`）、ニコの札（陣営ごとの編成）、艦隊（後手の提督も着任。対人戦は深海なしで艦娘が相手の駒を撃ち、`PvpFleetMoves=10` 手で帰投。艦娘のダメージ `PvpShipDamageDelta=-1`）、対潜（両方の歩兵・香車）。
   - 確かめ方: `docs/snippets/test_pvp.cs` → `ui_press.cs`（「準備ができた」「この並びで決める」を2回ずつ）→ `test_pvp_teitoku.cs` → `test_pvp_check.cs`、手番を回すのは `test_pvp_pass.cs`。
   - 数値（コスト・持ち点・後手の C3+1・艦隊）は叩き台。AI どうしの対人戦の自動プレイで直すのはこれから。
+- 作る順番の3（オンライン）: `feat/pvp-online`（#25 の上）。
+  - 中継サーバー: `server/worker.js`（Cloudflare Workers + Durable Objects。部屋コードごとに2人をつなぎ、手を中継して記録を残す。つなぎ直すと記録を送り直す）。置き方は `server/README.md`（ユーザーが `npx wrangler login` → `npx wrangler deploy` を打つ。まだ置いていない）。
+  - 手元で試す: `node server/local-relay.js 8787`（同じ通信の Node 版）と `node server/test-bot.js ws://localhost:8787 4321`（相手役。先手で1手指してあとはパス）。
+  - ゲーム側: `Pvp/PvpNet.cs`（WebSocket。読み終えた手を数えて、つなぎ直しの記録を飛ばす）、`Pvp/PvpOnline.cs`（setup・team・place・move・pass・resign・hash を送り合う。相手の手は同じ順番で再生）、`PvpSetupUI` に「1台で2人／部屋を作る／部屋に入る」と待つ画面。
+  - 後手の画面は盤を180度回す（`Visual/ViewFlip.cs`。カメラを回し、駒の数字・飛び出す文字・座標・吹き出し・予想ダメージを正立させる）。
+  - 確かめたこと: Unity（後手・盤が回る）と相手役で、部屋に入る → 編成 → 並べ方 → 相手の手の再生 → こちらの手を送る → 相手のパスで手番が戻る、まで。
+  - 持ち時間: `Pvp/PvpClock.cs`（1手 `PvpTurnSeconds=60` 秒、過ぎたら自動でパス、続けて `PvpTimeoutsToLose=3` 回で負け。オンラインは自分の手番だけ数える）。画面上部の手番の札に残り秒。
+  - 中継サーバーは `npx wrangler deploy --dry-run` と `wrangler dev`（手元の Cloudflare の実行環境）で確かめた（接続・中継・つなぎ直しの記録・満室）。wrangler 4.149.0 はユーザーの許可で取ってきた。2026-10-12 にユーザーのアカウントに置いた: https://c3shogi-relay.bututetu1-e75.workers.dev（サブドメインは自動で付いた bututetu1-e75 のまま、ユーザー了承）。ゲームの初めの値（`PvpNet.DefaultServer`）。本番に Node の相手役と Unity をつないで確かめた。
+  - 確かめていないこと: 2台のゲームどうし（盤の要約の食い違いが出ないか）。
+  - ケッコンの条件は「改二の MVP」のまま（2026-10-12 ユーザー決定。めったに起きないごほうび）。
+- 対人戦の自動プレイ（AIどうし）: `Sim/PvpSimulator.cs`。`node docs/balance/run_parallel.js --jobs pvp_cost,pvp_random --base 600 --chunk 25 --out BalanceReports/X`（1局0.7秒、1200局で1分ほど）。集計は `node docs/balance/pvp_stats.js X/pvp_cost.jsonl …`（先手・後手の勝率と、札ごとの「入っていた側の勝ち点」）。
+  - 編成はコスト制ならランダムに持ち点まで、ランダム配布なら同じ候補からランダム。両方の AI は自軍と同じ設定（引きつけ・駒も殴るは切る）。
+  - コストは `BalanceTuning.PvpCostOverrides="Boku:11,..."` でビルドし直さずに試せる。実験用の `PvpSimMirror`（同じ編成）・`PvpSimSecondFirst`（後手から指す）。
+  - 直した不具合: 髑髏などの「手で動かせない駒」を、AI は上側（Team.Enemy）だけ動かしていた → 対人戦は持ち主が動かせる（`PvpMatch.CanMoveByHand`）。AI の評価の結界・弓兵が上側の分しか見ていなかった → 対人戦は両側。
+  - 結果（`BalanceReports/pvp5_final`）: コスト表（`PvpMatch.CostTable`）で、コスト制の札はすべて勝ち点42〜60%、ランダム配布は42〜59%。僕・光春は長い対局ほど効きすぎた（68%・64%）ので、ユーザーの判断で対人戦だけ上限を付けた: 僕の強化は1体3回まで（`PvpBokuBuffCap`）、光春のお土産は1局3回まで（`PvpSouvenirCap`）。そのうえで僕10・光春6・〆鯖8。
+  - 先手・後手: AIどうしでは後手が57%（上乗せなし）。同じ編成なら上側51%・下側46%で、残りは AI の読みの細かな差。後手の C3 の上乗せは0にした（人どうしの手ごたえで決め直す）。
 - 案のページ: https://claude.ai/artifact/LAJyfC8RrBM5g4djYrc95D（ルールの叩き台・作り方・作る順番・4つの質問）。おすすめは「同じ手を両方で再生する」（ミニPCは手を中継するだけの Node.js + WebSocket。ゲームの乱数をゲーム用と演出用に分ける）。
 
 ## いまの状態（2026-10-11 の夜、ノート PC から引き継ぐとき）

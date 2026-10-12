@@ -45,9 +45,12 @@ for (const p of PIECES) jobs.push({ name: 'force_' + p, runs: opt.pieceRuns, arg
 jobs.push({ name: 'force_Teitoku', runs: opt.pieceRuns, args: ['-force', 'Monotetsu', '-teitoku'] });
 // 覚醒した姿の強さ（第一局から仲間にして、各局の初めから覚醒させる）。--jobs awaken_Konishiki のように名前で選ぶ
 for (const p of PIECES) jobs.push({ name: 'awaken_' + p, runs: opt.pieceRuns, args: ['-force', p, '-awaken'] });
+// 対人戦（AIどうし）。--jobs pvp_cost,pvp_random で選ぶ（周の数は --base）
+jobs.push({ name: 'pvp_cost', runs: opt.base, args: ['-pvp', 'Cost'] });
+jobs.push({ name: 'pvp_random', runs: opt.base, args: ['-pvp', 'Random'] });
 if (opt.jobs) jobs = jobs.filter(j => opt.jobs.includes(j.name));
 else if (!opt.full) jobs = jobs.filter(j => j.name === 'base');
-else jobs = jobs.filter(j => !j.name.startsWith('awaken_'));
+else jobs = jobs.filter(j => !j.name.startsWith('awaken_') && !j.name.startsWith('pvp_'));
 
 // ---- 準備 ----
 if (!fs.existsSync(exe)) { console.error('ビルドがありません: ' + exe + '\nUnity のメニュー「C3将棋 > 自動プレイ用のビルドを作る」で作ってください'); process.exit(1); }

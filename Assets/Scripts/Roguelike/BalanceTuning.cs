@@ -311,6 +311,19 @@ public static class BalanceTuning
     /// <summary>対人戦の艦隊: 深海がいないので、着任からこの手数（両軍の合計）で作戦完了・帰投する。艦娘の能力のダメージの増減</summary>
     public static int PvpFleetMoves = 10;
     public static int PvpShipDamageDelta = -1;
+    /// <summary>対人戦の持ち時間: 1手の秒数（0なら持ち時間なし）と、続けて時間切れになると負けになる回数</summary>
+    public static int PvpTurnSeconds = 60;
+    public static int PvpTimeoutsToLose = 3;
+    /// <summary>対人戦: 後手の C3 の体力の上乗せ（先手が1手早いぶんの埋め合わせ）</summary>
+    public static int PvpSecondC3Bonus = 0;   // 2026-10-12: AIどうしでは後手のほうが勝つ（上乗せなしで57%）ので0。人どうしの手ごたえで決め直す
+    /// <summary>対人戦のコストの上書き（"Boku:8,Mitsuharu:6" の形。空ならコスト表どおり。AIどうしの自動プレイで決める）</summary>
+    public static string PvpCostOverrides = "";
+    /// <summary>対人戦だけの上限（2026-10-12 ユーザー決定。長い対局ほど効きすぎるため）: 僕の強化は1体この回数まで、光春のお土産は1局この回数まで（0なら上限なし）</summary>
+    public static int PvpBokuBuffCap = 3;
+    public static int PvpSouvenirCap = 3;
+    /// <summary>対人戦の自動プレイの実験: 後手を先手と同じ編成にする・後手から指す（ふだんは false）</summary>
+    public static bool PvpSimMirror = false;
+    public static bool PvpSimSecondFirst = false;
     /// <summary>艦娘は提督の周り（入渠できるマス）から出撃する（false なら自陣のどこか）</summary>
     public static bool FleetSortieNearTeitoku = true;
 
