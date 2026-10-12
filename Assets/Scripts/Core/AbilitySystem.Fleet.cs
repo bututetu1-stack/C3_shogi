@@ -467,7 +467,7 @@ public partial class AbilitySystem
             if (PieceTypes.IsKanmusu(p.data.pieceType) && p.isAlive) ships.Add(p);
         foreach (var ship in ships)
         {
-            if (!ship.isAlive) continue;
+            if (!ship.isAlive || IsSuppressed(ship)) continue;
             Fleet fleet;
             fleets.TryGetValue(ship.linkedGroupId, out fleet);
             var source = GameSim.BeginSource(ship);

@@ -72,7 +72,7 @@ public class PieceRenderer : MonoBehaviour
         {
             if (pieceInstance == null) return Color.white;
             if (pieceInstance.stunned) return StunnedTint;
-            return pieceInstance.isSealed ? SealedTint : Color.white;
+            return AbilitySystem.IsSuppressed(pieceInstance) ? SealedTint : Color.white;
         }
     }
     public float BaseScale { get; private set; }
@@ -119,6 +119,29 @@ public class PieceRenderer : MonoBehaviour
         auraRenderer.sortingOrder = OrderShadow - 1;
         auraRenderer.enabled = false;
         auraPhase = Random.value * 6.28f;
+
+        // 結界: 能力を止める範囲（周り KekkaiRange マス）をうっすら塗って、縁に輪を描く（画像 KekkaiDome があればそれ）
+        if (piece.data.pieceType == PieceType.Kekkai)
+        {
+            float size = BalanceTuning.KekkaiRange * 2 + 1;
+            Color c = AbilitySystem.KekkaiPurple;
+            Sprite dome = EffectArt.Get("KekkaiDome");
+            var fillObj = CreateChild("KekkaiRange", transform);
+            fillObj.localScale = Vector3.one * size;
+            var fill = fillObj.gameObject.AddComponent<SpriteRenderer>();
+            fill.sprite = dome != null ? dome : SpriteFactory.SoftCircle;
+            fill.color = dome != null ? new Color(1f, 1f, 1f, 0.6f) : new Color(c.r, c.g, c.b, 0.22f);
+            fill.sortingOrder = OrderShadow - 1;
+            if (dome == null)
+            {
+                var ringObj = CreateChild("KekkaiEdge", transform);
+                ringObj.localScale = Vector3.one * size;
+                var ring = ringObj.gameObject.AddComponent<SpriteRenderer>();
+                ring.sprite = SpriteFactory.Ring;
+                ring.color = new Color(c.r, c.g, c.b, 0.45f);
+                ring.sortingOrder = OrderShadow - 1;
+            }
+        }
 
         // ステータスは駒から見て 左肩=攻撃、右肩=防御、右下=体力（数字は常に正立）
         stats = CreateChild("Stats", transform);

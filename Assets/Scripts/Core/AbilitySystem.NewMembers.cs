@@ -81,13 +81,14 @@ public partial class AbilitySystem
         if (victim == null) return;
         BoardManager bm = BoardManager.Instance;
         PieceType v = victim.data.pieceType;
-        bool fodder = v == PieceType.Chuka || v == PieceType.Dopa;
+        bool fodder = v == PieceType.Chuka || v == PieceType.Dopa || IsObstacle(v);
 
         // 裏帳簿: 盤にいる光春（成る前）がいれば、味方が敵を倒すたびに裏金がたまる
         if (victim.team == Team.Enemy && !fodder && GameManager.Instance != null)
         {
             foreach (var m in AlivePieces(Team.Player, PieceType.Mitsuharu))
             {
+                if (IsSuppressed(m)) continue;
                 if (m.isPromoted || GameManager.Instance.SecretFund >= BalanceTuning.MitsuharuFundMax) break;
                 GameManager.Instance.SecretFund += BalanceTuning.MitsuharuFundPerKill;
                 GameManager.Instance.SecretFund = Mathf.Min(GameManager.Instance.SecretFund, BalanceTuning.MitsuharuFundMax);
@@ -104,7 +105,7 @@ public partial class AbilitySystem
         {
             foreach (var k in AlivePieces(team, PieceType.Kawasemi))
             {
-                if (k == victim) continue;
+                if (k == victim || IsSuppressed(k)) continue;
                 if (Mathf.Max(Mathf.Abs(k.boardPosition.x - pos.x), Mathf.Abs(k.boardPosition.y - pos.y)) > BalanceTuning.KawasemiScavengeRange) continue;
                 int parts = PartsOf(k);
                 if (parts >= BalanceTuning.KawasemiPartsMax) continue;
@@ -146,7 +147,7 @@ public partial class AbilitySystem
         if (team != Team.Player || GameManager.Instance == null) yield break;
         foreach (var m in AlivePieces(team, PieceType.Mitsuharu))
         {
-            if (m.isPromoted) continue;
+            if (m.isPromoted || IsSuppressed(m)) continue;
             // 会計の権力: 盤にいるあいだ、手番ごとに裏金がたまる
             if (GameManager.Instance.SecretFund < BalanceTuning.MitsuharuFundMax && BalanceTuning.MitsuharuFundPerTurn > 0)
             {
@@ -282,7 +283,7 @@ public partial class AbilitySystem
     {
         foreach (var niko in AlivePieces(team, PieceType.Niko))
         {
-            if (!niko.isAlive) continue;
+            if (!niko.isAlive || IsSuppressed(niko)) continue;
             List<NikoTask> deck;
             if (!nikoDecks.TryGetValue(niko, out deck)) { deck = new List<NikoTask>(); nikoDecks[niko] = deck; }
 
@@ -577,7 +578,7 @@ public partial class AbilitySystem
     public void OnAttackedAndSurvived(PieceInstance attacker, PieceInstance target)
     {
         if (target == null || attacker == null || !target.isAlive || !attacker.isAlive) return;
-        if (target.data.pieceType != PieceType.Shimesaba || target.isSealed) return;
+        if (target.data.pieceType != PieceType.Shimesaba || IsSuppressed(target)) return;
         int damage = CombatResolver.AbilityDamage(target, BalanceTuning.ShimesabaRetort + (target.awakened ? BalanceTuning.ShimesabaAwakenedRetortBonus : 0));
         FloatingText.Spawn(target.boardPosition, target.awakened ? "論破" : "レスバ", ArgueWhite, 3.2f);
         if (target.awakened && BattleEffects.Instance != null) BattleEffects.Instance.PlayAwakenBurst("LogicShatter", attacker.boardPosition, target.data.awakenColor);
@@ -620,7 +621,7 @@ public partial class AbilitySystem
     {
         foreach (var s in AlivePieces(team, PieceType.Shimesaba))
         {
-            if (!s.isAlive || !s.isPromoted || s.isSealed) continue;
+            if (!s.isAlive || !s.isPromoted || IsSuppressed(s)) continue;
             int left;
             if (!doomCountdown.TryGetValue(s, out left)) left = DoomCountdown(s);
             left--;
@@ -674,7 +675,7 @@ public partial class AbilitySystem
     {
         foreach (var k in AlivePieces(team, PieceType.Kawasemi))
         {
-            if (!k.isAlive || !(k.isPromoted || k.awakened) || k.isSealed) continue;
+            if (!k.isAlive || !(k.isPromoted || k.awakened) || IsSuppressed(k)) continue;
             bool good = k.awakened || Random.value < KawasemiGoodChance(PartsOf(k));
             Team foe = team == Team.Player ? Team.Enemy : Team.Player;
             string what;

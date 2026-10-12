@@ -311,6 +311,8 @@ public static class SpriteFactory
                     return Cached("pieceart_abyss", () => RecolorPieceArt(PieceArt, new Color(0.08f, 0.11f, 0.15f), true, new Color(0.25f, 0.75f, 0.72f, 0.3f)));
                 case "awakened":
                     return Cached("pieceart_awakened", () => RecolorPieceArt(PieceArt, new Color(0.17f, 0.09f, 0.24f), true, new Color(1f, 0.8f, 0.4f, 0.4f)));
+                case "stone":
+                    return Cached("pieceart_stone", () => RecolorPieceArt(PieceArt, new Color(0.55f, 0.55f, 0.53f), false, new Color(1f, 1f, 1f, 0.2f)));
             }
         }
         switch (kind)
@@ -323,6 +325,8 @@ public static class SpriteFactory
                 return Cached("piece_abyss", () => CreatePieceBody(256, Palette.Hex(0x151B25), BodyFinish.Lacquer, Palette.Hex(0x3FB8B0), Palette.Hex(0x2F6F78)));
             case "awakened":
                 return Cached("piece_awakened", () => CreatePieceBody(256, Palette.Hex(0x2A1638), BodyFinish.Lacquer, Palette.Gold, Palette.Hex(0xB07CE8)));
+            case "stone":
+                return Cached("piece_stone", () => CreatePieceBody(256, Palette.Hex(0x8C8C88), BodyFinish.Metal, Palette.Hex(0x3A3A3A), Palette.Hex(0xBDBDB8)));
             default:
                 return PieceBody(Rarity.Normal);
         }

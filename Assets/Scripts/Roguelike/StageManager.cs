@@ -68,14 +68,72 @@ public class StageManager : MonoBehaviour
     public void SetupEnemyForStage(int stage)
     {
         BoardManager bm = BoardManager.Instance;
-        foreach (var p in GetEnemyLayout(stage, bm.CurrentBoardSize))
+        int variant = GameManager.Instance != null ? GameManager.Instance.VariantFor(stage) : 0;
+        foreach (var p in GetEnemyLayout(stage, bm.CurrentBoardSize, variant))
             bm.SpawnPiece(bm.GetPieceDataByType(p.type), Team.Enemy, p.position);
 
         ApplyStageScaling(bm, stage);
     }
 
-    /// <summary>ステージごとの敵の初期配置（盤上端が敵陣）</summary>
+    // ================================================================
+    // 布陣の型（局ごとに2〜3通り。周の初めにどれを使うか決める。0 はもとの布陣）
+    // ================================================================
+    private static readonly string[][] VariantNames =
+    {
+        null,
+        new[] { null, "岩場", "傀儡" },             // 1
+        new[] { null, "弓兵の陣", "端の砦" },       // 2
+        new[] { null, "大盾の列", "岩の中原" },     // 3
+        new[] { null, "猪突の突撃", "妖狐の森" },   // 4
+        new string[] { null },                      // 5 将棋の陣は本将棋のまま
+        new[] { null, "大盾の構え", "結界の陣" },   // 6
+        new[] { null, "影と狐", "影と弓" },         // 7
+        new[] { null, "岩の城", "結界と傀儡" },     // 8
+        new[] { null, "天狗と弓", "天狗と猪" },     // 9
+        new[] { null, "結界の護り", "弓と盾" },     // 10
+        new[] { null, "狐と骨", "結界の風" },       // 11
+        new[] { null, "龍の結界", "猪と盾" },       // 12
+        new[] { null, "傀儡の門", "狐と結界" },     // 13
+        new[] { null, "盾と弓", "結界の審判" },     // 14
+        new string[] { null },                      // 15 魔王降臨はそのまま
+    };
+
+    /// <summary>その局の布陣の型の数</summary>
+    public static int VariantCount(int stage)
+    {
+        return stage >= 1 && stage < VariantNames.Length ? VariantNames[stage].Length : 1;
+    }
+
+    /// <summary>型の名前（もとの布陣は null）</summary>
+    public static string VariantName(int stage, int variant)
+    {
+        if (stage < 1 || stage >= VariantNames.Length) return null;
+        string[] names = VariantNames[stage];
+        return variant >= 0 && variant < names.Length ? names[variant] : null;
+    }
+
+    /// <summary>局の名前に、型の名前を添える（例「初陣 ― 岩場」）</summary>
+    public string GetStageTitle(int stage)
+    {
+        string name = GetStageName(stage);
+        string v = VariantName(stage, GameManager.Instance != null ? GameManager.Instance.VariantFor(stage) : 0);
+        return v == null ? name : name + " ― " + v;
+    }
+
+    /// <summary>ステージごとの敵の初期配置（もとの型）</summary>
     public static List<Placement> GetEnemyLayout(int stage, int size)
+    {
+        return GetEnemyLayout(stage, size, 0);
+    }
+
+    /// <summary>ステージごとの敵の初期配置（盤上端が敵陣）。variant が 0 ならもとの布陣、ほかは型の布陣</summary>
+    public static List<Placement> GetEnemyLayout(int stage, int size, int variant)
+    {
+        if (variant > 0 && variant < VariantCount(stage)) return GetVariantLayout(stage, size, variant);
+        return GetBaseLayout(stage, size);
+    }
+
+    private static List<Placement> GetBaseLayout(int stage, int size)
     {
         var list = new List<Placement>();
         int c = size / 2;
@@ -248,6 +306,243 @@ public class StageManager : MonoBehaviour
         return list;
     }
 
+    /// <summary>型の布陣。前半は駒を少なめにして、新しい敵を1つずつ見せる</summary>
+    private static List<Placement> GetVariantLayout(int stage, int size, int variant)
+    {
+        int c = size / 2;
+        int top = size - 1;
+        var list = new List<Placement>();
+        switch (stage * 10 + variant)
+        {
+            // 第一局（5×5）
+            case 11: // 岩場: C3 は隅、巨岩が道をふさぐ
+                list.Add(new Placement(PieceType.C3, 0, top));
+                list.Add(new Placement(PieceType.Gold, 1, top));
+                list.Add(new Placement(PieceType.Pawn, 0, top - 1));
+                list.Add(new Placement(PieceType.Pawn, 1, top - 1));
+                list.Add(new Placement(PieceType.Kyogan, c, top - 1));
+                list.Add(new Placement(PieceType.Kyogan, size - 1, top - 1));
+                break;
+            case 12: // 傀儡: C3 の前に傀儡
+                list.Add(new Placement(PieceType.C3, c, top));
+                list.Add(new Placement(PieceType.Kugutsu, c, top - 1));
+                list.Add(new Placement(PieceType.Pawn, c - 1, top - 1));
+                list.Add(new Placement(PieceType.Pawn, c + 1, top - 1));
+                list.Add(new Placement(PieceType.Gold, c + 1, top));
+                break;
+
+            // 第二局（5×5）
+            case 21: // 弓兵の陣
+                list.Add(new Placement(PieceType.C3, c, top));
+                list.Add(new Placement(PieceType.Yumihei, c - 1, top));
+                list.Add(new Placement(PieceType.Yumihei, c + 1, top));
+                list.Add(new Placement(PieceType.Silver, 0, top));
+                list.Add(new Placement(PieceType.Pawn, 0, top - 1));
+                list.Add(new Placement(PieceType.Pawn, c, top - 1));
+                list.Add(new Placement(PieceType.Pawn, size - 1, top - 1));
+                break;
+            case 22: // 端の砦: C3 は隅、金銀と巨岩で守る
+                list.Add(new Placement(PieceType.C3, size - 1, top));
+                list.Add(new Placement(PieceType.Gold, size - 2, top));
+                list.Add(new Placement(PieceType.Silver, size - 1, top - 1));
+                list.Add(new Placement(PieceType.Kyogan, size - 2, top - 1));
+                list.Add(new Placement(PieceType.Pawn, 0, top - 1));
+                list.Add(new Placement(PieceType.Pawn, 1, top - 1));
+                list.Add(new Placement(PieceType.Pawn, 2, top - 1));
+                break;
+
+            // 第三局（7×7）
+            case 31: // 大盾の列: 大盾を前に、後ろから弓兵（横から攻めれば崩せる）
+                list.Add(new Placement(PieceType.C3, c, top));
+                list.Add(new Placement(PieceType.Ootate, c - 1, top - 2));
+                list.Add(new Placement(PieceType.Ootate, c + 1, top - 2));
+                list.Add(new Placement(PieceType.Pawn, c, top - 2));
+                list.Add(new Placement(PieceType.Pawn, 0, top - 2));
+                list.Add(new Placement(PieceType.Pawn, size - 1, top - 2));
+                list.Add(new Placement(PieceType.Yumihei, 1, top - 1));
+                list.Add(new Placement(PieceType.Gold, c - 1, top));
+                list.Add(new Placement(PieceType.Gold, c + 1, top));
+                break;
+            case 32: // 岩の中原: 盤の真ん中に巨岩を散らす
+                list.Add(new Placement(PieceType.C3, c, top));
+                list.Add(new Placement(PieceType.Kyogan, 1, c));
+                list.Add(new Placement(PieceType.Kyogan, size - 2, c));
+                list.Add(new Placement(PieceType.Kyogan, c, c));
+                list.Add(new Placement(PieceType.Bishop, c, top - 1));
+                list.Add(new Placement(PieceType.Silver, 0, top));
+                list.Add(new Placement(PieceType.Silver, size - 1, top));
+                list.Add(new Placement(PieceType.Gold, c - 1, top));
+                list.Add(new Placement(PieceType.Gold, c + 1, top));
+                list.Add(new Placement(PieceType.Pawn, 1, top - 2));
+                list.Add(new Placement(PieceType.Pawn, c, top - 2));
+                list.Add(new Placement(PieceType.Pawn, size - 2, top - 2));
+                break;
+
+            // 第四局（7×7）
+            case 41: // 猪突の突撃
+                list.Add(new Placement(PieceType.C3, c, top));
+                list.Add(new Placement(PieceType.Chototsu, 1, top - 1));
+                list.Add(new Placement(PieceType.Chototsu, size - 2, top - 1));
+                list.Add(new Placement(PieceType.Pawn, c, top - 2));
+                list.Add(new Placement(PieceType.Gold, c - 1, top));
+                list.Add(new Placement(PieceType.Gold, c + 1, top));
+                list.Add(new Placement(PieceType.Silver, 1, top));
+                list.Add(new Placement(PieceType.Silver, size - 2, top));
+                list.Add(new Placement(PieceType.Pawn, 0, top - 2));
+                list.Add(new Placement(PieceType.Pawn, c - 1, top - 2));
+                list.Add(new Placement(PieceType.Pawn, c + 1, top - 2));
+                list.Add(new Placement(PieceType.Pawn, size - 1, top - 2));
+                break;
+            case 42: // 妖狐の森: 巨岩の木立に妖狐が潜む
+                list.Add(new Placement(PieceType.C3, c, top));
+                list.Add(new Placement(PieceType.Youko, c - 1, top - 1));
+                list.Add(new Placement(PieceType.Youko, c + 1, top - 1));
+                list.Add(new Placement(PieceType.Kyogan, 1, c));
+                list.Add(new Placement(PieceType.Kyogan, c, c));
+                list.Add(new Placement(PieceType.Kyogan, size - 2, c));
+                list.Add(new Placement(PieceType.Gold, c - 1, top));
+                list.Add(new Placement(PieceType.Gold, c + 1, top));
+                list.Add(new Placement(PieceType.Silver, 0, top));
+                list.Add(new Placement(PieceType.Silver, size - 1, top));
+                list.Add(new Placement(PieceType.Pawn, 1, top - 2));
+                list.Add(new Placement(PieceType.Pawn, size - 2, top - 2));
+                break;
+
+            // 第六局から（9×9）
+            case 61: // 大盾の構え
+                list.Add(new Placement(PieceType.C3, c, top));
+                AddStandardArmy(list, size, PieceType.Kishou, PieceType.Kishou, PieceType.Lance, PieceType.Lance);
+                for (int x = c - 1; x <= c + 1; x++) Replace(list, x, top - 2, PieceType.Ootate);
+                break;
+            case 62: // 結界の陣（結界が初めて出る）
+                list.Add(new Placement(PieceType.C3, c, top));
+                AddStandardArmy(list, size, PieceType.Kishou, PieceType.Kishou, PieceType.Lance, PieceType.Lance);
+                list.Add(new Placement(PieceType.Kekkai, c, top - 1));
+                break;
+            case 71: // 影と狐
+                list.Add(new Placement(PieceType.C3, c, top));
+                AddStandardArmy(list, size, PieceType.Youko, PieceType.Youko, PieceType.Kagenin, PieceType.Kagenin);
+                list.Add(new Placement(PieceType.Kyogan, 2, c));
+                list.Add(new Placement(PieceType.Kyogan, size - 3, c));
+                break;
+            case 72: // 影と弓
+                list.Add(new Placement(PieceType.C3, c, top));
+                AddStandardArmy(list, size, PieceType.Kishou, PieceType.Knight, PieceType.Kagenin, PieceType.Kagenin);
+                Replace(list, 2, top - 2, PieceType.Yumihei);
+                Replace(list, size - 3, top - 2, PieceType.Yumihei);
+                list.Add(new Placement(PieceType.Kyogan, c, c));
+                break;
+            case 81: // 岩の城
+                list.Add(new Placement(PieceType.C3, c, top));
+                AddStandardArmy(list, size, PieceType.Kishou, PieceType.Kishou, PieceType.Lance, PieceType.Lance);
+                list.Add(new Placement(PieceType.Teppeki, c, top - 1));
+                Replace(list, c - 1, top - 2, PieceType.Ootate);
+                Replace(list, c + 1, top - 2, PieceType.Ootate);
+                list.Add(new Placement(PieceType.Kyogan, 2, top - 3));
+                list.Add(new Placement(PieceType.Kyogan, size - 3, top - 3));
+                list.Add(new Placement(PieceType.Kyogan, c, c));
+                break;
+            case 82: // 結界と傀儡
+                list.Add(new Placement(PieceType.C3, c, top));
+                AddStandardArmy(list, size, PieceType.Kishou, PieceType.Kishou, PieceType.Lance, PieceType.Lance);
+                list.Add(new Placement(PieceType.Teppeki, c, top - 1));
+                Replace(list, size - 2, top - 1, PieceType.Kekkai);
+                list.Add(new Placement(PieceType.Kugutsu, c, top - 3));
+                break;
+            case 91: // 天狗と弓
+                list.Add(new Placement(PieceType.C3, c, top));
+                AddStandardArmy(list, size, PieceType.Tengu, PieceType.Tengu, PieceType.Kagenin, PieceType.Kagenin);
+                list.Add(new Placement(PieceType.Teppeki, c, top - 1));
+                Replace(list, 1, top - 2, PieceType.Yumihei);
+                Replace(list, size - 2, top - 2, PieceType.Yumihei);
+                break;
+            case 92: // 天狗と猪（猪突が端から走り出す）
+                list.Add(new Placement(PieceType.C3, c, top));
+                AddStandardArmy(list, size, PieceType.Tengu, PieceType.Tengu, PieceType.Chototsu, PieceType.Chototsu);
+                list.Add(new Placement(PieceType.Teppeki, c, top - 1));
+                Remove(list, 0, top - 2);
+                Remove(list, size - 1, top - 2);
+                break;
+
+            // ボスの局と後半: もとの布陣の護衛を入れ替える
+            default:
+                list = GetBaseLayout(stage, size);
+                switch (stage * 10 + variant)
+                {
+                    case 101: // 結界の護り
+                        Replace(list, c - 2, top - 1, PieceType.Kekkai);
+                        Replace(list, c + 2, top - 1, PieceType.Kekkai);
+                        break;
+                    case 102: // 弓と盾
+                        Replace(list, 0, top, PieceType.Yumihei);
+                        Replace(list, size - 1, top, PieceType.Yumihei);
+                        Replace(list, c - 2, top, PieceType.Ootate);
+                        Replace(list, c + 2, top, PieceType.Ootate);
+                        break;
+                    case 111: // 狐と骨
+                        Replace(list, 0, top - 1, PieceType.Youko);
+                        Replace(list, size - 1, top - 1, PieceType.Youko);
+                        break;
+                    case 112: // 結界の風
+                        Replace(list, c - 1, top - 1, PieceType.Kekkai);
+                        Replace(list, c + 1, top - 1, PieceType.Yumihei);
+                        break;
+                    case 121: // 龍の結界
+                        Replace(list, c - 1, top - 1, PieceType.Kekkai);
+                        Replace(list, c + 2, top - 1, PieceType.Yumihei);
+                        break;
+                    case 122: // 猪と盾
+                        Replace(list, 0, top, PieceType.Chototsu);
+                        Replace(list, size - 1, top, PieceType.Chototsu);
+                        Remove(list, 0, top - 2);
+                        Remove(list, size - 1, top - 2);
+                        Replace(list, c - 2, top, PieceType.Ootate);
+                        Replace(list, c + 2, top, PieceType.Ootate);
+                        break;
+                    case 131: // 傀儡の門
+                        Replace(list, 0, top - 1, PieceType.Kugutsu);
+                        Replace(list, size - 1, top - 1, PieceType.Kugutsu);
+                        break;
+                    case 132: // 狐と結界
+                        Replace(list, 0, top, PieceType.Youko);
+                        Replace(list, size - 1, top, PieceType.Youko);
+                        Replace(list, c + 1, top - 1, PieceType.Kekkai);
+                        break;
+                    case 141: // 盾と弓
+                        Replace(list, c - 1, top, PieceType.Ootate);
+                        Replace(list, c + 1, top, PieceType.Ootate);
+                        Replace(list, 0, top - 1, PieceType.Yumihei);
+                        Replace(list, size - 1, top - 1, PieceType.Yumihei);
+                        break;
+                    case 142: // 結界の審判
+                        Replace(list, c + 1, top - 1, PieceType.Kekkai);
+                        Replace(list, 1, top - 1, PieceType.Youko);
+                        Replace(list, size - 2, top - 1, PieceType.Youko);
+                        break;
+                }
+                break;
+        }
+        return list;
+    }
+
+    /// <summary>(x, y) にいる駒を別の種類に替える（いなければ置く）</summary>
+    private static void Replace(List<Placement> list, int x, int y, PieceType type)
+    {
+        for (int i = 0; i < list.Count; i++)
+        {
+            if (list[i].position.x != x || list[i].position.y != y) continue;
+            list[i] = new Placement(type, x, y);
+            return;
+        }
+        list.Add(new Placement(type, x, y));
+    }
+
+    /// <summary>(x, y) の駒を取り除く</summary>
+    private static void Remove(List<Placement> list, int x, int y)
+    {
+        list.RemoveAll(p => p.position.x == x && p.position.y == y);
+    }
+
     private static void AddPawnRow(List<Placement> list, int size, int row)
     {
         for (int x = 0; x < size; x++)
@@ -290,8 +585,10 @@ public class StageManager : MonoBehaviour
         }
         else
         {
-            enemy.AddMaxHP(stage / BalanceTuning.EnemyHpDivisor);
-            enemy.stageBonusATK = EnemyStageAtk(stage);
+            // 前半（EnemyScaleFromStage より前）は上乗せしない
+            int late = Mathf.Max(0, stage - BalanceTuning.EnemyScaleFromStage + 1);
+            enemy.AddMaxHP(late / Mathf.Max(1, BalanceTuning.EnemyLateHpDivisor));
+            enemy.stageBonusATK = late / Mathf.Max(1, BalanceTuning.EnemyLateAtkDivisor);
             enemy.bonusATK += enemy.stageBonusATK;
         }
         CombatResolver.RefreshStats(enemy);

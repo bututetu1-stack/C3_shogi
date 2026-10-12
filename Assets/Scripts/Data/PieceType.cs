@@ -54,7 +54,16 @@ public enum PieceType
     // PlayStation 鯖の部員
     RN,         // RN（STS2・ポケモンスリープ・SEKIRO）
     Negu,       // 寝癖（正式名は「ねぐせ」、成ると外跳）
-    Mutou       // 無糖（成るとアーマード・コア）
+    Mutou,      // 無糖（成るとアーマード・コア）
+    // 第9版の敵駒（2026-10-11）
+    Kyogan,     // 巨岩（地形）
+    Kugutsu,    // 傀儡（挑発）
+    Yumihei,    // 弓兵（射撃）
+    Ootate,     // 大盾（正面に強い）
+    Chototsu,   // 猪突（助走）
+    Youko,      // 妖狐（倒すと狐火）
+    Kitsunebi,  // 狐火（妖狐が残す）
+    Kekkai      // 結界（能力無効）
 }
 
 /// <summary>駒の種類のまとまり</summary>

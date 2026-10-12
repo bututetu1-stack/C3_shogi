@@ -8,6 +8,13 @@ public static class BalanceTuning
     public static int EnemyAtkDivisor = 4;
     /// <summary>敵の攻撃の上乗せを何局遅らせるか（体力の上乗せと同じ局で一度に上がらないように）</summary>
     public static int EnemyAtkDelay = 0;
+    /// <summary>敵の駒（C3・深海を除く）に局の上乗せが付き始める局。前半は上乗せせず、敵の種類と布陣で難しさを作る（第9版）。
+    /// 上乗せは「この局を1とした局の数」を、下の割る数で割った値</summary>
+    public static int EnemyScaleFromStage = 8;
+    /// <summary>後半の敵の駒の上乗せ: 体力 = (局 − 7) ÷ この値、攻撃 = (局 − 7) ÷ EnemyLateAtkDivisor（第八局から。第十五局で体力+8・攻撃+4）。
+    /// 深海・艦娘の上乗せは EnemyAtkDivisor（局 ÷ 4）のまま</summary>
+    public static int EnemyLateHpDivisor = 1;
+    public static int EnemyLateAtkDivisor = 2;
     /// <summary>敵の体力の上乗せ = 局 ÷ この値（2なら第二局から+1、第十五局で+7）</summary>
     public static int EnemyHpDivisor = 2;
     /// <summary>敵C3の体力の上乗せ = (局−1) ÷ この値</summary>
@@ -194,6 +201,17 @@ public static class BalanceTuning
     public static int MutouBossBonus = 1;
     /// <summary>無糖（AC）: スタッガーした敵が次に受けるダメージの上乗せ</summary>
     public static int MutouStaggerDamage = 2;
+
+    // ---- 第9版の敵駒 ----
+
+    /// <summary>結界: 能力を止める範囲（周り何マス）</summary>
+    public static int KekkaiRange = 2;
+    /// <summary>弓兵: 手番の終わりに射る矢のダメージの元の値（防御で減る）</summary>
+    public static int YumiheiDamage = 1;
+    /// <summary>大盾: 正面から受ける通常の攻撃を減らす量</summary>
+    public static int OotateGuard = 2;
+    /// <summary>妖狐: 倒されたとき残す狐火の数</summary>
+    public static int YoukoFoxfires = 2;
 
     // ---- 局の合間のできごと（部の時間） ----
 

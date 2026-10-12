@@ -1,0 +1,67 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01e8fb0f6e3e9d54297b027b2b9c6457, type: 3}
+  m_Name: Ootate
+  m_EditorClassIdentifier: Shogi::PieceData
+  pieceType: 54
+  displayName: "\u5927\u76FE"
+  pieceName: "\u5927\u76FE"
+  flavor: "\u5927\u304D\u306A\u76FE\u3092\u69CB\u3048\u305F\u5175\u3002"
+  description: "\u6B63\u9762\uFF08\u81EA\u8ECD\u306E\u5074\uFF09\u304B\u3089\u53D7\u3051\u308B\u901A\u5E38\u306E\u653B\u6483\u306E\u30C0\u30E1\u30FC\u30B8\u30922\u6E1B\u3089\u3059\u3002\u6A2A\u3084\u5F8C\u308D\u304B\u3089\u306F\u666E\u901A\u306B\u901A\u308B\u3002"
+  baseATK: 2
+  baseDEF: 1
+  baseHP: 4
+  rarity: 0
+  moveDirections:
+  - direction: {x: 0, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 1, y: 0}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: -1, y: 0}
+    maxDistance: 1
+    canJump: 0
+  canPromote: 0
+  promotedDisplayName: 
+  promotedName: 
+  promotedFlavor: 
+  promotedDescription: 
+  promotedATK: 0
+  promotedDEF: 0
+  promotedHP: 0
+  promotedMoveDirections: []
+  canAwaken: 0
+  awakenedName: 
+  awakenedDescription: 
+  awakenCaption: 
+  awakenColor: {r: 1, g: 0.8, b: 0.35, a: 1}
+  awakenedATK: 0
+  awakenedDEF: 0
+  awakenedHP: 0
+  awakenedMoveDirections: []
+  veteranName: 
+  veteranDescription: 
+  veteranMoveDirections: []
+  hasPromotedRarity: 0
+  promotedRarity: 0
+  isAutoMove: 0
+  isManualControllable: 1
+  excludeFromDraft: 1
+  isImmovable: 0
+  immuneToFlip: 0
+  losesHPOnMove: 0
+  diesOnPromotion: 0
+  isImmovableWhenPromoted: 0
+  isTauntPiece: 0
+  portrait: {fileID: 0}
+  promotedPortrait: {fileID: 0}
