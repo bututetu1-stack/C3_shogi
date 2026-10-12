@@ -40,7 +40,7 @@ PR #16〜#21 はユーザーの指示で順に main にマージした。その�
   - 後手の画面は盤を180度回す（`Visual/ViewFlip.cs`。カメラを回し、駒の数字・飛び出す文字・座標・吹き出し・予想ダメージを正立させる）。
   - 確かめたこと: Unity（後手・盤が回る）と相手役で、部屋に入る → 編成 → 並べ方 → 相手の手の再生 → こちらの手を送る → 相手のパスで手番が戻る、まで。
   - 持ち時間: `Pvp/PvpClock.cs`（1手 `PvpTurnSeconds=60` 秒、過ぎたら自動でパス、続けて `PvpTimeoutsToLose=3` 回で負け。オンラインは自分の手番だけ数える）。画面上部の手番の札に残り秒。
-  - 中継サーバーは `npx wrangler deploy --dry-run` と `wrangler dev`（手元の Cloudflare の実行環境）で確かめた（接続・中継・つなぎ直しの記録・満室）。wrangler 4.149.0 はユーザーの許可で取ってきた。置くのはユーザーがアカウントを作ってから（ログインはブラウザで許可）。
+  - 中継サーバーは `npx wrangler deploy --dry-run` と `wrangler dev`（手元の Cloudflare の実行環境）で確かめた（接続・中継・つなぎ直しの記録・満室）。wrangler 4.149.0 はユーザーの許可で取ってきた。2026-10-12 にユーザーのアカウントに置いた: https://c3shogi-relay.bututetu1-e75.workers.dev（サブドメインは自動で付いた bututetu1-e75 のまま、ユーザー了承）。ゲームの初めの値（`PvpNet.DefaultServer`）。本番に Node の相手役と Unity をつないで確かめた。
   - 確かめていないこと: 2台のゲームどうし（盤の要約の食い違いが出ないか）。
   - ケッコンの条件は「改二の MVP」のまま（2026-10-12 ユーザー決定。めったに起きないごほうび）。
 - 対人戦の自動プレイ（AIどうし）: `Sim/PvpSimulator.cs`。`node docs/balance/run_parallel.js --jobs pvp_cost,pvp_random --base 600 --chunk 25 --out BalanceReports/X`（1局0.7秒、1200局で1分ほど）。集計は `node docs/balance/pvp_stats.js X/pvp_cost.jsonl …`（先手・後手の勝率と、札ごとの「入っていた側の勝ち点」）。

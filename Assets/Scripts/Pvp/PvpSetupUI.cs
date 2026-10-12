@@ -150,7 +150,7 @@ public class PvpSetupUI : MonoBehaviour
         serverText = field.value;
         server.Add(field);
         r.Add(server);
-        var hint = UIFactory.Label("例: wss://c3shogi-relay.〇〇.workers.dev（置き方は server/README.md）", 14, Palette.TextSub);
+        var hint = UIFactory.Label("ふつうはこのままでよい（部の中継サーバー）。手元で試すときは ws://localhost:8787", 14, Palette.TextSub);
         hint.style.marginTop = 4;
         r.Add(hint);
         statusLabel = UIFactory.Label("", 17, Palette.EnemyLight);

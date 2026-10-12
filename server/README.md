@@ -1,5 +1,7 @@
 # 対人戦の中継サーバー
 
+**置いてあるアドレス（2026-10-12）: https://c3shogi-relay.bututetu1-e75.workers.dev** — ゲームの「オンラインのサーバー」の初めの値にしてある（`PvpNet.DefaultServer`）。直したら `server` フォルダで `npx wrangler deploy` を打つと置き直せる（ログインはこの PC に残っている）。
+
 オンラインの対人戦で、2人のゲームのあいだの手を中継するだけの小さなサーバーです。
 Cloudflare Workers の無料の枠に置きます。ミニPCは使わず、ポート開放も要りません。遊ぶ人は何も入れなくてかまいません。
 

@@ -69,10 +69,13 @@ public class PvpNet : MonoBehaviour
     // 読み終えた相手の手の数（つなぎ直したとき、記録のうちここまでは飛ばす）
     private int peerRead;
 
-    /// <summary>前に使ったサーバーのアドレス（設定に残す）</summary>
+    /// <summary>部の中継サーバー（Cloudflare Workers。2026-10-12 に置いた。置き方は server/README.md）</summary>
+    public const string DefaultServer = "https://c3shogi-relay.bututetu1-e75.workers.dev";
+
+    /// <summary>前に使ったサーバーのアドレス（設定に残す。入れていなければ部の中継サーバー）</summary>
     public static string SavedServer
     {
-        get { return PlayerPrefs.GetString("pvp_server", ""); }
+        get { return PlayerPrefs.GetString("pvp_server", DefaultServer); }
         set { PlayerPrefs.SetString("pvp_server", value ?? ""); PlayerPrefs.Save(); }
     }
 
