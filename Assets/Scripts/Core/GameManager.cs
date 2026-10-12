@@ -63,6 +63,8 @@ public class GameManager : MonoBehaviour
     public int RunBonusC3HP { get; private set; }
     /// <summary>応急修理要員の残り（艦娘が沈むとき1回ずつ使う）</summary>
     public int RunDamageControl { get; private set; }
+    /// <summary>強化「歩兵を消す」を取った（次の局から最後まで、自軍の歩兵を置かない）</summary>
+    public bool RunNoPawns { get; private set; }
     // 艦隊がS勝利したら、次の局の選択肢に強化が1枚増える（その局の番号）
     private int bonusUpgradeStage;
 
@@ -115,11 +117,24 @@ public class GameManager : MonoBehaviour
         Roster.Clear();
         RunBonusATK = RunBonusDEF = RunBonusHP = RunBonusC3HP = 0;
         RunDamageControl = 0;
+        RunNoPawns = false;
         SecretFund = 0;
         bonusUpgradeStage = 0;
         pendingExtraPicks = pendingExtraRerolls = pendingEnemyHp = pendingEnemyAtk = 0;
         TotalKills = TotalMoves = StagesCleared = 0;
         if (stageManager != null) stageManager.currentStage = 1;
+    }
+
+    /// <summary>強化「歩兵を消す」: もう置いてある自軍の歩兵を盤から下げる（この局から効く）</summary>
+    private void RemovePlayerPawns()
+    {
+        foreach (var p in boardManager.GetTeamPieces(Team.Player))
+        {
+            if (p.data.pieceType != PieceType.Pawn) continue;
+            Vector2Int pos = p.boardPosition;
+            boardManager.RemovePieceController(pos);
+            boardManager.RemovePiece(pos, false);
+        }
     }
 
     /// <summary>現在のステージの盤を作り、C3・歩・持ち越し駒を配置する</summary>
@@ -135,11 +150,14 @@ public class GameManager : MonoBehaviour
         // C3を中央下に配置
         boardManager.SpawnPiece(boardManager.GetPieceDataByType(PieceType.C3), Team.Player, new Vector2Int(size / 2, 0));
 
-        // 歩兵を配置（9x9なら3段目、それ以外は2段目）
-        var pawn = boardManager.GetPieceDataByType(PieceType.Pawn);
-        int pawnRow = (size >= 9) ? 2 : 1;
-        for (int x = 0; x < size; x++)
-            boardManager.SpawnPiece(pawn, Team.Player, new Vector2Int(x, pawnRow));
+        // 歩兵を配置（9x9なら3段目、それ以外は2段目）。強化「歩兵を消す」を取っていたら置かない
+        if (!RunNoPawns)
+        {
+            var pawn = boardManager.GetPieceDataByType(PieceType.Pawn);
+            int pawnRow = (size >= 9) ? 2 : 1;
+            for (int x = 0; x < size; x++)
+                boardManager.SpawnPiece(pawn, Team.Player, new Vector2Int(x, pawnRow));
+        }
 
         // 持ち越し駒を外側から再配置
         foreach (var data in playerOwnedPieces)
@@ -236,6 +254,7 @@ public class GameManager : MonoBehaviour
                 case UpgradeKind.AllHP: RunBonusHP += 2; break;
                 case UpgradeKind.C3HP: RunBonusC3HP += 4; break;
                 case UpgradeKind.DamageControl: RunDamageControl += 1; break;
+                case UpgradeKind.NoPawns: RunNoPawns = true; RemovePlayerPawns(); break;
             }
         }
     }
@@ -397,6 +416,7 @@ public class GameManager : MonoBehaviour
             members = new List<RunMember>(Roster.Members).ToArray(),
             runATK = RunBonusATK, runDEF = RunBonusDEF, runHP = RunBonusHP, runC3HP = RunBonusC3HP,
             damageControl = RunDamageControl,
+            noPawns = RunNoPawns,
             secretFund = SecretFund,
             bonusUpgradeStage = bonusUpgradeStage,
             enemyHp = phase == "battle" ? pendingEnemyHp : 0,
@@ -421,6 +441,7 @@ public class GameManager : MonoBehaviour
         Roster.Restore(data.members);
         RunBonusATK = data.runATK; RunBonusDEF = data.runDEF; RunBonusHP = data.runHP; RunBonusC3HP = data.runC3HP;
         RunDamageControl = data.damageControl;
+        RunNoPawns = data.noPawns;
         SecretFund = data.secretFund;
         bonusUpgradeStage = data.bonusUpgradeStage;
         pendingEnemyHp = data.phase == "battle" ? data.enemyHp : 0;

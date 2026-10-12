@@ -7,7 +7,9 @@ public class PieceData : ScriptableObject
     public string displayName;      // 表示名 (2文字: "歩兵", "飛車" 等)
     public string pieceName;        // フルネーム
     [TextArea(2, 4)]
-    public string description;      // 駒の説明文
+    public string flavor;           // キャラの説明（人となり。能力の説明は description）
+    [TextArea(2, 4)]
+    public string description;      // 能力の説明
     public int baseATK;
     public int baseDEF;
     public int baseHP;
@@ -18,6 +20,8 @@ public class PieceData : ScriptableObject
     public bool canPromote;
     public string promotedDisplayName;  // 成り後の表示名
     public string promotedName;         // 成り後のフルネーム
+    [TextArea(2, 4)]
+    public string promotedFlavor;       // 成った姿のキャラの説明（空なら flavor）
     [TextArea(2, 4)]
     public string promotedDescription;
     public int promotedATK;

@@ -172,24 +172,19 @@ public class PieceDetailUI : MonoBehaviour
             content.Add(sealedNote);
         }
 
-        // 説明文
-        var descLabel = UIFactory.Paragraph(desc, 18, Palette.Text);
-        descLabel.style.marginTop = 14;
-        content.Add(descLabel);
-        // 覚醒していても、もとの能力（技や札の一覧など）は読めるように続けて出す
+        // 説明: キャラの説明（薄い字）と能力（枠）を分ける。覚醒していたら、覚醒の枠のあとにもとの能力も出す
+        string flavorText = UIFactory.FlavorOf(d, promoted);
+        if (!string.IsNullOrEmpty(flavorText)) content.Add(UIFactory.FlavorBox(flavorText, 17));
         if (isCurrentForm && piece.awakened && !string.IsNullOrEmpty(d.awakenedDescription))
         {
+            content.Add(UIFactory.AbilityBox("覚醒「" + d.awakenedName + "」", d.awakenedDescription, 18, d.awakenColor));
             string baseDesc = piece.isPromoted ? d.promotedDescription
                 : (piece.IsVeteran && !string.IsNullOrEmpty(d.veteranDescription) ? d.veteranDescription : d.description);
-            if (!string.IsNullOrEmpty(baseDesc))
-            {
-                var baseHead = UIFactory.Label("覚醒する前からの能力", 17, Palette.TextSub, "c3-bold");
-                baseHead.style.marginTop = 12;
-                content.Add(baseHead);
-                var baseLabel = UIFactory.Paragraph(baseDesc, 17, Palette.Text);
-                baseLabel.style.marginTop = 4;
-                content.Add(baseLabel);
-            }
+            if (!string.IsNullOrEmpty(baseDesc)) content.Add(UIFactory.AbilityBox("覚醒する前からの能力", baseDesc, 17, Palette.GoldLight));
+        }
+        else if (!string.IsNullOrEmpty(desc))
+        {
+            content.Add(UIFactory.AbilityBox("能力", desc, 18, Palette.GoldLight));
         }
 
         // 説明と動きの図の間はしっかり空ける

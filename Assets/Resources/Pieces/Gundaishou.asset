@@ -15,7 +15,8 @@ MonoBehaviour:
   pieceType: 26
   displayName: "\u8ECD\u5C06"
   pieceName: "\u8ECD\u5C06"
-  description: "\u6226\u5834\u3092\u7D71\u7387\u3059\u308B\u6307\u63EE\u5B98\u3002\u6BCE\u30BF\u30FC\u30F3\u7D42\u4E86\u6642\u3001\u96A3\u63A5\u3059\u308B\u5473\u65B9\u306EATK\u3092+1\u3059\u308B\u3002\u653E\u7F6E\u3059\u308B\u3068\u5473\u65B9\u304C\u5F37\u5316\u3057\u7D9A\u3051\u308B\u3002"
+  flavor: "\u6226\u5834\u3092\u7D71\u7387\u3059\u308B\u6307\u63EE\u5B98\u3002"
+  description: "\u624B\u756A\u306E\u7D42\u308F\u308A\u306B\u3001\u96A3\u306E\u5473\u65B9\u306E\u653B\u6483\u3092+1\u3059\u308B\uFF081\u4F533\u56DE\u307E\u3067\uFF09\u3002\u653E\u3063\u3066\u304A\u304F\u3068\u5473\u65B9\u304C\u5F37\u304F\u306A\u308A\u7D9A\u3051\u308B\u3002"
   baseATK: 2
   baseDEF: 2
   baseHP: 3
@@ -46,13 +47,26 @@ MonoBehaviour:
     maxDistance: 1
     canJump: 0
   canPromote: 0
-  promotedDisplayName:
-  promotedName:
-  promotedDescription:
+  promotedDisplayName: 
+  promotedName: 
+  promotedFlavor: 
+  promotedDescription: 
   promotedATK: 0
   promotedDEF: 0
   promotedHP: 0
   promotedMoveDirections: []
+  canAwaken: 0
+  awakenedName: 
+  awakenedDescription: 
+  awakenCaption: 
+  awakenColor: {r: 1, g: 0.8, b: 0.35, a: 1}
+  awakenedATK: 0
+  awakenedDEF: 0
+  awakenedHP: 0
+  awakenedMoveDirections: []
+  veteranName: 
+  veteranDescription: 
+  veteranMoveDirections: []
   hasPromotedRarity: 0
   promotedRarity: 0
   isAutoMove: 0
@@ -64,3 +78,5 @@ MonoBehaviour:
   diesOnPromotion: 0
   isImmovableWhenPromoted: 0
   isTauntPiece: 0
+  portrait: {fileID: 0}
+  promotedPortrait: {fileID: 0}

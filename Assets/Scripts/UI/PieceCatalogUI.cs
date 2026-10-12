@@ -332,13 +332,14 @@ public class PieceCatalogUI : MonoBehaviour
         }
         if (buttons.childCount > 0) detail.Add(buttons);
 
-        string desc = awakened ? d.awakenedDescription + "（練度★3の部員が、その局で活躍を" + BalanceTuning.AwakenActivities + "回重ねると覚醒する）"
-            : promoted ? d.promotedDescription : (veteran ? d.veteranDescription : d.description);
-        if (!string.IsNullOrEmpty(desc))
+        string flavorText = UIFactory.FlavorOf(d, promoted);
+        if (!string.IsNullOrEmpty(flavorText)) detail.Add(UIFactory.FlavorBox(flavorText, 18));
+        if (awakened)
+            detail.Add(UIFactory.AbilityBox("覚醒「" + d.awakenedName + "」", d.awakenedDescription + "（練度★3の部員が、その局で活躍を" + BalanceTuning.AwakenActivities + "回重ねると覚醒する）", 19, d.awakenColor));
+        else
         {
-            var p = UIFactory.Paragraph(desc, 19, Palette.Text);
-            p.style.marginTop = 12;
-            detail.Add(p);
+            string desc = promoted ? d.promotedDescription : (veteran ? d.veteranDescription : d.description);
+            if (!string.IsNullOrEmpty(desc)) detail.Add(UIFactory.AbilityBox("能力", desc, 19, Palette.GoldLight));
         }
 
         string stages = StageList(d.pieceType);

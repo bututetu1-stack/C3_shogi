@@ -61,6 +61,54 @@ public static class UIFactory
         return label;
     }
 
+    /// <summary>キャラの説明（人となり）: 薄い色の文字に、左の細い線</summary>
+    public static VisualElement FlavorBox(string text, float fontSize)
+    {
+        var box = new VisualElement();
+        box.style.borderLeftWidth = 3;
+        box.style.borderLeftColor = new Color(Palette.Gold.r, Palette.Gold.g, Palette.Gold.b, 0.45f);
+        box.style.paddingLeft = 12;
+        box.style.marginTop = 12;
+        box.Add(Paragraph(text, fontSize, Palette.TextSub));
+        return box;
+    }
+
+    /// <summary>能力の説明: 見出しと、うっすら色の付いた枠</summary>
+    public static VisualElement AbilityBox(string heading, string text, float fontSize, Color headingColor)
+    {
+        var box = new VisualElement();
+        box.style.marginTop = 10;
+        box.style.paddingLeft = box.style.paddingRight = 12;
+        box.style.paddingTop = 8;
+        box.style.paddingBottom = 10;
+        box.style.backgroundColor = new Color(headingColor.r, headingColor.g, headingColor.b, 0.08f);
+        Color edge = new Color(headingColor.r, headingColor.g, headingColor.b, 0.4f);
+        box.style.borderTopWidth = box.style.borderBottomWidth = box.style.borderLeftWidth = box.style.borderRightWidth = 1;
+        box.style.borderTopColor = box.style.borderBottomColor = box.style.borderLeftColor = box.style.borderRightColor = edge;
+        box.style.borderTopLeftRadius = box.style.borderTopRightRadius = box.style.borderBottomLeftRadius = box.style.borderBottomRightRadius = 8;
+        var head = Label(heading, fontSize - 2, headingColor, "c3-bold");
+        head.style.marginBottom = 4;
+        box.Add(head);
+        box.Add(Paragraph(text, fontSize, Palette.Text));
+        return box;
+    }
+
+    /// <summary>駒の説明をキャラと能力の2つの枠に分けて並べる（空のほうは出さない）</summary>
+    public static VisualElement PieceText(string flavor, string ability, float fontSize)
+    {
+        var box = new VisualElement();
+        if (!string.IsNullOrEmpty(flavor)) box.Add(FlavorBox(flavor, fontSize - 1));
+        if (!string.IsNullOrEmpty(ability)) box.Add(AbilityBox("能力", ability, fontSize, Palette.GoldLight));
+        return box;
+    }
+
+    /// <summary>その姿のキャラの説明（成った姿の説明がなければ、成る前のもの）</summary>
+    public static string FlavorOf(PieceData d, bool promoted)
+    {
+        if (promoted && !string.IsNullOrEmpty(d.promotedFlavor)) return d.promotedFlavor;
+        return d.flavor;
+    }
+
     /// <summary>動きの図の凡例</summary>
     public static Label MoveLegend()
     {

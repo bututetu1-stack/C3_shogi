@@ -25,6 +25,9 @@ public static class BalanceTuning
     /// <summary>仲間を2枚選べる局（盤が9×9になり、駒の数が一気に増える第五局）</summary>
     public static int[] TwoPickStages = { 5 };
 
+    /// <summary>強化カード「歩兵を消す」を候補に出すか（取ったら次の局から最後まで自軍の歩兵が出ない）</summary>
+    public static bool NoPawnsCard = true;
+
     /// <summary>仲間の候補に素の将棋駒（香・桂・銀・金・角・飛）も出すか（いまは部員と強化だけ）</summary>
     public static bool DraftStandardPieces = false;
 
