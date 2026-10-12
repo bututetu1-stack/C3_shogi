@@ -19,7 +19,7 @@ sb.Append("敵 " + enemies.Count + "体\n");
 // 1) 手番の初め: えちち連合
 int a0 = negu.ATK;
 GameSim.RunSync(ab.ExecuteTurnStartAbilities(Team.Player));
-sb.Append("1 連合 " + negu.allianceOn + " 攻 " + a0 + "→" + negu.ATK + "\n");
+sb.Append("1 連合 " + negu.allianceATK + " 攻 " + a0 + "→" + negu.ATK + "\n");
 
 // 2) 手番の終わり: ブロック・デイリー
 GameSim.RunSync(ab.ExecuteTurnEndAbilities(Team.Player));

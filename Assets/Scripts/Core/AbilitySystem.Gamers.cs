@@ -3,7 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 
 /// <summary>
-/// PlayStation 鯖の部員の能力: RN（ブロック・3本同時プレイ）、寝癖（デイリー消化・えちち連合・外跳ね）、無糖（死んで覚える・スタッガー・篝火）
+/// PlayStation 鯖の部員の能力: RN（ブロック・3本同時プレイ）、寝癖（デイリー消化・えちち連合・外跳ね）、無糖（死んで覚える・スタッガー・篝火）。
+/// えちち連合（会長 寝癖・副会長 物鉄、会員 小錦・RN・翡翠・ヲツ・無糖・僕）もここ
 /// </summary>
 public partial class AbilitySystem
 {
@@ -20,21 +21,21 @@ public partial class AbilitySystem
         switch (p.data.pieceType)
         {
             case PieceType.RN:
-                return p.block > 0
+                return WithComrade(p, p.block > 0
                     ? "ブロック " + p.block + "（防御とは別に、受けるダメージをあと" + p.block + "防ぐ。次の自分の手番の初めに消える）"
-                    : "ブロック 0（自分の手番の終わりに" + RnBlockOf(p) + "を得る）";
+                    : "ブロック 0（自分の手番の終わりに" + RnBlockOf(p) + "を得る）");
             case PieceType.Negu:
             {
                 string s = "デイリー " + p.dailyCount + "/" + NeguEveryOf(p) + "（報酬 攻撃+" + p.dailyRewards + "/" + NeguCapOf(p) + "）";
-                if (p.allianceOn) s += "　えちち連合 攻撃+" + BalanceTuning.NeguAllianceATK;
-                return s;
+                if (p.allianceATK > 0) s += "　えちち連合 攻撃+" + p.allianceATK;
+                return WithComrade(p, s);
             }
             case PieceType.Mutou:
             {
                 int learned = GameManager.Instance != null && p.team == Team.Player ? GameManager.Instance.Roster.DeathBonus(PieceType.Mutou) : 0;
                 string s = "死んで覚えた 攻撃+" + learned + "/" + BalanceTuning.MutouDeathCap;
                 if (p.awakened) s += p.bonfireUsed ? "（篝火は使った）" : "（篝火あり）";
-                return s;
+                return WithComrade(p, s);
             }
             default:
             {
@@ -42,9 +43,18 @@ public partial class AbilitySystem
                 if (p.posture > 0) parts.Add("体幹 " + p.posture + "/" + PostureMax(p));
                 if (p.staggered) parts.Add("スタッガー（次に受けるダメージ+" + BalanceTuning.MutouStaggerDamage + "）");
                 if (p.block > 0) parts.Add("ブロック " + p.block + "（受けるダメージをあと" + p.block + "防ぐ。次の自分の手番の初めに消える）");
-                return parts.Count > 0 ? string.Join("　", parts) : null;
+                return WithComrade(p, parts.Count > 0 ? string.Join("　", parts) : null);
             }
         }
+    }
+
+    /// <summary>同志が効いていれば、状態の行に足す</summary>
+    private static string WithComrade(PieceInstance p, string s)
+    {
+        int c = ComradeDEF(p);
+        if (c <= 0) return s;
+        string add = "えちち連合の同志 防御+" + c;
+        return string.IsNullOrEmpty(s) ? add : s + "　" + add;
     }
 
     private static int RnBlockOf(PieceInstance p)
@@ -75,23 +85,69 @@ public partial class AbilitySystem
         RefreshAlliance(team);
     }
 
-    /// <summary>えちち連合: 物鉄（提督・物鉄・改も）が同じ盤にいるあいだ、寝癖の攻撃が上がる</summary>
+    // ============================================================
+    // えちち連合
+    // ============================================================
+
+    /// <summary>えちち連合の部員か（会長 寝癖・副会長 物鉄（提督・物鉄・改も）、会員 小錦・RN・翡翠・ヲツ・無糖・僕）</summary>
+    public static bool IsAllianceMember(PieceType t)
+    {
+        switch (t)
+        {
+            case PieceType.Negu:
+            case PieceType.Monotetsu:
+            case PieceType.Konishiki:
+            case PieceType.RN:
+            case PieceType.Kawasemi:
+            case PieceType.Wotsu:
+            case PieceType.Mutou:
+            case PieceType.Boku:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /// <summary>
+    /// 同志: 連合の部員は、周り1マスに同じ陣営の仲間がいると防御が上がる。
+    /// 盤の上の並びで決まるので、その場で数える（AI の読みで駒を動かしたときもそのまま効く）。その駒自身の能力なので、能力無効のあいだは止まる
+    /// </summary>
+    public static int ComradeDEF(PieceInstance p)
+    {
+        if (p == null || !p.isAlive || BalanceTuning.AllianceComradeDEF == 0 || !IsAllianceMember(p.data.pieceType)) return 0;
+        BoardManager bm = BoardManager.Instance;
+        if (bm == null || bm.GetPieceAt(p.boardPosition) != p) return 0;
+        for (int dx = -1; dx <= 1; dx++)
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                if (dx == 0 && dy == 0) continue;
+                PieceInstance q = bm.GetPieceAt(p.boardPosition + new Vector2Int(dx, dy));
+                if (q != null && q.isAlive && q.team == p.team && IsAllianceMember(q.data.pieceType))
+                    return IsSuppressed(p) ? 0 : BalanceTuning.AllianceComradeDEF;
+            }
+        return 0;
+    }
+
+    /// <summary>会長: 盤にいる連合の仲間1人につき、寝癖の攻撃が上がる（副会長の物鉄は2人分。上限あり）</summary>
     private void RefreshAlliance(Team team)
     {
         var negus = AlivePieces(team, PieceType.Negu);
         if (negus.Count == 0) return;
-        bool partner = AlivePieces(team, PieceType.Monotetsu).Count > 0;
+        int members = 0;
+        foreach (var p in BoardManager.Instance.GetTeamPieces(team))
+            if (p.isAlive && p.data.pieceType != PieceType.Negu && IsAllianceMember(p.data.pieceType))
+                members += p.data.pieceType == PieceType.Monotetsu ? 2 : 1;
         foreach (var n in negus)
         {
-            bool on = partner && !IsSuppressed(n);
-            if (on == n.allianceOn) continue;
-            n.allianceOn = on;
-            n.bonusATK += on ? BalanceTuning.NeguAllianceATK : -BalanceTuning.NeguAllianceATK;
+            int atk = IsSuppressed(n) ? 0 : Mathf.Min(BalanceTuning.NeguAllianceCap, members * BalanceTuning.NeguAllianceATK);
+            if (atk == n.allianceATK) continue;
+            n.bonusATK += atk - n.allianceATK;
+            n.allianceATK = atk;
             CombatResolver.RefreshStats(n);
-            FloatingText.Spawn(n.boardPosition, on ? "えちち連合" : "連合解散", DailyPink, 3f, 0.2f);
+            FloatingText.Spawn(n.boardPosition, atk > 0 ? "えちち連合 攻撃+" + atk : "連合解散", DailyPink, 3f, 0.2f);
             if (BattleLogUI.Instance != null)
                 BattleLogUI.Instance.AddLog(BattleLogUI.ColorName(n.DisplayName, n.team)
-                    + (on ? " と物鉄のえちち連合（攻撃+" + BalanceTuning.NeguAllianceATK + "）" : " のえちち連合は、物鉄がいなくなって一度解散した"));
+                    + (atk > 0 ? " が会長のえちち連合（攻撃+" + atk + "）" : " のえちち連合は、仲間がいなくなって一度解散した"));
         }
     }
 
