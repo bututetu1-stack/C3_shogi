@@ -153,7 +153,7 @@ public class InputManager : MonoBehaviour
     private void SelectPiece(PieceInstance piece)
     {
         // 手動操作不可の駒は閲覧のみ
-        if (!piece.data.isManualControllable)
+        if (!PvpMatch.CanMoveByHand(piece.data))
         {
             ViewPiece(piece);
             return;

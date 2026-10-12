@@ -60,6 +60,8 @@ public class SimpleAI : MonoBehaviour
 
     private void ConfigureDifficulty(Team team)
     {
+        // 対人戦（AIどうしの自動プレイ）は、両方とも自軍と同じ設定で指す
+        if (PvpMatch.Active) team = Team.Player;
         features = team == Team.Player ? BalanceTuning.AiFeaturesPlayer : BalanceTuning.AiFeaturesEnemy;
         int[] w = team == Team.Player ? BalanceTuning.AiWeightsPlayer : BalanceTuning.AiWeightsEnemy;
         weights = w != null && w.Length > 0 ? w : DefaultWeights;
@@ -221,7 +223,7 @@ public class SimpleAI : MonoBehaviour
         int completedDepth = 0;
         List<MoveEntry> best = null;
         // 挑発の引きつけは敵の思考だけにかける（自軍はプレイヤーが指すので縛らない）
-        CollectLures(forEnemy ? Team.Player : Team.Enemy, forEnemy);
+        CollectLures(forEnemy ? Team.Player : Team.Enemy, forEnemy && !PvpMatch.Active);
 
         foreach (int depth in searchDepths)
         {
@@ -231,7 +233,7 @@ public class SimpleAI : MonoBehaviour
             for (int i = 0; i < root.Count; i++)
             {
                 MoveEntry e = root[i];
-                int lure = LureBonus(e.piece, e.move) + (forEnemy ? AggroBonus(e.piece, e.move) : 0);
+                int lure = PvpMatch.Active ? 0 : LureBonus(e.piece, e.move) + (forEnemy ? AggroBonus(e.piece, e.move) : 0);
                 int mark = Simulate(e.piece, e.move);
                 // 最善候補との差を見るため、最善より少し悪い手までは正確に読む
                 int raw = forEnemy
@@ -519,7 +521,8 @@ public class SimpleAI : MonoBehaviour
     private static bool IsControllable(PieceInstance p)
     {
         if (p.data.pieceType == PieceType.C3) return false;
-        if (p.team == Team.Player && !p.data.isManualControllable) return false;
+        // 自軍は人が動かせる駒だけ（対人戦は両方の陣営とも、人が動かせる駒だけ）
+        if ((p.team == Team.Player || PvpMatch.Active) && !PvpMatch.CanMoveByHand(p.data)) return false;
         if (p.data.isImmovable || p.data.isAutoMove) return false;
         if (p.isPromoted && p.data.isImmovableWhenPromoted) return false;
         return true;
@@ -919,6 +922,31 @@ public class SimpleAI : MonoBehaviour
         }
         foreach (var p in evalEnemy)
             if (p.isSealed && p.data.pieceType != PieceType.C3) s -= Mathf.Max(0, AbilityValue(p)) / 2;
+        if (PvpMatch.Active)
+        {
+            // 対人戦: 自軍側の結界で止まっている敵側の能力駒も数える
+            bool kekkaiP = false;
+            foreach (var p in evalPlayer) if (p.data.pieceType == PieceType.Kekkai) { kekkaiP = true; break; }
+            if (kekkaiP)
+                foreach (var p in evalEnemy)
+                    if (p.data.pieceType != PieceType.C3 && !p.isSealed && AbilitySystem.IsSuppressed(p)) s -= Mathf.Max(0, AbilityValue(p)) / 2;
+            // 対人戦: 自軍側の弓兵の射線（上に向かって射る）
+            foreach (var archer in evalPlayer)
+            {
+                if (archer.data.pieceType != PieceType.Yumihei || archer.isSealed) continue;
+                for (int y = archer.boardPosition.y + 1; y < size; y++)
+                {
+                    PieceInstance p = bm.GetPieceAt(new Vector2Int(archer.boardPosition.x, y));
+                    if (p == null || AbilitySystem.IsSubmerged(p)) continue;
+                    if (p.team == Team.Enemy && p.data.pieceType != PieceType.C3)
+                    {
+                        s -= 20;
+                        if (p.currentHP <= CombatResolver.AbilityHitPreview(p, CombatResolver.AbilityDamage(archer, BalanceTuning.YumiheiDamage))) s -= PieceValue(p) / 2;
+                    }
+                    break;
+                }
+            }
+        }
 
         // 弓兵の射線: 手番の終わりに、前の直線上いちばん近い相手の駒に当たる
         foreach (var archer in evalEnemy)

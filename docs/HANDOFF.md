@@ -43,6 +43,12 @@ PR #16〜#21 はユーザーの指示で順に main にマージした。その�
   - 中継サーバーは `npx wrangler deploy --dry-run` と `wrangler dev`（手元の Cloudflare の実行環境）で確かめた（接続・中継・つなぎ直しの記録・満室）。wrangler 4.149.0 はユーザーの許可で取ってきた。置くのはユーザーがアカウントを作ってから（ログインはブラウザで許可）。
   - 確かめていないこと: 2台のゲームどうし（盤の要約の食い違いが出ないか）。
   - ケッコンの条件は「改二の MVP」のまま（2026-10-12 ユーザー決定。めったに起きないごほうび）。
+- 対人戦の自動プレイ（AIどうし）: `Sim/PvpSimulator.cs`。`node docs/balance/run_parallel.js --jobs pvp_cost,pvp_random --base 600 --chunk 25 --out BalanceReports/X`（1局0.7秒、1200局で1分ほど）。集計は `node docs/balance/pvp_stats.js X/pvp_cost.jsonl …`（先手・後手の勝率と、札ごとの「入っていた側の勝ち点」）。
+  - 編成はコスト制ならランダムに持ち点まで、ランダム配布なら同じ候補からランダム。両方の AI は自軍と同じ設定（引きつけ・駒も殴るは切る）。
+  - コストは `BalanceTuning.PvpCostOverrides="Boku:11,..."` でビルドし直さずに試せる。実験用の `PvpSimMirror`（同じ編成）・`PvpSimSecondFirst`（後手から指す）。
+  - 直した不具合: 髑髏などの「手で動かせない駒」を、AI は上側（Team.Enemy）だけ動かしていた → 対人戦は持ち主が動かせる（`PvpMatch.CanMoveByHand`）。AI の評価の結界・弓兵が上側の分しか見ていなかった → 対人戦は両側。
+  - 結果（`BalanceReports/pvp3_final`）: コスト表（`PvpMatch.CostTable`）で、ほとんどの札が勝ち点42〜57%。外れは僕68%・光春64%（コストを上げても下がらない。長い対局ほど効く能力なので、対人戦だけ能力を変えるか相談）。
+  - 先手・後手: AIどうしでは後手が57%（上乗せなし）。同じ編成なら上側51%・下側46%で、残りは AI の読みの細かな差。後手の C3 の上乗せは0にした（人どうしの手ごたえで決め直す）。
 - 案のページ: https://claude.ai/artifact/LAJyfC8RrBM5g4djYrc95D（ルールの叩き台・作り方・作る順番・4つの質問）。おすすめは「同じ手を両方で再生する」（ミニPCは手を中継するだけの Node.js + WebSocket。ゲームの乱数をゲーム用と演出用に分ける）。
 
 ## いまの状態（2026-10-11 の夜、ノート PC から引き継ぐとき）

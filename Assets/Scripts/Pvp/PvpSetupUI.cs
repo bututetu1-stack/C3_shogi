@@ -361,7 +361,7 @@ public class PvpSetupUI : MonoBehaviour
         row.style.flexWrap = Wrap.Wrap;
         row.style.justifyContent = Justify.Center;
         row.Add(RuleCard("コスト制", "持ち点" + PvpMatch.Budget + "の中で、部員・将棋の駒・敵の駒・全軍強化を自由に選ぶ。"
-            + "\n部員は激レア9・レア6・ブロンズ4。全軍強化は" + PvpMatch.UpgradeCost + "（" + PvpMatch.MaxUpgrades + "枚まで）。", PvpMatch.Rule.Cost));
+            + "\n部員は4〜11（強さに合わせて決めた）。全軍強化は" + PvpMatch.UpgradeCost + "（" + PvpMatch.MaxUpgrades + "枚まで）。", PvpMatch.Rule.Cost));
         row.Add(RuleCard("ランダム配布", "3枚から1枚を選ぶのを" + PvpMatch.RandomRounds + "回。"
             + "\n2人に同じ候補が出るので、選び方の腕の勝負。", PvpMatch.Rule.Random));
         r.Add(row);
@@ -691,21 +691,7 @@ public class PvpSetupUI : MonoBehaviour
 
     private void BuildRounds()
     {
-        rounds = new List<List<DraftOption>>();
-        var offered = new List<PieceData>();   // 同じ部員が2回出ないように
-        PieceData[] all = BoardManager.Instance != null ? BoardManager.Instance.allPieceData : new PieceData[0];
-        for (int r = 0; r < PvpMatch.RandomRounds; r++)
-        {
-            var options = PiecePool.DrawOptions(all, 3, offered, PvpMatch.RandomDraftStage, true, null);
-            // 対人戦で使わない強化（応急修理・歩兵を消す）は、使える強化に差し替える
-            for (int i = 0; i < options.Count; i++)
-            {
-                if (options[i].piece != null) { offered.Add(options[i].piece); continue; }
-                if (options[i].train != null || Array.IndexOf(PvpMatch.Upgrades, options[i].upgrade) < 0)
-                    options[i] = DraftOption.Upgrade(PvpMatch.Upgrades[GameRng.Range(0, PvpMatch.Upgrades.Length)]);
-            }
-            rounds.Add(options);
-        }
+        rounds = PvpMatch.BuildRandomRounds();
     }
 
     private void RandomDraft(Team team, int round, Action next)

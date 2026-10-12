@@ -10,6 +10,9 @@ public partial class GameManager
 {
     /// <summary>対人戦の決着が引き分けだった（決着画面で使う）</summary>
     public bool PvpDraw { get; private set; }
+    /// <summary>対人戦の勝った陣営（引き分け・まだなら null）と決まり方（自動プレイの記録用）</summary>
+    public Team? PvpWinner { get; private set; }
+    public string PvpEndReason { get; private set; }
 
     /// <summary>この陣営を人が動かせるか（対人戦は両方。1人用は自軍だけ）</summary>
     public bool IsHumanTeam(Team team)
@@ -55,6 +58,22 @@ public partial class GameManager
     /// <summary>2人の編成がそろったら、盤を作って対局を始める</summary>
     public void StartPvpBattle()
     {
+        SetupPvpBoard();
+        if (GameSim.Headless) { StartCoroutine(PvpIntroSequence()); return; }
+        BeginPvpPlacement();
+    }
+
+    /// <summary>自動プレイ: 盤を作って対局の初めまで（並べ方は決まった順のまま）</summary>
+    public IEnumerator SimStartPvp()
+    {
+        SetupPvpBoard();
+        return PvpIntroSequence();
+    }
+
+    private void SetupPvpBoard()
+    {
+        PvpWinner = null;
+        PvpEndReason = null;
         // オンラインの後手は、盤を180度回して見る（自分の駒が手前）
         ViewFlip.Set(PvpMatch.Online && PvpMatch.LocalTeam == Team.Enemy);
         isGameOver = false;
@@ -126,8 +145,10 @@ public partial class GameManager
         // 全軍強化
         foreach (var p in boardManager.GetTeamPieces(Team.Player)) ApplyPvpUpgrades(p);
         foreach (var p in boardManager.GetTeamPieces(Team.Enemy)) ApplyPvpUpgrades(p);
+    }
 
-        if (GameSim.Headless) { StartCoroutine(PvpIntroSequence()); return; }
+    private void BeginPvpPlacement()
+    {
         if (PvpMatch.Online)
         {
             // オンライン: 自分の駒だけ並べて送り、相手の並べ方が届いたら入れて対局へ
@@ -185,7 +206,9 @@ public partial class GameManager
     private IEnumerator PvpIntroSequence()
     {
         isTurnProcessing = true;
-        currentTurn = Team.Player;
+        // 自動プレイの実験（PvpSimSecondFirst）のときだけ後手から指す
+        Team opener = GameSim.Headless && BalanceTuning.PvpSimSecondFirst ? Team.Enemy : Team.Player;
+        currentTurn = opener;
         MoveCount = 1;
         if (!GameSim.Headless)
             EnsureStageTitle().ShowBanner("対人戦", PvpMatch.CurrentRule == PvpMatch.Rule.Cost ? "コスト制" : "ランダム配布", Palette.Text);
@@ -196,7 +219,7 @@ public partial class GameManager
             BattleLogUI.Instance.AddLog(PvpMatch.Online
                 ? "対人戦の始まり。" + (PvpMatch.LocalTeam == Team.Player ? "あなたが先手（先に指す）" : "あなたは後手（相手が先に指す）")
                 : "対人戦の始まり。" + BattleLogUI.ColorName("先手", Team.Player) + "から指す");
-        yield return ExecuteTurnStartThenNotify(Team.Player);
+        yield return ExecuteTurnStartThenNotify(opener);
         isTurnProcessing = false;
     }
 
@@ -205,13 +228,15 @@ public partial class GameManager
     {
         isGameOver = true;
         PvpDraw = !winner.HasValue;
+        PvpWinner = winner;
+        PvpEndReason = reason ?? "C3撃破";
         SetPhase(GamePhase.GameOver);
         if (InputManager.Instance != null) InputManager.Instance.ClearSelection();
         if (BattleLogUI.Instance != null)
             BattleLogUI.Instance.AddLog(winner.HasValue
                 ? BattleLogUI.ColorName(PvpMatch.SideName(winner.Value), winner.Value) + " の勝ち" + (reason != null ? "（" + reason + "）" : "")
                 : "引き分け" + (reason != null ? "（" + reason + "）" : ""));
-        if (OnGameOver != null) OnGameOver(winner ?? Team.Player);
+        if (OnGameOver != null && !GameSim.Headless) OnGameOver(winner ?? Team.Player);
     }
 
     /// <summary>手数切れの判定（対人戦）: 強さが同じなら引き分け</summary>
