@@ -48,6 +48,8 @@ public class PieceCatalogUI : MonoBehaviour
     private bool showPromoted;
     private bool showVeteran;
     private bool showAwakened;
+    private bool sortByRarity;
+    private Button sortButton;
 
     public static bool IsOpen { get { return instance != null && instance.overlay != null; } }
 
@@ -124,6 +126,14 @@ public class PieceCatalogUI : MonoBehaviour
             tabRow.Add(tab);
         }
         head.Add(tabRow);
+        sortButton = UIFactory.Button(SortLabel(), () =>
+        {
+            sortByRarity = !sortByRarity;
+            sortButton.text = SortLabel();
+            SelectGroup(groupIndex);
+        });
+        sortButton.style.marginRight = 8;
+        head.Add(sortButton);
         head.Add(UIFactory.Button("閉じる", Hide));
         panel.Add(head);
 
@@ -135,7 +145,7 @@ public class PieceCatalogUI : MonoBehaviour
         body.style.minHeight = 0;
         panel.Add(body);
 
-        var scroll = new ScrollView(ScrollViewMode.Vertical);
+        var scroll = UIFactory.Scroll();
         scroll.style.flexGrow = 1;
         scroll.style.flexShrink = 1;
         scroll.style.flexBasis = 0;
@@ -146,7 +156,7 @@ public class PieceCatalogUI : MonoBehaviour
         cardGrid.style.alignContent = Align.FlexStart;
         body.Add(scroll);
 
-        var detailScroll = new ScrollView(ScrollViewMode.Vertical);
+        var detailScroll = UIFactory.Scroll();
         detailScroll.style.width = 560;
         detailScroll.style.flexShrink = 0;
         detailScroll.style.marginLeft = 18;
@@ -181,16 +191,48 @@ public class PieceCatalogUI : MonoBehaviour
         cards.Clear();
         PieceData first = null;
         BoardManager bm = BoardManager.Instance;
+        var list = new List<PieceData>();
         foreach (PieceType type in Groups[index].types)
         {
             PieceData data = bm != null ? bm.GetPieceDataByType(type) : null;
-            if (data == null) continue;
+            if (data != null) list.Add(data);
+        }
+        if (sortByRarity)
+        {
+            // レアの高い順（同じレアは登場順のまま）
+            var order = new List<PieceData>(list);
+            list.Sort((a, b) =>
+            {
+                int c = RarityRank(b.rarity).CompareTo(RarityRank(a.rarity));
+                return c != 0 ? c : order.IndexOf(a).CompareTo(order.IndexOf(b));
+            });
+        }
+        foreach (PieceData data in list)
+        {
             if (first == null) first = data;
             VisualElement card = CreateCard(data);
             cards.Add(card);
             cardGrid.Add(card);
         }
         Select(first, false);
+    }
+
+    private string SortLabel()
+    {
+        return sortByRarity ? "並び: レア順" : "並び: いつもの順";
+    }
+
+    /// <summary>レアの高さ（レジェンド > 激レア > レア > ノーマル > ブロンズ）</summary>
+    private static int RarityRank(Rarity r)
+    {
+        switch (r)
+        {
+            case Rarity.Legend: return 4;
+            case Rarity.SuperRare: return 3;
+            case Rarity.Rare: return 2;
+            case Rarity.Normal: return 1;
+            default: return 0;
+        }
     }
 
     private VisualElement CreateCard(PieceData data)

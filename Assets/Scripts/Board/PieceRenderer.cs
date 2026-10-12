@@ -21,6 +21,8 @@ public class PieceRenderer : MonoBehaviour
     private static readonly Color SealedTint = new Color(0.72f, 1f, 0.78f);
     // 潜航中の潜水艦は青く透かして、海の中にいるように見せる
     private static readonly Color SubmergedTint = new Color(0.62f, 0.82f, 1f, 0.66f);
+    // RN のブロック（防御の盾の下に、鋼色の盾で残りの量を出す）
+    private static readonly Color BlockSteel = new Color(0.27f, 0.36f, 0.48f);
 
     private PieceInstance pieceInstance;
     private bool isEnemyPiece;
@@ -55,6 +57,9 @@ public class PieceRenderer : MonoBehaviour
     private Badge atkBadge;
     private Badge defBadge;
     private Badge hpBadge;
+    private Badge blockBadge;
+    private int shownBlock = -1;
+    private Color appliedRest = Color.white;
 
     private class Badge
     {
@@ -171,6 +176,8 @@ public class PieceRenderer : MonoBehaviour
         atkBadge = CreateBadge("ATK", SpriteFactory.Circle, Palette.ATK, new Vector3(-0.34f, 0.34f, 0f) * flip, 0.27f);
         defBadge = CreateBadge("DEF", SpriteFactory.Shield, Palette.DEF, new Vector3(0.34f, 0.34f, 0f) * flip, 0.27f);
         hpBadge = CreateBadge("HP", SpriteFactory.Circle, Palette.HP, new Vector3(0.34f, -0.36f, 0f) * flip, 0.27f);
+        blockBadge = CreateBadge("BLOCK", SpriteFactory.Shield, BlockSteel, new Vector3(0.34f, 0.07f, 0f) * flip, 0.27f);
+        blockBadge.root.SetActive(false);
 
         appliedName = null;
         RefreshBody(true);
@@ -262,7 +269,9 @@ public class PieceRenderer : MonoBehaviour
     {
         if (pieceInstance == null) return;
         RefreshBody(false);
-        bodyRenderer.color = BodyRestColor;
+        appliedRest = BodyRestColor;
+        bodyRenderer.color = appliedRest;
+        UpdateBlock();
 
         SetBadge(atkBadge, pieceInstance.ATK);
         SetBadge(defBadge, pieceInstance.DEF);
@@ -369,6 +378,34 @@ public class PieceRenderer : MonoBehaviour
         }
         UpdateFleetMarks();
         UpdateStars();
+        UpdateBlock();
+        UpdateRestTint();
+    }
+
+    /// <summary>ブロックが変わったら盾の数字を出し直す（0なら隠す）</summary>
+    private void UpdateBlock()
+    {
+        if (blockBadge == null || pieceInstance == null) return;
+        int b = pieceInstance.isAlive ? pieceInstance.block : 0;
+        if (b == shownBlock) return;
+        shownBlock = b;
+        blockBadge.root.SetActive(b > 0);
+        blockBadge.text.text = "+" + b;
+        blockBadge.text.fontSize = 1.6f;
+    }
+
+    /// <summary>
+    /// 結界・封印・冷笑・潜航の色を、状態が変わったその場で戻す（駒が結界から出た・結界が倒れたときなど）。
+    /// 攻撃を受けて赤く光っている途中は、光り終わりに戻るので触らない。
+    /// </summary>
+    private void UpdateRestTint()
+    {
+        if (bodyRenderer == null || pieceInstance == null || !pieceInstance.isAlive) return;
+        Color rest = BodyRestColor;
+        if (rest == appliedRest) return;
+        bool flashing = bodyRenderer.color != appliedRest;
+        appliedRest = rest;
+        if (!flashing) bodyRenderer.color = rest;
     }
 
     /// <summary>部員の練度が上がったら★を並べ直す</summary>

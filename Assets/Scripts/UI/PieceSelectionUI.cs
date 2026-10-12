@@ -13,7 +13,8 @@ public class PieceSelectionUI : MonoBehaviour
     private List<DraftOption> currentChoices;
     private System.Action<DraftOption> onPieceSelected;
     private DraftOption selectedOption;
-    private bool showingPromoted;
+    /// <summary>説明に出している姿（ふだん・成り・覚醒）</summary>
+    private enum DetailView { Normal, Promoted, Awakened }
     private readonly List<VisualElement> cards = new List<VisualElement>();
     private VisualElement detailPanel;
     private Button confirmButton;
@@ -51,14 +52,13 @@ public class PieceSelectionUI : MonoBehaviour
         currentChoices = choices;
         onPieceSelected = callback;
         selectedOption = null;
-        showingPromoted = false;
         cards.Clear();
 
         root.style.display = DisplayStyle.Flex;
         root.style.backgroundColor = new Color(0.03f, 0.025f, 0.02f, 0.95f);
         root.pickingMode = PickingMode.Position;   // 盤へのクリックを遮る
 
-        var scroll = new ScrollView(ScrollViewMode.Vertical);
+        var scroll = UIFactory.Scroll();
         scroll.style.flexGrow = 1;
         scroll.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
         scroll.contentContainer.style.alignItems = Align.Center;
@@ -234,7 +234,6 @@ public class PieceSelectionUI : MonoBehaviour
     private void SelectCard(DraftOption option)
     {
         selectedOption = option;
-        showingPromoted = false;
 
         if (BattleEffects.Instance != null)
             BattleEffects.Instance.PlayClick();
@@ -244,7 +243,7 @@ public class PieceSelectionUI : MonoBehaviour
 
         if (option.IsTrain) RenderTrainDetail(option);
         else if (option.IsUpgrade) RenderUpgradeDetail(option);
-        else RenderPieceDetail(option.piece, false);
+        else RenderPieceDetail(option.piece, DetailView.Normal);
         confirmButton.SetEnabled(true);
     }
 
@@ -308,14 +307,15 @@ public class PieceSelectionUI : MonoBehaviour
         {
             int afterXp = m.xp + BalanceTuning.TrainXp;
             int afterStars = RunRoster.StarsFor(m.rarity, afterXp);
-            string now = "いま: " + StarText(m.stars) + "  練度 " + RunRoster.XpText(m);
-            string then = "鍛えると: " + StarText(afterStars) + "  練度 " + afterXp
-                + (afterStars > m.stars ? "（★" + afterStars + "：" + RunRoster.StarEffectText(afterStars) + "）" : "");
-            var progress = UIFactory.Paragraph(now + "\n" + then, 21, Palette.GoldLight);
-            progress.style.marginBottom = 8;
+            var progress = UIFactory.Label("練度 " + m.xp + " → " + afterXp + "　　" + StarText(m.stars) + " → " + StarText(afterStars),
+                24, Palette.GoldLight, "c3-bold");
+            progress.style.marginBottom = 6;
             detailPanel.Add(progress);
+            var ladder = UIFactory.StarLadder(m.rarity, m.xp, 21, afterXp);
+            ladder.style.marginBottom = 10;
+            detailPanel.Add(ladder);
         }
-        detailPanel.Add(UIFactory.Paragraph(option.Description, 19, Palette.Text));
+        detailPanel.Add(UIFactory.Paragraph(option.Description, 19, Palette.TextSub));
     }
 
     /// <summary>強化カードの種類の札（S勝利で増えた1枚は「S勝利のごほうび」）</summary>
@@ -324,18 +324,19 @@ public class PieceSelectionUI : MonoBehaviour
         return option.fleetReward ? UIFactory.Chip("S勝利のごほうび", CutInUI.SeaLight) : UIFactory.Chip("全軍強化", Palette.GoldLight);
     }
 
-    private void RenderPieceDetail(PieceData piece, bool promoted)
+    private void RenderPieceDetail(PieceData piece, DetailView view)
     {
         detailPanel.Clear();
         detailPanel.style.flexDirection = FlexDirection.Row;
         detailPanel.style.justifyContent = Justify.FlexStart;
-        promoted = promoted && piece.canPromote;
+        bool promoted = view == DetailView.Promoted && piece.canPromote;
+        bool awakened = view == DetailView.Awakened && piece.canAwaken;
 
-        string fullName = promoted ? piece.promotedName : piece.pieceName;
+        string fullName = awakened ? piece.pieceName + "「" + piece.awakenedName + "」" : promoted ? piece.promotedName : piece.pieceName;
         string desc = promoted ? piece.promotedDescription : piece.description;
-        int atk = (promoted ? piece.promotedATK : piece.baseATK) + PiecePool.RecruitBonusATK(piece);
-        int def = promoted ? piece.promotedDEF : piece.baseDEF;
-        int hp = (promoted ? piece.promotedHP : piece.baseHP) + PiecePool.RecruitBonusHP(piece);
+        int atk = (promoted ? piece.promotedATK : piece.baseATK) + PiecePool.RecruitBonusATK(piece) + (awakened ? piece.awakenedATK : 0);
+        int def = (promoted ? piece.promotedDEF : piece.baseDEF) + (awakened ? piece.awakenedDEF : 0);
+        int hp = (promoted ? piece.promotedHP : piece.baseHP) + PiecePool.RecruitBonusHP(piece) + (awakened ? piece.awakenedHP : 0);
         Rarity rarity = (promoted && piece.hasPromotedRarity) ? piece.promotedRarity : piece.rarity;
 
         // 左: 名前・ステータス・説明
@@ -354,27 +355,29 @@ public class PieceSelectionUI : MonoBehaviour
         rarityChip.style.marginLeft = 12;
         head.Add(rarityChip);
         if (promoted) head.Add(UIFactory.Chip("成り", Palette.EnemyLight));
+        if (awakened) head.Add(UIFactory.Chip("覚醒", piece.awakenColor));
         left.Add(head);
 
         left.Add(UIFactory.StatRow(atk, def, UIFactory.FormatHP(hp)));
 
-        var descBox = UIFactory.PieceText(UIFactory.FlavorOf(piece, promoted), desc, 20);
+        // 覚醒した姿では、ふだんの能力に覚醒で変わることを足して見せる
+        var descBox = UIFactory.PieceText(awakened ? null : UIFactory.FlavorOf(piece, promoted), desc, 20);
         descBox.style.marginTop = 4;
         left.Add(descBox);
+        if (awakened)
+            left.Add(UIFactory.AbilityBox("覚醒「" + piece.awakenedName + "」", piece.awakenedDescription
+                + "（練度★3の部員が、その局で活躍を" + BalanceTuning.AwakenActivities + "回重ねると覚醒する）", 20, piece.awakenColor));
 
+        // 姿の切り替え（成り・覚醒）
+        var toggles = new VisualElement();
+        toggles.style.flexDirection = FlexDirection.Row;
+        toggles.style.flexWrap = Wrap.Wrap;
+        toggles.style.marginTop = 16;
         if (piece.canPromote)
-        {
-            bool nextState = !promoted;
-            var toggle = UIFactory.Button(promoted ? "成る前を見る" : "成った姿を見る", () =>
-            {
-                showingPromoted = nextState;
-                RenderPieceDetail(piece, nextState);
-            });
-            toggle.style.alignSelf = Align.FlexStart;
-            toggle.style.marginTop = 16;
-            toggle.style.marginLeft = 0;
-            left.Add(toggle);
-        }
+            toggles.Add(ViewToggle(promoted ? "成る前を見る" : "成った姿を見る", piece, promoted ? DetailView.Normal : DetailView.Promoted, toggles.childCount));
+        if (piece.canAwaken)
+            toggles.Add(ViewToggle(awakened ? "覚醒する前を見る" : "覚醒した姿を見る", piece, awakened ? DetailView.Normal : DetailView.Awakened, toggles.childCount));
+        if (toggles.childCount > 0) left.Add(toggles);
         detailPanel.Add(left);
 
         // 区切り線
@@ -389,8 +392,9 @@ public class PieceSelectionUI : MonoBehaviour
         var right = new VisualElement();
         right.style.alignItems = Align.Center;
         right.style.flexShrink = 0;
-        right.Add(UIFactory.Label(promoted ? "動き（成り）" : "動き", 20, Palette.Gold, "c3-bold"));
-        MoveDirection[] moves = UIFactory.MovesOf(piece, promoted);
+        right.Add(UIFactory.Label(awakened ? "動き（覚醒）" : promoted ? "動き（成り）" : "動き", 20, Palette.Gold, "c3-bold"));
+        MoveDirection[] moves = awakened && piece.awakenedMoveDirections != null && piece.awakenedMoveDirections.Length > 0
+            ? piece.awakenedMoveDirections : UIFactory.MovesOf(piece, promoted);
         var grid = UIFactory.MoveGrid(moves, false, 22f);
         grid.style.marginTop = 10;
         right.Add(grid);
@@ -398,6 +402,13 @@ public class PieceSelectionUI : MonoBehaviour
         if (immovable != null) right.Add(immovable);
         else right.Add(UIFactory.MoveLegend());
         detailPanel.Add(right);
+    }
+
+    private Button ViewToggle(string text, PieceData piece, DetailView next, int index)
+    {
+        var b = UIFactory.Button(text, () => RenderPieceDetail(piece, next));
+        b.style.marginLeft = index > 0 ? 8 : 0;
+        return b;
     }
 
     private void OnConfirm()

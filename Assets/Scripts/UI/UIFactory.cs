@@ -36,6 +36,25 @@ public static class UIFactory
         return root;
     }
 
+    /// <summary>
+    /// 縦スクロールを作る。スクロールバーをつかんだあとにバーへフォーカスが残ると、
+    /// ゲームパッドやジョイスティックのわずかな傾き（「上」の入力）でゆっくり動き続けるので、
+    /// バーにはフォーカスを渡さず、上下左右の入力もスクロールに届かないようにする。
+    /// </summary>
+    public static ScrollView Scroll()
+    {
+        var scroll = new ScrollView(ScrollViewMode.Vertical);
+        scroll.focusable = false;
+        scroll.touchScrollBehavior = ScrollView.TouchScrollBehavior.Clamped;
+        foreach (var s in new[] { scroll.verticalScroller, scroll.horizontalScroller })
+        {
+            s.focusable = false;
+            s.slider.focusable = false;
+        }
+        scroll.RegisterCallback<NavigationMoveEvent>(e => e.StopPropagation(), TrickleDown.TrickleDown);
+        return scroll;
+    }
+
     public static Label Label(string text, float fontSize, Color color, params string[] classes)
     {
         var label = new Label(text);
@@ -107,6 +126,51 @@ public static class UIFactory
     {
         if (promoted && !string.IsNullOrEmpty(d.promotedFlavor)) return d.promotedFlavor;
         return d.flavor;
+    }
+
+    /// <summary>
+    /// 練度の★を1段ずつ並べる（★・効果・必要な練度・あといくつ）。
+    /// afterXp が0以上なら、その練度で新しく届く★を「鍛えると届く」と目立たせる。
+    /// </summary>
+    public static VisualElement StarLadder(Rarity rarity, int xp, float fontSize, int afterXp = -1)
+    {
+        var box = new VisualElement();
+        box.style.maxWidth = fontSize * 28;
+        int[] t = RunRoster.Thresholds(rarity);
+        for (int i = 0; i < t.Length; i++)
+        {
+            int star = i + 1;
+            bool done = xp >= t[i];
+            bool soon = !done && afterXp >= t[i];
+            Color c = done ? Palette.GoldLight : soon ? Palette.HP : Palette.TextSub;
+            var row = new VisualElement();
+            row.style.flexDirection = FlexDirection.Row;
+            row.style.alignItems = Align.Center;
+            row.style.marginTop = 2;
+            var s = Label((done ? "★" : "☆") + star, fontSize, c, "c3-bold");
+            s.style.width = fontSize * 2.4f;
+            row.Add(s);
+            var eff = Label(RunRoster.StarEffectText(star), fontSize, done || soon ? Palette.Text : Palette.TextSub);
+            eff.style.flexGrow = 1;
+            row.Add(eff);
+            string state = done ? "達成" : soon ? "鍛えると届く" : "あと" + (t[i] - xp);
+            row.Add(soon ? Label("練度" + t[i] + "（" + state + "）", fontSize - 2, c, "c3-bold") : Label("練度" + t[i] + "（" + state + "）", fontSize - 2, c));
+            box.Add(row);
+        }
+        return box;
+    }
+
+    /// <summary>1行に1つずつの箇条書き（行頭は「・」）</summary>
+    public static VisualElement Bullets(System.Collections.Generic.IEnumerable<string> lines, float fontSize, Color color)
+    {
+        var box = new VisualElement();
+        foreach (var line in lines)
+        {
+            var p = Paragraph("・" + line, fontSize, color);
+            p.style.marginTop = 2;
+            box.Add(p);
+        }
+        return box;
     }
 
     /// <summary>動きの図の凡例</summary>

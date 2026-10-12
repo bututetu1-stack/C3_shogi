@@ -54,8 +54,7 @@ public class DraftOption
         get
         {
             if (piece != null) return piece.description;
-            if (train != null) return train.pieceName + "の練度が +" + BalanceTuning.TrainXp + " される。練度がたまると★が上がり、★1で攻撃+" + BalanceTuning.StarATK
-                + "、★2で体力+" + BalanceTuning.StarHP + "、★3で防御+" + BalanceTuning.StarDEF + "と覚醒の解禁。練度は最後まで続く。";
+            if (train != null) return train.pieceName + "の練度が +" + BalanceTuning.TrainXp + " される。練度は周の最後まで残る。";
             switch (upgrade)
             {
                 case UpgradeKind.AllATK: return "C3以外の味方全員の攻撃力が +1 される。この効果は最後まで続く。";
