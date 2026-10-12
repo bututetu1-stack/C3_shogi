@@ -511,7 +511,7 @@ public partial class AbilitySystem : MonoBehaviour
     }
 
     // ============================================================
-    // きぷ／へるの冷笑（自分の手番の終わりに、周囲1マスの敵を2体まで冷笑し、次の手番は動けなくする。へるは周りの敵すべて）
+    // きぷ／へるの冷笑（自分の手番の終わりに、周囲1マスの敵を3体まで冷笑し、次の手番は動けなくする。へるは周りの敵すべて）
     // ============================================================
     private static readonly Color SneerBlue = new Color(0.62f, 0.85f, 1f);
 
@@ -595,7 +595,7 @@ public partial class AbilitySystem : MonoBehaviour
                 if (target != null && target != rihaku
                     && target.data.pieceType != PieceType.C3
                     && !target.data.immuneToFlip
-                    && (!rihaku.awakened || WorthFlipping(rihaku, target)))
+                    && (!(rihaku.awakened || BalanceTuning.RihakuSmartFlip) || WorthFlipping(rihaku, target)))
                     candidates.Add(target);
             }
         }
@@ -695,8 +695,21 @@ public partial class AbilitySystem : MonoBehaviour
         new Vector2Int(-1, 1), new Vector2Int(-1, -1)
     };
 
+    // なこが盤で迎えた自分の手番の数（突撃の間隔を数える。局の初めに空にする）
+    private readonly Dictionary<PieceInstance, int> nakoTurns = new Dictionary<PieceInstance, int>();
+
     private IEnumerator ExecuteNakoAbility(PieceInstance nako)
     {
+        int turn;
+        nakoTurns.TryGetValue(nako, out turn);
+        nakoTurns[nako] = turn + 1;
+        int interval = Mathf.Max(1, nako.isPromoted ? BalanceTuning.NakoPromotedInterval : BalanceTuning.NakoDashInterval);
+        if (turn % interval != 0)
+        {
+            // ドーパミン切れ: この手番は休む
+            FloatingText.Spawn(nako.boardPosition, "ドパ切れ", NakoPink, 3f);
+            yield break;
+        }
         GameSim.AbilitySource = nako;
         yield return NakoAbilityBody(nako);
         GameSim.AbilitySource = null;
@@ -708,7 +721,7 @@ public partial class AbilitySystem : MonoBehaviour
 
         // 能力中に成った場合も2回目が発動するよう、毎回回数を評価する。覚醒（ドパ・オーバードライブ）は倒すたびにもう一度
         int chain = 0;
-        for (int run = 0; run < (nako.isPromoted ? 2 : 1) + chain; run++)
+        for (int run = 0; run < (nako.isPromoted ? BalanceTuning.NakoPromotedDashes : 1) + chain; run++)
         {
             if (!nako.isAlive) yield break;
 
@@ -728,6 +741,12 @@ public partial class AbilitySystem : MonoBehaviour
             }
 
             if (candidates.Count == 0) yield break;
+            if (BalanceTuning.NakoAvoidCamp && !nako.isPromoted && GameRng.Range(0, 100) >= BalanceTuning.NakoCampPercent)
+            {
+                int size = bm.CurrentBoardSize;
+                var outside = candidates.FindAll(c => !nako.CanPromoteAt(c.y, size));
+                if (outside.Count > 0) candidates = outside;
+            }
 
             // 覚醒したなこは狙って出す。素のなこも NakoBaseAimPercent の割合で狙う（既定は0＝でたらめ）
             bool aim = (nako.awakened && BalanceTuning.NakoAwakenedAim) || (BalanceTuning.NakoBaseAimPercent > 0 && GameRng.Range(0, 100) < BalanceTuning.NakoBaseAimPercent);
@@ -782,16 +801,19 @@ public partial class AbilitySystem : MonoBehaviour
                 nakoPC.MoveTo(nakoPos);
 
             // パス上の敵駒に2ダメージ（スライド到着後。攻撃の上乗せぶん増える）。C3は能力の影響を受けない
-            int dash = CombatResolver.AbilityDamage(nako, 2);
+            int dash = BalanceTuning.NakoDashScales ? CombatResolver.AbilityDamage(nako, BalanceTuning.NakoDashDamage) : BalanceTuning.NakoDashDamage;
             bool hitAny = false;
             bool killedAny = false;
+            int hits = 0;
             foreach (var pos in path)
             {
+                if (BalanceTuning.NakoDashMaxHits > 0 && hits >= BalanceTuning.NakoDashMaxHits) break;
                 PieceInstance target = bm.GetPieceAt(pos);
                 if (target != null && target.team != nako.team && target.isAlive
                     && !ResistsAbilities(target))
                 {
                     hitAny = true;
+                    hits++;
                     if (BattleLogUI.Instance != null)
                         BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("なこ", nako.team) + "の突撃！" + BattleLogUI.ColorName(target.DisplayName, target.team) + " に" + dash + "ダメージ");
                     if (CombatResolver.ApplyDamage(target, dash, false)) killedAny = true;

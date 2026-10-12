@@ -74,7 +74,7 @@ public static class BalanceTuning
     public static int YuuRunUpPerSquare = 1;
 
     /// <summary>きぷが冷笑する敵の数（へるは周りの敵すべて）</summary>
-    public static int KipuSneerTargets = 2;
+    public static int KipuSneerTargets = 3;   // 2026-10-12 夜の相談で 2→3（体力+1 と合わせた底上げ）
 
     // ---- 練度（部員の成長。RunRoster） ----
 
@@ -109,6 +109,21 @@ public static class BalanceTuning
     public static bool YokozunaPushMoves = true;
     /// <summary>覚醒した鶏炭（デバッグ完了）が届く距離</summary>
     public static int KeiAwakenedRange = 2;
+    /// <summary>なこの突撃のダメージ（攻撃の上乗せぶん増える）</summary>
+    public static int NakoDashDamage = 2;
+    /// <summary>なこの突撃のダメージが攻撃の上乗せで増えるか</summary>
+    public static bool NakoDashScales = true;
+    /// <summary>なこのドパを敵陣に出さない（でたらめに突撃して勝手に成らないように。敵陣のほかに出せる場所がなければ出す）</summary>
+    public static bool NakoAvoidCamp = false;
+    /// <summary>NakoAvoidCamp のときも、この割合（%）は敵陣にもドパを出す</summary>
+    public static int NakoCampPercent = 0;
+    /// <summary>なこの1回の突撃で当たる相手の数の上限（通り道の手前から。0 なら通り道の全員）</summary>
+    public static int NakoDashMaxHits = 0;
+    /// <summary>なこが突撃する間隔（1 なら毎手番、2 なら2手番に1回で、あいだの手番は「ドパ切れ」で休む）。成ったなこは NakoPromotedInterval</summary>
+    public static int NakoDashInterval = 1;
+    public static int NakoPromotedInterval = 1;
+    /// <summary>成ったなこの、1手番の突撃の回数</summary>
+    public static int NakoPromotedDashes = 2;
     /// <summary>覚醒したなこ: 突撃で倒したときの追加の突撃の回数</summary>
     public static int NakoChainMax = 2;
     /// <summary>覚醒したなこ: ドパを、通り道に敵がいちばん多く並ぶ向きに出す（false なら覚醒前と同じくでたらめな向き）</summary>
@@ -125,6 +140,8 @@ public static class BalanceTuning
     public static int KipuAwakenedTargets = 3;
     /// <summary>覚醒した李白: 裏返すたびの攻撃の上乗せの上限</summary>
     public static int RihakuPoetMax = 3;
+    /// <summary>覚醒していない李白も、得になる駒だけを裏返す（味方は成ると得な駒だけ成らせ、敵は成っている駒だけ戻す）</summary>
+    public static bool RihakuSmartFlip = false;
     /// <summary>覚醒した李白: 裏返す範囲の広がり（成る前1・成ると2に足す）</summary>
     public static int RihakuAwakenedRadius = 0;
     /// <summary>雷帝「天雷」の落雷の元のダメージ（貫通。局による上乗せは足さない）</summary>
@@ -208,8 +225,8 @@ public static class BalanceTuning
     // ---- PlayStation 鯖の部員（RN・寝癖・無糖） ----
 
     /// <summary>RN: 自分の手番の終わりに得るブロック（次の自分の手番まで、受けるダメージをこの分防ぐ）。成ると・覚醒の上乗せ</summary>
-    public static int RnBlock = 2;
-    public static int RnPromotedBlock = 3;
+    public static int RnBlock = 3;            // 2026-10-12 夜の相談で 2→3、成ると 3→4
+    public static int RnPromotedBlock = 4;
     public static int RnAwakenedBlockBonus = 2;
     /// <summary>RN（成った後）: ポケモンスリープ（動かなかった手番の終わりの回復）と SEKIRO の弾き（ブロックで全部防いだら相手に。防御無視）</summary>
     public static int RnSleepHeal = 1;

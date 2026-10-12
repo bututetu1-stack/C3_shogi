@@ -43,6 +43,7 @@ public partial class AbilitySystem
         junkParts.Clear();
         smallBuffs.Clear();
         invitesUsed.Clear();
+        nakoTurns.Clear();
     }
 
     /// <summary>盤外にいる自軍の駒（局に勝ったときの練度に数える）</summary>
