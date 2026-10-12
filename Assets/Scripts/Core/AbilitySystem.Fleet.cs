@@ -41,6 +41,12 @@ public partial class AbilitySystem
         if (BattleEffects.Instance != null) BattleEffects.Instance.SetNight(false);
     }
 
+    /// <summary>潜航中の潜水艦。ほかの駒はその上を通り抜けられ（止まれはしない）、弓兵の矢も上を越えていく</summary>
+    public static bool IsSubmerged(PieceInstance p)
+    {
+        return p != null && p.isAlive && p.data.pieceType == PieceType.KanmusuSS;
+    }
+
     /// <summary>中破（体力が最大の半分以下）</summary>
     public static bool IsDamaged(PieceInstance ship) { return ship.currentHP * 2 <= ship.MaxHP; }
 
@@ -164,7 +170,7 @@ public partial class AbilitySystem
         {
             PieceData data = bm.GetPieceDataByType(classes[i]);
             if (data == null) continue;
-            Vector2Int? spawnPos = FindEmptyInRange(0, halfBoard + 1);
+            Vector2Int? spawnPos = PickSortieSpot(teitoku, halfBoard);
             if (!spawnPos.HasValue) continue;
             if (fx != null) fx.PlaySortieEffect(spawnPos.Value);
             PieceInstance ship = bm.Spawn(data, Team.Player, spawnPos.Value);
@@ -184,6 +190,7 @@ public partial class AbilitySystem
                 BattleLogUI.Instance.AddLog("建造完了: " + BattleLogUI.ColorName(ClassName(classes[i]), Team.Player) + "、出撃！");
             yield return new WaitForSeconds(0.3f);
         }
+        RecordSortie(ships, teitoku);
 
         // 開幕航空戦: 空母がいれば、深海すべてに先制の航空攻撃
         foreach (var carrier in ships)
@@ -192,12 +199,14 @@ public partial class AbilitySystem
             var abyss = AliveShinkai();
             if (abyss.Count == 0) break;
             if (BattleLogUI.Instance != null) BattleLogUI.Instance.AddLog("開幕航空戦！");
-            var source = GameSim.BeginSource(carrier);
-            foreach (var s in abyss)
+            // 全機を発艦させ、爆弾が落ちてから当てる
+            if (fx != null)
             {
-                if (fx != null) fx.PlayAirRaidEffect(carrier.boardPosition, s.boardPosition, true);
-                FleetHit(carrier, s, ShipDamage(carrier, BalanceTuning.CarrierOpeningDamage, fleet));
+                foreach (var s in abyss) fx.PlayAirRaidEffect(carrier.boardPosition, s.boardPosition, true);
+                yield return new WaitForSeconds(BattleEffects.AirRaidImpactTime);
             }
+            var source = GameSim.BeginSource(carrier);
+            foreach (var s in abyss) FleetHit(carrier, s, ShipDamage(carrier, BalanceTuning.CarrierOpeningDamage, fleet));
             GameSim.EndSource(source);
             yield return new WaitForSeconds(0.4f);
         }
@@ -296,6 +305,43 @@ public partial class AbilitySystem
             if (BattleEffects.Instance != null) BattleEffects.Instance.SetNight(false);
             fleets.Remove(groupId);
         }
+    }
+
+    /// <summary>艦娘の出撃位置: 提督の周り（入渠できるマス）。空いていなければ、または FleetSortieNearTeitoku でなければ自陣のどこか</summary>
+    private Vector2Int? PickSortieSpot(PieceInstance teitoku, int halfBoard)
+    {
+        if (BalanceTuning.FleetSortieNearTeitoku)
+        {
+            BoardManager bm = BoardManager.Instance;
+            var spots = new List<Vector2Int>();
+            for (int dx = -1; dx <= 1; dx++)
+                for (int dy = -1; dy <= 1; dy++)
+                {
+                    Vector2Int p = teitoku.boardPosition + new Vector2Int(dx, dy);
+                    if ((dx != 0 || dy != 0) && bm.IsInBounds(p) && bm.IsEmpty(p)) spots.Add(p);
+                }
+            if (spots.Count > 0) return spots[Random.Range(0, spots.Count)];
+        }
+        return FindEmptyInRange(0, halfBoard + 1);
+    }
+
+    /// <summary>自動プレイの集計用: 出撃した艦娘と提督・いちばん近い深海との距離（"位置:提督@1"・"位置:深海@4"）</summary>
+    private static void RecordSortie(List<PieceInstance> ships, PieceInstance teitoku)
+    {
+        if (!GameSim.Headless) return;
+        var abyss = AliveShinkai();
+        foreach (var ship in ships)
+        {
+            GameSim.RecordFleet("位置:提督", Chebyshev(ship.boardPosition, teitoku.boardPosition));
+            int near = 99;
+            foreach (var s in abyss) near = Mathf.Min(near, Chebyshev(ship.boardPosition, s.boardPosition));
+            if (near < 99) GameSim.RecordFleet("位置:深海", near);
+        }
+    }
+
+    private static int Chebyshev(Vector2Int a, Vector2Int b)
+    {
+        return Mathf.Max(Mathf.Abs(a.x - b.x), Mathf.Abs(a.y - b.y));
     }
 
     /// <summary>自動プレイの集計用: 艦隊戦が終わったときの、艦種ごとの与ダメージ（"艦:駆逐艦@5"）</summary>
@@ -457,7 +503,7 @@ public partial class AbilitySystem
             if (fleet.night || gm == null || gm.MoveCount - fleet.arrivalMove < BalanceTuning.FleetNightAfterMoves) continue;
             fleet.night = true;
             GameSim.RecordFleet("夜戦", gm.MoveCount - fleet.arrivalMove);
-            if (BattleLogUI.Instance != null) BattleLogUI.Instance.AddLog("夜戦突入！ 駆逐・軽巡・潜水の攻撃が2倍になり、空母は攻撃できない");
+            if (BattleLogUI.Instance != null) BattleLogUI.Instance.AddLog("夜戦突入！ 駆逐・軽巡・潜水の攻撃が2倍になり、" + (BalanceTuning.CarrierNightOps ? "空母は改だけ発艦できる" : "空母は攻撃できない"));
             if (BattleEffects.Instance != null) BattleEffects.Instance.SetNight(true);
             yield return CutInUI.Play("夜戦突入", "我、夜戦に突入す！", null, CutInUI.Navy, 1.2f);
         }
@@ -536,7 +582,8 @@ public partial class AbilitySystem
         var abyss = AliveShinkai();
         if (abyss.Count == 0 || IsHeavilyDamaged(ship)) yield break;   // 大破は攻撃しない
         PieceType type = ship.data.pieceType;
-        if (type == PieceType.KanmusuCV && (IsDamaged(ship) || (fleet != null && fleet.night))) yield break;   // 空母は中破・夜戦で発艦できない
+        // 空母は中破・夜戦で発艦できない（夜間作戦航空要員がいれば、改の空母は夜戦でも発艦できる）
+        if (type == PieceType.KanmusuCV && (IsDamaged(ship) || (fleet != null && fleet.night && !(BalanceTuning.CarrierNightOps && ship.isPromoted)))) yield break;
 
         BoardManager bm = BoardManager.Instance;
         BattleEffects fx = BattleEffects.Instance;
@@ -599,7 +646,7 @@ public partial class AbilitySystem
             }
             case PieceType.KanmusuCV:
             {
-                // 空爆: 深海に1、深海の周り2マス以内の敵2体に2
+                // 空爆: 深海に1、深海の周り2マス以内の敵（CarrierSplashTargets 体）に2
                 if (fx != null) fx.PlayAirRaidEffect(ship.boardPosition, target.boardPosition);
                 yield return new WaitForSeconds(BattleEffects.AirRaidImpactTime);
                 Vector2Int center = target.boardPosition;
@@ -608,7 +655,7 @@ public partial class AbilitySystem
                 FleetHit(ship, target, bomb);
                 var nearby = GetEnemiesInRange(center, 2, Team.Enemy, target);
                 ShuffleList(nearby);
-                for (int i = 0; i < Mathf.Min(2, nearby.Count); i++) FleetHit(ship, nearby[i], ShipDamage(ship, BalanceTuning.CarrierSplashDamage, fleet));
+                for (int i = 0; i < Mathf.Min(BalanceTuning.CarrierSplashTargets, nearby.Count); i++) FleetHit(ship, nearby[i], ShipDamage(ship, BalanceTuning.CarrierSplashDamage, fleet));
                 break;
             }
             default:

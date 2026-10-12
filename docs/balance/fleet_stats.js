@@ -12,6 +12,7 @@ for (const file of files) {
   const ends = [];          // 作戦完了・轟沈までの手数
   const nightAt = [];
   const shipDamage = {};    // 艦種 → 作戦完了までに与えたダメージの一覧（"艦:駆逐艦@5"）
+  const sortie = { 提督: [], 深海: [] };   // 出撃した艦娘と提督・いちばん近い深海との距離（"位置:提督@1"）
   for (const line of fs.readFileSync(file, 'utf8').split('\n')) {
     if (!line.trim()) continue;
     const run = JSON.parse(line);
@@ -22,6 +23,7 @@ for (const file of files) {
       if (!arrive) continue;
       arrivals++;
       for (const e of ev) {
+        if (e.k.startsWith('位置:')) { (sortie[e.k.slice(3)] = sortie[e.k.slice(3)] || []).push(e.v); continue; }
         if (!e.k.startsWith('艦:')) continue;
         const cls = e.k.slice(2);
         (shipDamage[cls] = shipDamage[cls] || []).push(e.v);
@@ -45,6 +47,8 @@ for (const file of files) {
     console.log('  夜戦を ' + n + ' 手で始めたら入れる艦隊: ' + pct(reach, arrivals));
   }
   console.log('  実際に夜戦に入った: ' + pct(nights, arrivals));
+  if (sortie.提督.length) console.log('  出撃した艦娘と提督の距離: 平均 ' + avg(sortie.提督).toFixed(1) + ' / 隣（入渠できる）' + pct(sortie.提督.filter(v => v <= 1).length, sortie.提督.length));
+  if (sortie.深海.length) console.log('  出撃した艦娘といちばん近い深海の距離: 平均 ' + avg(sortie.深海).toFixed(1) + ' / 2マス以内 ' + pct(sortie.深海.filter(v => v <= 2).length, sortie.深海.length));
   const classes = Object.keys(shipDamage);
   if (classes.length) {
     console.log('  作戦完了までに与えたダメージ（艦種ごとの平均、深海以外も含む）:');

@@ -69,7 +69,7 @@ public partial class AbilitySystem
             for (int y = archer.boardPosition.y + dir; y >= 0 && y < bm.CurrentBoardSize; y += dir)
             {
                 PieceInstance p = bm.GetPieceAt(new Vector2Int(archer.boardPosition.x, y));
-                if (p == null) continue;
+                if (p == null || IsSubmerged(p)) continue;   // 潜った潜水艦の上は矢が越えていく
                 if (p.team != team && p.isAlive && p.data.pieceType != PieceType.C3) target = p;
                 break;   // 味方や C3 に当たると、そこで矢は止まる
             }
@@ -78,7 +78,7 @@ public partial class AbilitySystem
             if (BattleEffects.Instance != null) BattleEffects.Instance.PlayArrow(archer.boardPosition, target.boardPosition);
             if (BattleLogUI.Instance != null)
                 BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("弓兵", team) + " が " + BattleLogUI.ColorName(target.DisplayName, target.team) + " を射た");
-            yield return new WaitForSeconds(0.2f);
+            yield return new WaitForSeconds(0.25f);   // 矢が届いてから
             var source = GameSim.BeginSource(archer);
             CombatResolver.ApplyDamage(target, damage, true);
             GameSim.EndSource(source);

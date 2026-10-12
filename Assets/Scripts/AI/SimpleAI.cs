@@ -177,19 +177,22 @@ public class SimpleAI : MonoBehaviour
 
         int completedDepth = 0;
         List<MoveEntry> best = null;
+        // 挑発の引きつけは敵の思考だけにかける（自軍はプレイヤーが指すので縛らない）
+        CollectLures(forEnemy ? Team.Player : Team.Enemy, forEnemy);
 
         foreach (int depth in searchDepths)
         {
             var scored = new List<MoveEntry>(root.Count);
-            // 評価値は「敵が有利なほど正」。自軍の手番では小さいほど良い
+            // 評価値は「敵が有利なほど正」。自軍の手番では小さいほど良い（敵の点には引きつけの点も入る）
             int bestRaw = forEnemy ? -WinScore * 2 : WinScore * 2;
             for (int i = 0; i < root.Count; i++)
             {
                 MoveEntry e = root[i];
+                int lure = LureBonus(e.piece, e.move);
                 int mark = Simulate(e.piece, e.move);
                 // 最善候補との差を見るため、最善より少し悪い手までは正確に読む
                 int raw = forEnemy
-                    ? AlphaBeta(depth - 1, false, bestRaw - randomMargin, WinScore * 2, 1)
+                    ? AlphaBeta(depth - 1, false, bestRaw - randomMargin - lure, WinScore * 2, 1) + lure
                     : AlphaBeta(depth - 1, true, -WinScore * 2, bestRaw + randomMargin, 1);
                 Restore(mark);
                 if (timeUp) break;
@@ -233,6 +236,37 @@ public class SimpleAI : MonoBehaviour
     private static bool SameMove(MoveEntry a, MoveEntry b)
     {
         return a.piece == b.piece && a.move.position == b.move.position;
+    }
+
+    // ================================================================
+    // 挑発の引きつけ（小錦・潜水）: 近くの駒は、挑発駒を攻撃する手・近づく手を好む
+    // ================================================================
+    private readonly List<PieceInstance> lures = new List<PieceInstance>();
+
+    private void CollectLures(Team owner, bool active)
+    {
+        lures.Clear();
+        if (!active || BalanceTuning.TauntLureRange <= 0) return;
+        foreach (var p in BoardManager.Instance.GetTeamPieces(owner))
+            if (p.isAlive && p.data.isTauntPiece && !AbilitySystem.IsObstacle(p.data.pieceType) && !AbilitySystem.IsSuppressed(p))
+                lures.Add(p);
+    }
+
+    /// <summary>この手の引きつけの点（いちばん強く引かれている挑発駒で数える）</summary>
+    private int LureBonus(PieceInstance piece, MoveValidator.MoveResult move)
+    {
+        int best = 0;
+        for (int i = 0; i < lures.Count; i++)
+        {
+            PieceInstance t = lures[i];
+            int dist = Chebyshev(piece.boardPosition, t.boardPosition);
+            if (dist > BalanceTuning.TauntLureRange) continue;
+            int bonus = move.isAttack
+                ? (move.position == t.boardPosition ? BalanceTuning.TauntLureAttack : 0)
+                : (dist - Chebyshev(move.position, t.boardPosition)) * BalanceTuning.TauntLureApproach;
+            if (bonus > best) best = bonus;
+        }
+        return best;
     }
 
     /// <summary>Alpha-Beta探索（正の値 = AI有利）</summary>
@@ -699,8 +733,12 @@ public class SimpleAI : MonoBehaviour
                     count[idx]++;
                     sumAtk[idx] += atk;
                     if (atk > maxAtk[idx]) maxAtk[idx] = atk;
-                    // 飛び越えられない方向は駒に当たったら止まる（MoveValidatorと同じ規則）
-                    if (!dir.canJump && bm.GetPieceAt(new Vector2Int(x, y)) != null) break;
+                    // 飛び越えられない方向は駒に当たったら止まる（MoveValidatorと同じ規則。潜航中の潜水艦は通り抜ける）
+                    if (!dir.canJump)
+                    {
+                        PieceInstance blocker = bm.GetPieceAt(new Vector2Int(x, y));
+                        if (blocker != null && !AbilitySystem.IsSubmerged(blocker)) break;
+                    }
                 }
             }
         }

@@ -330,9 +330,27 @@ public partial class AbilitySystem
                         BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("ニコ", niko.team) + " はいまできるタスクがなかった");
                     break;
                 }
+                yield return LandNikoShot(niko);
                 yield return new WaitForSeconds(0.35f);
             }
         }
+    }
+
+    // 物鉄の札（支援砲撃）の着弾待ち。演出があるときだけ使う
+    private PieceInstance nikoShotTarget;
+    private int nikoShotDamage;
+
+    /// <summary>物鉄の札の砲弾が届くのを待ってから当てる（届く前に沈んでいれば何もしない）</summary>
+    private IEnumerator LandNikoShot(PieceInstance niko)
+    {
+        if (nikoShotTarget == null) yield break;
+        PieceInstance target = nikoShotTarget;
+        nikoShotTarget = null;
+        yield return new WaitForSeconds(BattleEffects.BombardmentImpactTime);
+        if (!target.isAlive) yield break;
+        GameSim.AbilitySource = niko;
+        CombatResolver.ApplyDamage(target, nikoShotDamage, true);
+        GameSim.AbilitySource = null;
     }
 
     /// <summary>暇なとき: 仲間にした部員の札を、引く順に並べる（ニコ自身は除く。同じ部員は1枚）</summary>
@@ -508,8 +526,12 @@ public partial class AbilitySystem
                     if (e.isAlive && e.data.pieceType != PieceType.C3) targets.Add(e);
                 if (targets.Count == 0) return false;
                 PieceInstance target = targets[Random.Range(0, targets.Count)];
-                if (BattleEffects.Instance != null) BattleEffects.Instance.PlayBombardmentEffect(niko.boardPosition, target.boardPosition);
-                CombatResolver.ApplyDamage(target, CombatResolver.AbilityDamage(niko, 1 + CardBonus(niko)), true);
+                int damage = CombatResolver.AbilityDamage(niko, 1 + CardBonus(niko));
+                if (BattleEffects.Instance == null) { CombatResolver.ApplyDamage(target, damage, true); return true; }
+                // 砲弾が届いてから当てる（ExecuteNikoAbilities が着弾を待つ）
+                BattleEffects.Instance.PlayBombardmentEffect(niko.boardPosition, target.boardPosition);
+                nikoShotTarget = target;
+                nikoShotDamage = damage;
                 return true;
             }
             case PieceType.Konishiki:
