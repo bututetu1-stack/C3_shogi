@@ -80,7 +80,7 @@ public partial class AbilitySystem
                 BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("弓兵", team) + " が " + BattleLogUI.ColorName(target.DisplayName, target.team) + " を射た");
             yield return new WaitForSeconds(0.25f);   // 矢が届いてから
             var source = GameSim.BeginSource(archer);
-            CombatResolver.ApplyDamage(target, damage, true);
+            CombatResolver.AbilityHit(target, damage);
             GameSim.EndSource(source);
             yield return new WaitForSeconds(0.2f);
         }

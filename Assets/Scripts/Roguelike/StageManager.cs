@@ -587,7 +587,7 @@ public class StageManager : MonoBehaviour
             // 前半（EnemyScaleFromStage より前）は上乗せしない
             int late = Mathf.Max(0, stage - BalanceTuning.EnemyScaleFromStage + 1);
             enemy.AddMaxHP(late / Mathf.Max(1, BalanceTuning.EnemyLateHpDivisor));
-            enemy.stageBonusATK = late / Mathf.Max(1, BalanceTuning.EnemyLateAtkDivisor);
+            enemy.stageBonusATK = Mathf.FloorToInt(late / Mathf.Max(0.5f, BalanceTuning.EnemyLateAtkDivisor));
             enemy.bonusATK += enemy.stageBonusATK;
         }
         CombatResolver.RefreshStats(enemy);

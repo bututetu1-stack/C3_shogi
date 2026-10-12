@@ -1584,6 +1584,16 @@ public class BattleEffects : MonoBehaviour
     }
 
     /// <summary>衝撃波のリング</summary>
+    /// <summary>能力が戻った瞬間（結界を出た・結界が倒れた・封印が解けた）: 鎖が砕ける（画像 SealBreak がなければ緑の輪と光の粒）</summary>
+    public void PlaySealBreak(Vector2Int pos)
+    {
+        Vector3 p = World(pos);
+        if (ArtFx("SealBreak", p, 0.5f, 1.6f, 0.55f)) return;
+        Color green = new Color(0.62f, 1f, 0.7f, 0.9f);
+        StartCoroutine(RingWave(p, green, 0.3f, 1.3f, 0.45f));
+        StartCoroutine(Burst(p, 10, green, Color.white, 1.2f, 2.6f, 0.07f, 0.45f, 0f, SpriteFactory.Pixel));
+    }
+
     private IEnumerator RingWave(Vector3 pos, Color color, float startSize, float endSize, float life)
     {
         var sr = CreateSprite(SpriteFactory.Ring, pos, color, startSize, OrderGlow + 1);

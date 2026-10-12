@@ -267,9 +267,9 @@ public partial class AbilitySystem
         }
         int damage = CombatResolver.AbilityDamage(negu, BalanceTuning.NeguBounceWallDamage);
         if (BattleLogUI.Instance != null)
-            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName(negu.DisplayName, negu.team) + " が跳ね飛ばした " + BattleLogUI.ColorName(target.DisplayName, target.team) + " がぶつかった（" + damage + "ダメージ）");
+            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName(negu.DisplayName, negu.team) + " が跳ね飛ばした " + BattleLogUI.ColorName(target.DisplayName, target.team) + " がぶつかった（" + CombatResolver.AbilityHitPreview(target, damage) + "ダメージ）");
         var source = GameSim.BeginSource(negu);
-        CombatResolver.ApplyDamage(target, damage, true);
+        CombatResolver.AbilityHit(target, damage);
         GameSim.EndSource(source);
     }
 

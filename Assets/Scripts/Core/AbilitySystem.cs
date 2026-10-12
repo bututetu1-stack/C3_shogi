@@ -487,13 +487,13 @@ public partial class AbilitySystem : MonoBehaviour
             int damage = CombatResolver.AbilityDamage(k, blocked ? BalanceTuning.YokozunaWallDamage : BalanceTuning.YokozunaPushDamage + (slap ? 1 : 0));
             if (BattleEffects.Instance != null) BattleEffects.Instance.PlayYokozunaEffect(k.boardPosition, target.boardPosition);
             if (BattleLogUI.Instance != null)
-                BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("横綱", k.team) + "の" + (blocked ? "寄り倒し！" : slap ? "張り手！" : "押し出し！") + BattleLogUI.ColorName(target.DisplayName, target.team) + " に" + damage + "ダメージ");
+                BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("横綱", k.team) + "の" + (blocked ? "寄り倒し！" : slap ? "張り手！" : "押し出し！") + BattleLogUI.ColorName(target.DisplayName, target.team) + " に" + CombatResolver.AbilityHitPreview(target, damage) + "ダメージ");
             FloatingText.Spawn(target.boardPosition, blocked ? "寄り倒し" : slap ? "張り手" : "押し出し", Palette.GoldLight, 3.2f);
             yield return new WaitForSeconds(0.2f);
             if (!blocked && !slap) CombatResolver.MovePieceTo(target, dest);
             yield return new WaitForSeconds(0.15f);
             var source = GameSim.BeginSource(k);
-            CombatResolver.ApplyDamage(target, damage, true);
+            CombatResolver.AbilityHit(target, damage);
             GameSim.EndSource(source);
             yield return new WaitForSeconds(0.3f);
         }
@@ -1320,7 +1320,7 @@ public partial class AbilitySystem : MonoBehaviour
         if (BattleEffects.Instance != null)
             BattleEffects.Instance.PlayExplosionEffect(deathPos);
         if (BattleLogUI.Instance != null)
-            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("髑髏", piece.team) + " が爆発！隣接駒に貫通" + blast + "ダメージ");
+            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("髑髏", piece.team) + " が爆発！隣の駒に" + (BalanceTuning.LegacyPierce ? "貫通" + blast : (blast + BalanceTuning.PierceCompensation) + "（防御で減る）") + "ダメージ");
 
         // 隣接全セルに貫通1ダメージ（攻撃の上乗せぶん増える。C3は能力の影響を受けない）
         var victims = new List<PieceInstance>();
@@ -1339,7 +1339,7 @@ public partial class AbilitySystem : MonoBehaviour
 
         var source = GameSim.BeginSource(piece);
         foreach (var victim in victims)
-            CombatResolver.ApplyDamage(victim, blast, true);
+            CombatResolver.AbilityHit(victim, blast);
         GameSim.EndSource(source);
 
         explodingPositions.Remove(deathPos);

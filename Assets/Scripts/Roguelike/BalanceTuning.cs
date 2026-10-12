@@ -11,10 +11,10 @@ public static class BalanceTuning
     /// <summary>敵の駒（C3・深海を除く）に局の上乗せが付き始める局。前半は上乗せせず、敵の種類と布陣で難しさを作る（第9版）。
     /// 上乗せは「この局を1とした局の数」を、下の割る数で割った値</summary>
     public static int EnemyScaleFromStage = 9;
-    /// <summary>後半の敵の駒の上乗せ: 体力 = (局 − 7) ÷ この値、攻撃 = (局 − 7) ÷ EnemyLateAtkDivisor（第八局から。第十五局で体力+8・攻撃+4）。
+    /// <summary>後半の敵の駒の上乗せ: late = 局 − EnemyScaleFromStage + 1 として、体力 = late ÷ この値、攻撃 = late ÷ EnemyLateAtkDivisor の切り捨て（第九局から。第十五局で体力+7・攻撃+5）。
     /// 深海・艦娘の上乗せは EnemyAtkDivisor（局 ÷ 4）のまま</summary>
     public static int EnemyLateHpDivisor = 1;
-    public static int EnemyLateAtkDivisor = 2;
+    public static float EnemyLateAtkDivisor = 1.25f;   // 小数も可。2026-10-12 に 2 → 1.25（第十五局で攻撃+5。駒も殴る敵・防御の変更で易しくなったぶん）
     /// <summary>敵の体力の上乗せ = 局 ÷ この値（2なら第二局から+1、第十五局で+7）</summary>
     public static int EnemyHpDivisor = 2;
     /// <summary>敵C3の体力の上乗せ = (局−1) ÷ この値</summary>
@@ -63,9 +63,12 @@ public static class BalanceTuning
     /// <summary>引きつけの強さ（敵の思考で、挑発駒を攻撃する手と、1マス近づく手に足す点。駒1体の値打ちがおよそ100〜300）</summary>
     public static int TauntLureAttack = 150;
     public static int TauntLureApproach = 50;
+    /// <summary>敵の思考で、自軍の駒（C3以外）にダメージが通る攻撃の手に足す点と、通るダメージ1ごとの点（0なら足さない。「駒も殴りに来る」）</summary>
+    public static int EnemyAggroAttack = 60;
+    public static int EnemyAggroPerDamage = 20;
 
     /// <summary>僕のそばに何手番続けていると強化されるか</summary>
-    public static int BokuBuffTurns = 2;
+    public static int BokuBuffTurns = 1;
 
     /// <summary>ユウの助走: 敵まで走ったマスのうち、2マス目から1マスごとの攻撃の上乗せ（3マス先なら+2）</summary>
     public static int YuuRunUpPerSquare = 1;
@@ -110,10 +113,10 @@ public static class BalanceTuning
     public static int NakoChainMax = 2;
     /// <summary>覚醒したなこ: ドパを、通り道に敵がいちばん多く並ぶ向きに出す（false なら覚醒前と同じくでたらめな向き）</summary>
     public static bool NakoAwakenedAim = true;
-    /// <summary>素のなこがドパを「通り道に敵がいちばん多い向き」に出す割合（%）。0 ならでたらめ（夜の改善ループで相談用に作った。既定は0）</summary>
-    public static int NakoBaseAimPercent = 0;
-    /// <summary>門人の突進を少し考えさせる（倒せる相手・ダメージの大きい相手を狙い、攻撃できなければ相手の C3 に近づく）。false ならでたらめ（夜の改善ループで相談用に作った。既定は false）</summary>
-    public static bool MoninSmartRush = false;
+    /// <summary>素のなこがドパを「通り道に敵がいちばん多い向き」に出す割合（%）。0 ならでたらめ（2026-10-12 の相談で 25 に）</summary>
+    public static int NakoBaseAimPercent = 25;
+    /// <summary>門人の突進を少し考えさせる（倒せる相手・ダメージの大きい相手を狙い、攻撃できなければ相手の C3 に近づく）。false ならでたらめ（2026-10-12 の相談で入れた）</summary>
+    public static bool MoninSmartRush = true;
     /// <summary>覚醒したヲツが作る中華の数と、その中華の満腹の上限（1体あたり）</summary>
     public static int WotsuAwakenedChukaCount = 4;
     public static int WotsuAwakenedFullMax = 2;
@@ -145,6 +148,11 @@ public static class BalanceTuning
     public static int[] AiWeightsPlayer = new int[0];
     /// <summary>自動プレイ専用: 仲間選択をでたらめではなく、測った強さの順に選ぶ（人が考えて選んだときの目安を出すため。既定は false）</summary>
     public static bool SimSmartDraft = false;
+    /// <summary>仲間の候補の抽選の重み（1体あたり）: レア・激レアの第一局の値と、1局ごとの伸び（ブロンズは30から少しずつ下がる）</summary>
+    public static float DraftRareBase = 12f;
+    public static float DraftRareGrowth = 0.1f;
+    public static float DraftSuperRareBase = 3f;
+    public static float DraftSuperRareGrowth = 0.4f;
     public static int[] AiWeightsEnemy = { 450, 150, 8, 3, 6, 8, 300 };   // 前進・接近を2倍（後半ほど C3 に迫る。勝率は同じ）
     /// <summary>覚醒した僕が1体を強化できる量の上限</summary>
     public static int BokuAwakenedCap = 1;
@@ -231,6 +239,12 @@ public static class BalanceTuning
     public static int KekkaiRange = 2;
     /// <summary>弓兵: 手番の終わりに射る矢のダメージの元の値（防御で減る）</summary>
     public static int YumiheiDamage = 1;
+    /// <summary>
+    /// 防御無視を特別なものだけにする（2026-10-12 の相談）。false なら、〆鯖・RN の忍殺・ボス（雷帝・魔王）の雷・艦隊から深海への攻撃のほかは
+    /// 防御が効き、その代わりに能力のダメージに PierceCompensation を足す。true なら昔どおり（弓兵・髑髏・横綱・寝癖・ニコの札・基地航空隊・支援艦隊も防御無視）
+    /// </summary>
+    public static bool LegacyPierce = false;
+    public static int PierceCompensation = 1;
     /// <summary>大盾: 正面から受ける通常の攻撃を減らす量</summary>
     public static int OotateGuard = 2;
     /// <summary>妖狐: 倒されたとき残す狐火の数</summary>
@@ -284,15 +298,16 @@ public static class BalanceTuning
     public static int LandBaseDamage = 1;
     /// <summary>開幕雷撃: 改で出撃した潜水艦（練度★3の提督）が着任のときに撃つ雷撃の元の値（0なら撃たない。Gemini 第三回）</summary>
     public static int SubOpeningTorpedo = 2;
-    /// <summary>ケッコンカッコカリ: 生還した物鉄・改がもう一度敵陣に入ったときの最大体力の上乗せ（体力も全快。0なら起きない）</summary>
+    /// <summary>ケッコンカッコカリ: 改二の艦娘がS勝利でMVPになると、その周のあいだその艦種は最初から改二で出撃し、最大体力と能力のダメージが上がる（0なら起きない）</summary>
     public static int RingMaxHp = 2;
+    public static int RingDamage = 1;
     /// <summary>夜間触接: 夜戦に入ったとき軽巡か空母がいれば、夜戦のあいだ艦娘の攻撃にこの値を足す（0なら起きない。Gemini 第三回）</summary>
     public static int NightContactDamage = 0;
     /// <summary>戦果（夜の改善ループの案、既定はオフ）: 艦隊がS勝利するたびに、その周のあいだ自軍全員の体力にこの値を足す（FleetSpoilsMax 回まで）</summary>
     public static int FleetSpoilsHp = 0;
     public static int FleetSpoilsMax = 3;
-    /// <summary>歴戦の艦隊（夜の改善ループの案、既定はオフ）: その周で一度でもS勝利していれば、次からの着任で艦娘が最初から改で出撃する（練度★3と同じ）</summary>
-    public static bool FleetVeteranKai = false;
+    /// <summary>歴戦の艦隊（2026-10-12 の相談で入れた）: その周で一度でもS勝利していれば、次からの着任で艦娘が最初から改で出撃する（練度★3と同じ）</summary>
+    public static bool FleetVeteranKai = true;
     /// <summary>艦娘は提督の周り（入渠できるマス）から出撃する（false なら自陣のどこか）</summary>
     public static bool FleetSortieNearTeitoku = true;
 

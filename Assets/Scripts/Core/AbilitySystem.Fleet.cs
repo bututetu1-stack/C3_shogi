@@ -196,7 +196,9 @@ public partial class AbilitySystem
             ships.Add(ship);
             // 練度★3の提督の艦娘は、最初から改で出撃する（歴戦の艦隊: その周で一度S勝利していても）
             bool veteranFleet = BalanceTuning.FleetVeteranKai && GameManager.Instance.FleetSWins > 0;
-            if ((GameManager.Instance.Roster.StarsOf(teitoku.data.pieceType) >= 3 || veteranFleet) && !ship.isPromoted)
+            if (GameManager.Instance.RingedClasses.Contains(classes[i]))
+                ApplyRingedSortie(ship);   // ケッコンカッコカリした艦種は改二で
+            else if ((GameManager.Instance.Roster.StarsOf(teitoku.data.pieceType) >= 3 || veteranFleet) && !ship.isPromoted)
             {
                 ship.Promote();
                 CombatResolver.PlayFlip(ship);
@@ -295,6 +297,7 @@ public partial class AbilitySystem
                 if (BattleEffects.Instance != null) BattleEffects.Instance.PlayMvp(mvp.boardPosition);
                 if (BattleLogUI.Instance != null)
                     BattleLogUI.Instance.AddLog("MVP: " + BattleLogUI.ColorName(ClassName(mvp.data.pieceType), Team.Player) + "（深海に" + mvp.fleetDamage + "ダメージ）");
+                if (sRank) GiveRing(mvp);   // 改二のMVPならケッコンカッコカリ
             }
 
             string rank = sRank ? "S勝利" : "A勝利";
@@ -447,7 +450,7 @@ public partial class AbilitySystem
         foreach (var t in targets)
         {
             if (!t.isAlive) continue;
-            CombatResolver.ApplyDamage(t, damage, true);
+            CombatResolver.AbilityHit(t, damage);
             hit++;
         }
         GameSim.EndSource(source);
@@ -568,8 +571,8 @@ public partial class AbilitySystem
             if (!target.isAlive) continue;
             int damage = BalanceTuning.FleetSupportDamage + StageManager.EnemyStageAtk(stage);
             if (BattleLogUI.Instance != null)
-                BattleLogUI.Instance.AddLog("支援艦隊の" + kind + "！" + BattleLogUI.ColorName(target.DisplayName, target.team) + " に" + damage + "ダメージ");
-            CombatResolver.ApplyDamage(target, damage, true);
+                BattleLogUI.Instance.AddLog("支援艦隊の" + kind + "！" + BattleLogUI.ColorName(target.DisplayName, target.team) + " に" + CombatResolver.AbilityHitPreview(target, damage) + "ダメージ");
+            CombatResolver.AbilityHit(target, damage);
         }
         GameSim.EndSource(source);
     }
@@ -628,25 +631,42 @@ public partial class AbilitySystem
     private static readonly Color RingPink = new Color(1f, 0.72f, 0.82f);
 
     /// <summary>
-    /// ケッコンカッコカリ（Gemini 第三回）: 作戦を終えて生還した物鉄・改が、もう一度敵陣に入る（出る）と、
-    /// 体力が全快して最大体力が上がる。1局に1回のめったに起きない演出
+    /// ケッコンカッコカリ: S勝利でMVPになった改二の艦娘と指輪を交わす。
+    /// その周のあいだ、その艦種は最初から改二で出撃し、最大体力+RingMaxHp・能力のダメージ+RingDamage（指輪の印が付く）
     /// </summary>
-    public void CheckRing(PieceInstance piece, Vector2Int from)
+    private void GiveRing(PieceInstance ship)
     {
-        if (BalanceTuning.RingMaxHp <= 0 || piece == null || !piece.isAlive || piece.ringed || !piece.IsVeteran
-            || piece.data.pieceType != PieceType.Monotetsu || IsSuppressed(piece)) return;
-        int size = BoardManager.Instance.CurrentBoardSize;
-        if (!InEnemyCamp(piece.team, from.y, size) && !InEnemyCamp(piece.team, piece.boardPosition.y, size)) return;
-        piece.ringed = true;
-        piece.AddMaxHP(BalanceTuning.RingMaxHp);
-        piece.currentHP = piece.MaxHP;
-        CombatResolver.RefreshStats(piece);
-        RunRoster.Feat(piece);
-        GameSim.RecordFleet("ケッコン", GameManager.Instance != null ? GameManager.Instance.MoveCount : 0);
-        FloatingText.Spawn(piece.boardPosition, "ケッコンカッコカリ", RingPink, 4.4f, 0.3f);
-        if (BattleEffects.Instance != null) BattleEffects.Instance.PlayRing(piece.boardPosition);
+        GameManager gm = GameManager.Instance;
+        if (BalanceTuning.RingMaxHp <= 0 || ship == null || !ship.isAlive || !ship.kai2 || gm == null) return;
+        PieceType type = ship.data.pieceType;
+        if (gm.RingedClasses.Contains(type)) return;
+        gm.RingedClasses.Add(type);
+        ship.ringed = true;
+        CombatResolver.RefreshStats(ship);
+        GameSim.RecordFleet("ケッコン", gm.MoveCount);
+        FloatingText.Spawn(ship.boardPosition, "ケッコンカッコカリ", RingPink, 4.4f, 0.3f);
+        if (BattleEffects.Instance != null) BattleEffects.Instance.PlayRing(ship.boardPosition);
         if (BattleLogUI.Instance != null)
-            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("物鉄・改", piece.team) + " がケッコンカッコカリ！ 体力が全快し、最大体力+" + BalanceTuning.RingMaxHp);
+            BattleLogUI.Instance.AddLog("MVPの" + BattleLogUI.ColorName(ClassName(type) + "改二", Team.Player) + " とケッコンカッコカリ！ この周のあいだ、"
+                + ClassName(type) + "は最初から改二で出撃する（体力+" + BalanceTuning.RingMaxHp + "・能力のダメージ+" + BalanceTuning.RingDamage + "）");
+    }
+
+    /// <summary>ケッコンカッコカリした艦種の艦娘: 改二で出撃し、最大体力を上げて指輪の印を付ける</summary>
+    private static void ApplyRingedSortie(PieceInstance ship)
+    {
+        if (!ship.isPromoted) ship.Promote();
+        if (!ship.kai2)
+        {
+            ship.kai2 = true;
+            ship.bonusATK += 1;
+            ship.bonusDEF += 1;
+        }
+        ship.ringed = true;
+        ship.AddMaxHP(BalanceTuning.RingMaxHp);
+        ship.currentHP = ship.MaxHP;
+        CombatResolver.PlayFlip(ship);
+        CombatResolver.RefreshStats(ship);
+        FloatingText.Spawn(ship.boardPosition, "指輪", RingPink, 3.2f, 0.4f);
     }
 
     public void CheckKai2(PieceInstance ship, Vector2Int from)
@@ -722,7 +742,7 @@ public partial class AbilitySystem
     /// <summary>艦娘の攻撃のダメージ（改+1、中破−1、夜戦は駆逐・軽巡・潜水が2倍。攻撃の上乗せも足す）</summary>
     private static int ShipDamage(PieceInstance ship, int baseDamage, Fleet fleet)
     {
-        int damage = CombatResolver.AbilityDamage(ship, baseDamage) + (ship.isPromoted ? 1 : 0) + BalanceTuning.FleetDamageBonus;
+        int damage = CombatResolver.AbilityDamage(ship, baseDamage) + (ship.isPromoted ? 1 : 0) + (ship.ringed ? BalanceTuning.RingDamage : 0) + BalanceTuning.FleetDamageBonus;
         if (fleet != null && fleet.formation == Formation.LineAhead) damage += BalanceTuning.FormationLineAheadDamage;
         if (IsDamaged(ship)) damage -= 1;
         PieceType type = ship.data.pieceType;
@@ -751,9 +771,12 @@ public partial class AbilitySystem
                 if (escort != null) BattleEffects.Instance.PlayAbyssGuard(target.boardPosition, escort.boardPosition);
             }
         }
-        if (PieceTypes.IsShinkai(target.data.pieceType)) ship.fleetDamage += Mathf.Min(damage, target.currentHP);
-        ship.fleetDamageAll += Mathf.Min(damage, target.currentHP);
-        CombatResolver.ApplyDamage(target, damage, true);
+        // 深海には防御無視。ほかの駒には防御が効く（LegacyPierce なら昔どおり、どれにも防御無視）
+        bool pierce = BalanceTuning.LegacyPierce || PieceTypes.IsShinkai(target.data.pieceType);
+        int dealt = pierce ? damage : Mathf.Max(0, damage - target.DEF);
+        if (PieceTypes.IsShinkai(target.data.pieceType)) ship.fleetDamage += Mathf.Min(dealt, target.currentHP);
+        ship.fleetDamageAll += Mathf.Min(dealt, target.currentHP);
+        CombatResolver.ApplyDamage(target, damage, pierce);
     }
 
     private static List<PieceInstance> AliveShinkai()

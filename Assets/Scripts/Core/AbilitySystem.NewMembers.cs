@@ -366,7 +366,7 @@ public partial class AbilitySystem
         yield return new WaitForSeconds(BattleEffects.BombardmentImpactTime);
         if (!target.isAlive) yield break;
         GameSim.AbilitySource = niko;
-        CombatResolver.ApplyDamage(target, nikoShotDamage, true);
+        CombatResolver.AbilityHit(target, nikoShotDamage);
         GameSim.AbilitySource = null;
     }
 
@@ -537,14 +537,14 @@ public partial class AbilitySystem
             }
             case PieceType.Monotetsu:
             {
-                // 支援砲撃: 盤のどこかの敵1体に1（防御無視）
+                // 支援砲撃: 盤のどこかの敵1体に1（防御が効く。PierceCompensation が足される）
                 var targets = new List<PieceInstance>();
                 foreach (var e in bm.GetTeamPieces(foe))
                     if (IsRandomFleetTarget(e)) targets.Add(e);   // 支援艦隊と同じく、覚醒前のボスは狙わない
                 if (targets.Count == 0) return false;
                 PieceInstance target = targets[Random.Range(0, targets.Count)];
                 int damage = CombatResolver.AbilityDamage(niko, 1 + CardBonus(niko));
-                if (BattleEffects.Instance == null) { CombatResolver.ApplyDamage(target, damage, true); return true; }
+                if (BattleEffects.Instance == null) { CombatResolver.AbilityHit(target, damage); return true; }
                 // 砲弾が届いてから当てる（ExecuteNikoAbilities が着弾を待つ）
                 BattleEffects.Instance.PlayBombardmentEffect(niko.boardPosition, target.boardPosition);
                 nikoShotTarget = target;
