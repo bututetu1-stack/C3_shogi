@@ -37,13 +37,15 @@ public class InputManager : MonoBehaviour
         if (viewedPiece != null && !viewedPiece.isAlive) viewedPiece = null;
 
         GameManager gm = GameManager.Instance;
-        if (gm == null || Mouse.current == null || gm.currentPhase != GamePhase.Battle)
+        // マウスでもタッチでも読めるように Pointer を使う（スマホの表示でも同じ）
+        Pointer pointer = Pointer.current;
+        if (gm == null || pointer == null || gm.currentPhase != GamePhase.Battle)
         {
             SetHover(null);
             return;
         }
 
-        Vector2 mousePos = Mouse.current.position.ReadValue();
+        Vector2 mousePos = pointer.position.ReadValue();
         bool overUI = IsPointerOverUI(mousePos);
         Vector2Int? boardPos = overUI ? (Vector2Int?)null : ScreenToBoard(mousePos);
         SetHover(boardPos);
@@ -52,7 +54,7 @@ public class InputManager : MonoBehaviour
         if (gm.IsTurnProcessing || isExecutingMove) return;
 
         // UIの上でのクリックは盤面に通さない。プレイヤーターン外でも敵駒の閲覧はできる
-        if (Mouse.current.leftButton.wasPressedThisFrame && !overUI)
+        if (pointer.press.wasPressedThisFrame && !overUI)
             HandleClick(mousePos);
     }
 

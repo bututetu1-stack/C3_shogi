@@ -53,8 +53,9 @@ public class GameOverUI : MonoBehaviour
 
         var panel = UIFactory.Panel();
         panel.style.alignItems = Align.Center;
-        panel.style.paddingTop = 30;
-        panel.style.paddingBottom = 28;
+        // スマホの表示は文字が大きいぶん、上下を詰めて画面に収める
+        panel.style.paddingTop = MobileUI.Active ? 10 : 30;
+        panel.style.paddingBottom = MobileUI.Active ? 12 : 28;
         panel.style.paddingLeft = 56;
         panel.style.paddingRight = 56;
         panel.style.maxWidth = 720;
@@ -62,7 +63,7 @@ public class GameOverUI : MonoBehaviour
         Color accent = won ? Palette.GoldLight : Palette.Enemy;
         panel.style.borderTopColor = panel.style.borderBottomColor = panel.style.borderLeftColor = panel.style.borderRightColor = accent;
 
-        var result = UIFactory.Label(won ? "制覇" : "敗北", 84, accent, "c3-mincho");
+        var result = UIFactory.Label(won ? "制覇" : "敗北", MobileUI.Active ? 52 : 84, accent, "c3-mincho");
         result.style.letterSpacing = 24;
         panel.Add(result);
 
@@ -71,7 +72,7 @@ public class GameOverUI : MonoBehaviour
             : (sm != null ? "第" + UIFactory.Kanji(sm.currentStage) + "局「" + sm.GetStageName(sm.currentStage) + "」にて敗退" : "");
         var subLabel = UIFactory.Label(sub, 20, Palette.TextSub, "c3-mincho");
         subLabel.style.marginTop = 2;
-        subLabel.style.marginBottom = 18;
+        subLabel.style.marginBottom = MobileUI.Active ? 6 : 18;
         panel.Add(subLabel);
 
         // 戦績
@@ -79,7 +80,7 @@ public class GameOverUI : MonoBehaviour
         {
             var stats = new VisualElement();
             stats.style.flexDirection = FlexDirection.Row;
-            stats.style.marginBottom = 16;
+            stats.style.marginBottom = MobileUI.Active ? 4 : 16;
             stats.Add(StatBox("突破した局", gm.StagesCleared.ToString()));
             stats.Add(StatBox("撃破した駒", gm.TotalKills.ToString()));
             stats.Add(StatBox("総手数", gm.TotalMoves.ToString()));
@@ -94,7 +95,7 @@ public class GameOverUI : MonoBehaviour
                 team.style.flexWrap = Wrap.Wrap;
                 team.style.justifyContent = Justify.Center;
                 team.style.marginTop = 6;
-                team.style.marginBottom = 18;
+                team.style.marginBottom = MobileUI.Active ? 6 : 18;
                 foreach (var data in gm.OwnedPieces)
                 {
                     // 駒の下に練度の★と、この周で倒した数
@@ -160,8 +161,9 @@ public class GameOverUI : MonoBehaviour
 
         var panel = UIFactory.Panel();
         panel.style.alignItems = Align.Center;
-        panel.style.paddingTop = 30;
-        panel.style.paddingBottom = 28;
+        // スマホの表示は文字が大きいぶん、上下を詰めて画面に収める
+        panel.style.paddingTop = MobileUI.Active ? 10 : 30;
+        panel.style.paddingBottom = MobileUI.Active ? 12 : 28;
         panel.style.paddingLeft = 56;
         panel.style.paddingRight = 56;
         panel.style.maxWidth = 720;
@@ -170,7 +172,7 @@ public class GameOverUI : MonoBehaviour
         panel.style.borderTopColor = panel.style.borderBottomColor = panel.style.borderLeftColor = panel.style.borderRightColor = accent;
 
         string head = draw ? "引き分け" : PvpMatch.Online ? (winner == PvpMatch.LocalTeam ? "あなたの勝ち" : "あなたの負け") : PvpMatch.SideName(winner) + "の勝ち";
-        var result = UIFactory.Label(head, 72, accent, "c3-mincho");
+        var result = UIFactory.Label(head, MobileUI.Active ? 48 : 72, accent, "c3-mincho");
         result.style.letterSpacing = 12;
         panel.Add(result);
         var sub = UIFactory.Label("対人戦（" + (PvpMatch.CurrentRule == PvpMatch.Rule.Cost ? "コスト制" : "ランダム配布") + "）・"

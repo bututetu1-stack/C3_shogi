@@ -281,7 +281,8 @@ public static class CombatResolver
         if (target.data.isTauntPiece)
         {
             if (BattleEffects.Instance != null) BattleEffects.Instance.PlayGuard(target.boardPosition);
-            SpeechBubble.SayMaybe(target, PieceLines.KonishikiBullied, 0.5f);
+            // 「またいじめられた」は小錦だけ（潜水艦は艦娘、傀儡は人形なので言わない）
+            if (target.data.pieceType == PieceType.Konishiki) SpeechBubble.SayMaybe(target, PieceLines.KonishikiBullied, 0.5f);
         }
         // RN の弾き（ブロックで全部防いだ）、外跳の跳ね飛ばし・無糖（AC）のスタッガー、〆鯖のレスバ（言い返す）
         if (AbilitySystem.Instance != null)

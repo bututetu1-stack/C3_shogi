@@ -21,6 +21,8 @@ public class PieceSelectionUI : MonoBehaviour
     private readonly List<VisualElement> cards = new List<VisualElement>();
     private VisualElement detailPanel;
     private Button confirmButton;
+    /// <summary>スマホの表示（左にカードと決定、右に説明。縦に積むと決定ボタンが画面の下に隠れるため）</summary>
+    private bool mobile;
 
     void Awake()
     {
@@ -61,34 +63,55 @@ public class PieceSelectionUI : MonoBehaviour
         root.style.backgroundColor = new Color(0.03f, 0.025f, 0.02f, 0.95f);
         root.pickingMode = PickingMode.Position;   // 盤へのクリックを遮る
 
+        mobile = MobileUI.Active;
         var scroll = UIFactory.Scroll();
         scroll.style.flexGrow = 1;
         scroll.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
         scroll.contentContainer.style.alignItems = Align.Center;
-        scroll.contentContainer.style.paddingTop = 18;
-        scroll.contentContainer.style.paddingBottom = 18;
-        root.Add(scroll);
+        scroll.contentContainer.style.paddingTop = mobile ? 10 : 18;
+        scroll.contentContainer.style.paddingBottom = mobile ? 10 : 18;
+        ScrollView side = null;
+        if (mobile)
+        {
+            var frame = new VisualElement();
+            frame.style.flexGrow = 1;
+            frame.style.flexDirection = FlexDirection.Row;
+            frame.style.paddingLeft = frame.style.paddingRight = 10;
+            root.Add(frame);
+            scroll.style.flexGrow = 0;
+            scroll.style.width = Length.Percent(50);
+            frame.Add(scroll);
+            side = UIFactory.Scroll();
+            side.style.flexGrow = 1;
+            side.style.flexBasis = 0;
+            side.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            side.contentContainer.style.paddingTop = side.contentContainer.style.paddingBottom = 10;
+            frame.Add(side);
+        }
+        else root.Add(scroll);
 
         // 見出し
         StageManager sm = StageManager.Instance;
         if (HeaderOverride != null)
         {
-            var stage = UIFactory.Label(HeaderOverride, 20, Palette.Gold, "c3-mincho");
+            var stage = UIFactory.Label(HeaderOverride, mobile ? 17 : 20, Palette.Gold, "c3-mincho");
             stage.style.marginBottom = 4;
             scroll.Add(stage);
         }
         else if (sm != null)
         {
-            var stage = UIFactory.Label("第" + UIFactory.Kanji(sm.currentStage) + "局「" + sm.GetStageTitle(sm.currentStage) + "」を前に", 20, Palette.Gold, "c3-mincho");
+            var stage = UIFactory.Label("第" + UIFactory.Kanji(sm.currentStage) + "局「" + sm.GetStageTitle(sm.currentStage) + "」を前に", mobile ? 17 : 20, Palette.Gold, "c3-mincho");
             stage.style.marginBottom = 4;
             scroll.Add(stage);
         }
-        string titleText = pickCount > 1
-            ? "仲間か強化を選んでください（" + pickCount + "枚のうち" + pickIndex + "枚目）"
-            : "仲間か強化をひとつ選んでください";
-        var title = UIFactory.Label(titleText, 34, Palette.Text, "c3-mincho");
-        title.style.letterSpacing = 4;
-        title.style.marginBottom = 14;
+        string titleText = mobile
+            ? (pickCount > 1 ? "仲間か強化を選ぶ（" + pickCount + "枚のうち" + pickIndex + "枚目）" : "仲間か強化をひとつ選ぶ")
+            : pickCount > 1
+                ? "仲間か強化を選んでください（" + pickCount + "枚のうち" + pickIndex + "枚目）"
+                : "仲間か強化をひとつ選んでください";
+        var title = UIFactory.Label(titleText, mobile ? 24 : 34, Palette.Text, "c3-mincho");
+        title.style.letterSpacing = mobile ? 2 : 4;
+        title.style.marginBottom = mobile ? 16 : 14;
         scroll.Add(title);
 
         // カード（絵と名前だけ）
@@ -103,21 +126,34 @@ public class PieceSelectionUI : MonoBehaviour
 
         // 画面下部: 選んだカードの説明
         detailPanel = UIFactory.Panel();
-        detailPanel.style.width = Length.Percent(92);
-        detailPanel.style.maxWidth = 1040;
-        detailPanel.style.minHeight = 120;
-        detailPanel.style.paddingTop = 16;
-        detailPanel.style.paddingBottom = 16;
-        detailPanel.style.paddingLeft = 28;
-        detailPanel.style.paddingRight = 28;
-        scroll.Add(detailPanel);
+        if (mobile)
+        {
+            // スマホの表示: 右の列いっぱいに
+            detailPanel.style.minHeight = 200;
+            detailPanel.style.paddingTop = detailPanel.style.paddingBottom = 12;
+            detailPanel.style.paddingLeft = detailPanel.style.paddingRight = 16;
+            side.Add(detailPanel);
+        }
+        else
+        {
+            detailPanel.style.width = Length.Percent(92);
+            detailPanel.style.maxWidth = 1040;
+            detailPanel.style.minHeight = 120;
+            detailPanel.style.paddingTop = 16;
+            detailPanel.style.paddingBottom = 16;
+            detailPanel.style.paddingLeft = 28;
+            detailPanel.style.paddingRight = 28;
+            scroll.Add(detailPanel);
+        }
         ShowHint();
 
         // 決定と引き直しは横に並べる
         var buttons = new VisualElement();
         buttons.style.flexDirection = FlexDirection.Row;
+        buttons.style.flexWrap = Wrap.Wrap;
+        buttons.style.justifyContent = Justify.Center;
         buttons.style.alignItems = Align.Center;
-        buttons.style.marginTop = 14;
+        buttons.style.marginTop = mobile ? 4 : 14;
         confirmButton = UIFactory.Button("これに決める", OnConfirm, "c3-button--primary", "c3-button--big");
         confirmButton.SetEnabled(false);
         buttons.Add(confirmButton);
@@ -141,9 +177,9 @@ public class PieceSelectionUI : MonoBehaviour
         PieceData piece = option.piece;
         var card = NewCard();
 
-        card.Add(UIFactory.PieceIcon(piece, false, piece.portrait != null ? 130 : 104));
+        card.Add(UIFactory.PieceIcon(piece, false, mobile ? (piece.portrait != null ? 84 : 70) : piece.portrait != null ? 130 : 104));
 
-        var name = UIFactory.Label(piece.pieceName, 28, Palette.Text, "c3-mincho");
+        var name = UIFactory.Label(piece.pieceName, mobile ? 22 : 28, Palette.Text, "c3-mincho");
         name.style.marginTop = 10;
         card.Add(name);
 
@@ -162,8 +198,8 @@ public class PieceSelectionUI : MonoBehaviour
         var card = NewCard();
 
         var icon = new VisualElement();
-        icon.style.width = 100;
-        icon.style.height = 100;
+        icon.style.width = mobile ? 70 : 100;
+        icon.style.height = mobile ? 70 : 100;
         icon.style.marginTop = 4;
         icon.style.marginBottom = 4;
         icon.style.alignItems = Align.Center;
@@ -174,10 +210,10 @@ public class PieceSelectionUI : MonoBehaviour
         icon.style.borderTopWidth = icon.style.borderBottomWidth = icon.style.borderLeftWidth = icon.style.borderRightWidth = 3;
         icon.style.borderTopColor = icon.style.borderBottomColor = icon.style.borderLeftColor = icon.style.borderRightColor = c;
         icon.pickingMode = PickingMode.Ignore;
-        icon.Add(UIFactory.Label(option.Glyph, option.Glyph.Length > 1 ? 40 : 54, Color.Lerp(c, Color.white, 0.4f), "c3-mincho"));
+        icon.Add(UIFactory.Label(option.Glyph, (option.Glyph.Length > 1 ? 40 : 54) * (mobile ? 3 : 4) / 4, Color.Lerp(c, Color.white, 0.4f), "c3-mincho"));
         card.Add(icon);
 
-        var name = UIFactory.Label(option.Title, 28, Palette.Text, "c3-mincho");
+        var name = UIFactory.Label(option.Title, mobile ? 20 : 28, Palette.Text, "c3-mincho");
         name.style.marginTop = 10;
         card.Add(name);
 
@@ -201,9 +237,9 @@ public class PieceSelectionUI : MonoBehaviour
     {
         PieceData member = option.train;
         var card = NewCard();
-        card.Add(UIFactory.PieceIcon(member, false, 104));
+        card.Add(UIFactory.PieceIcon(member, false, mobile ? 70 : 104));
 
-        var name = UIFactory.Label(option.Title, 26, Palette.Text, "c3-mincho");
+        var name = UIFactory.Label(option.Title, mobile ? 20 : 26, Palette.Text, "c3-mincho");
         name.style.marginTop = 10;
         card.Add(name);
 
@@ -233,10 +269,18 @@ public class PieceSelectionUI : MonoBehaviour
         return s;
     }
 
-    private static VisualElement NewCard()
+    private VisualElement NewCard()
     {
         var card = new VisualElement();
         card.AddToClassList("c3-card");
+        if (mobile)
+        {
+            card.style.width = 146;
+            card.style.marginLeft = card.style.marginRight = 4;
+            card.style.marginBottom = 10;
+            card.style.paddingTop = card.style.paddingBottom = 8;
+            card.style.paddingLeft = card.style.paddingRight = 6;
+        }
         return card;
     }
 
@@ -336,7 +380,7 @@ public class PieceSelectionUI : MonoBehaviour
     private void RenderPieceDetail(PieceData piece, DetailView view)
     {
         detailPanel.Clear();
-        detailPanel.style.flexDirection = FlexDirection.Row;
+        detailPanel.style.flexDirection = mobile ? FlexDirection.Column : FlexDirection.Row;
         detailPanel.style.justifyContent = Justify.FlexStart;
         bool promoted = view == DetailView.Promoted && piece.canPromote;
         bool awakened = view == DetailView.Awakened && piece.canAwaken;
@@ -350,16 +394,19 @@ public class PieceSelectionUI : MonoBehaviour
 
         // 左: 名前・ステータス・説明
         var left = new VisualElement();
-        left.style.flexGrow = 1;
-        left.style.flexShrink = 1;
-        left.style.flexBasis = 0;
+        if (!mobile)
+        {
+            left.style.flexGrow = 1;
+            left.style.flexShrink = 1;
+            left.style.flexBasis = 0;
+        }
 
         var head = new VisualElement();
         head.style.flexDirection = FlexDirection.Row;
         head.style.alignItems = Align.Center;
         head.style.flexWrap = Wrap.Wrap;
         head.style.marginBottom = 12;
-        head.Add(UIFactory.Label(fullName, 30, Palette.Text, "c3-mincho"));
+        head.Add(UIFactory.Label(fullName, mobile ? 26 : 30, Palette.Text, "c3-mincho"));
         var rarityChip = UIFactory.Chip(Palette.RarityName(rarity), Palette.RarityLabel(rarity));
         rarityChip.style.marginLeft = 12;
         head.Add(rarityChip);
@@ -391,9 +438,17 @@ public class PieceSelectionUI : MonoBehaviour
 
         // 区切り線
         var divider = new VisualElement();
-        divider.style.width = 1;
-        divider.style.marginLeft = 32;
-        divider.style.marginRight = 32;
+        if (mobile)
+        {
+            divider.style.height = 1;
+            divider.style.marginTop = divider.style.marginBottom = 14;
+        }
+        else
+        {
+            divider.style.width = 1;
+            divider.style.marginLeft = 32;
+            divider.style.marginRight = 32;
+        }
         divider.style.backgroundColor = new Color(Palette.Gold.r, Palette.Gold.g, Palette.Gold.b, 0.25f);
         detailPanel.Add(divider);
 
