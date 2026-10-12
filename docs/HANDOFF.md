@@ -33,6 +33,13 @@ PR #16〜#21 はユーザーの指示で順に main にマージした。その�
   - 両方の陣営で動くように直したもの: 光春の裏金（`GameManager.GetFund/SetFund`）、ニコの札（陣営ごとの編成）、艦隊（後手の提督も着任。対人戦は深海なしで艦娘が相手の駒を撃ち、`PvpFleetMoves=10` 手で帰投。艦娘のダメージ `PvpShipDamageDelta=-1`）、対潜（両方の歩兵・香車）。
   - 確かめ方: `docs/snippets/test_pvp.cs` → `ui_press.cs`（「準備ができた」「この並びで決める」を2回ずつ）→ `test_pvp_teitoku.cs` → `test_pvp_check.cs`、手番を回すのは `test_pvp_pass.cs`。
   - 数値（コスト・持ち点・後手の C3+1・艦隊）は叩き台。AI どうしの対人戦の自動プレイで直すのはこれから。
+- 作る順番の3（オンライン）: `feat/pvp-online`（#25 の上）。
+  - 中継サーバー: `server/worker.js`（Cloudflare Workers + Durable Objects。部屋コードごとに2人をつなぎ、手を中継して記録を残す。つなぎ直すと記録を送り直す）。置き方は `server/README.md`（ユーザーが `npx wrangler login` → `npx wrangler deploy` を打つ。まだ置いていない）。
+  - 手元で試す: `node server/local-relay.js 8787`（同じ通信の Node 版）と `node server/test-bot.js ws://localhost:8787 4321`（相手役。先手で1手指してあとはパス）。
+  - ゲーム側: `Pvp/PvpNet.cs`（WebSocket。読み終えた手を数えて、つなぎ直しの記録を飛ばす）、`Pvp/PvpOnline.cs`（setup・team・place・move・pass・resign・hash を送り合う。相手の手は同じ順番で再生）、`PvpSetupUI` に「1台で2人／部屋を作る／部屋に入る」と待つ画面。
+  - 後手の画面は盤を180度回す（`Visual/ViewFlip.cs`。カメラを回し、駒の数字・飛び出す文字・座標・吹き出し・予想ダメージを正立させる）。
+  - 確かめたこと: Unity（後手・盤が回る）と相手役で、部屋に入る → 編成 → 並べ方 → 相手の手の再生 → こちらの手を送る → 相手のパスで手番が戻る、まで。
+  - 確かめていないこと: 2台のゲームどうし（盤の要約の食い違いが出ないか）。持ち時間（1手60秒）はまだない。
 - 案のページ: https://claude.ai/artifact/LAJyfC8RrBM5g4djYrc95D（ルールの叩き台・作り方・作る順番・4つの質問）。おすすめは「同じ手を両方で再生する」（ミニPCは手を中継するだけの Node.js + WebSocket。ゲームの乱数をゲーム用と演出用に分ける）。
 
 ## いまの状態（2026-10-11 の夜、ノート PC から引き継ぐとき）

@@ -50,6 +50,12 @@ public class PieceController : MonoBehaviour
         StartCoroutine(SpawnRoutine());
     }
 
+    // 隠していた駒を見せたとき（対人戦の並べ方）、出てくる途中で止まっていたら出し直す
+    void OnEnable()
+    {
+        if (pieceInstance != null && !isDying && spawnScale < 1f) StartCoroutine(SpawnRoutine());
+    }
+
     public PieceInstance GetPiece() { return pieceInstance; }
     public PieceRenderer GetRenderer() { return pieceRenderer; }
 

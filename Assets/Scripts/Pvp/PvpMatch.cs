@@ -35,6 +35,11 @@ public static class PvpMatch
     public static Side Second = new Side { team = Team.Enemy };
     /// <summary>この対局の乱数の種（巨岩の置き場所・ランダム配布の候補など。オンラインでは2人で同じ種を使う）</summary>
     public static int Seed;
+    /// <summary>オンラインの対人戦か（false なら1台で2人）</summary>
+    public static bool Online;
+    /// <summary>オンラインで、この画面の人が動かす陣営</summary>
+    public static Team LocalTeam = Team.Player;
+
     /// <summary>決着画面の「もう一度」で、同じルールの対人戦から始め直す（場面を読み直しても残る）</summary>
     public static bool RestartPending;
 
@@ -135,6 +140,7 @@ public static class PvpMatch
     public static void Begin(Rule rule)
     {
         Active = true;
+        Online = false;
         CurrentRule = rule;
         First = new Side { team = Team.Player };
         Second = new Side { team = Team.Enemy };
@@ -142,9 +148,30 @@ public static class PvpMatch
         GameRng.InitState(Seed);
     }
 
+    /// <summary>オンラインの対局を始める（種と先手は部屋を作った人が決めて、2人で同じものを使う）</summary>
+    public static void BeginOnline(Rule rule, int seed, Team localTeam)
+    {
+        Active = true;
+        Online = true;
+        LocalTeam = localTeam;
+        CurrentRule = rule;
+        First = new Side { team = Team.Player };
+        Second = new Side { team = Team.Enemy };
+        Seed = seed;
+        GameRng.InitState(Seed);
+    }
+
     public static void End()
     {
         Active = false;
+        Online = false;
+    }
+
+    /// <summary>この画面の人の陣営の呼び方（オンラインは「あなた／相手」）</summary>
+    public static string WhoName(Team team)
+    {
+        if (!Online) return SideName(team);
+        return team == LocalTeam ? "あなた" : "相手";
     }
 
     /// <summary>

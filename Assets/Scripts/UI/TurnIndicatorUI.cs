@@ -139,7 +139,7 @@ public class TurnIndicatorUI : MonoBehaviour
 
         if (PvpMatch.Active)
         {
-            turnLabel.text = PvpMatch.SideLong(team) + "の番";
+            turnLabel.text = PvpMatch.Online ? (team == PvpMatch.LocalTeam ? "あなたの番" : "相手の番") + "（" + PvpMatch.SideName(team) + "）" : PvpMatch.SideLong(team) + "の番";
             Color c = team == Team.Player ? Palette.Player : Palette.Enemy;
             turnBadge.style.backgroundColor = new Color(c.r, c.g, c.b, 0.9f);
         }
@@ -173,8 +173,9 @@ public class TurnIndicatorUI : MonoBehaviour
         }
         if (BattleLogUI.Instance != null)
             BattleLogUI.Instance.AddLog(PvpMatch.Active
-                ? BattleLogUI.ColorName(PvpMatch.SideName(gm.currentTurn), gm.currentTurn) + " はパスした"
+                ? BattleLogUI.ColorName(PvpMatch.WhoName(gm.currentTurn), gm.currentTurn) + " はパスした"
                 : BattleLogUI.ColorName("あなた", Team.Player) + " はパスした");
+        if (PvpMatch.Online && PvpOnline.Instance != null) PvpOnline.Instance.SendPass();
         gm.EndTurn();
     }
 

@@ -169,7 +169,8 @@ public class GameOverUI : MonoBehaviour
         panel.style.borderTopWidth = panel.style.borderBottomWidth = panel.style.borderLeftWidth = panel.style.borderRightWidth = 2;
         panel.style.borderTopColor = panel.style.borderBottomColor = panel.style.borderLeftColor = panel.style.borderRightColor = accent;
 
-        var result = UIFactory.Label(draw ? "引き分け" : PvpMatch.SideName(winner) + "の勝ち", 72, accent, "c3-mincho");
+        string head = draw ? "引き分け" : PvpMatch.Online ? (winner == PvpMatch.LocalTeam ? "あなたの勝ち" : "あなたの負け") : PvpMatch.SideName(winner) + "の勝ち";
+        var result = UIFactory.Label(head, 72, accent, "c3-mincho");
         result.style.letterSpacing = 12;
         panel.Add(result);
         var sub = UIFactory.Label("対人戦（" + (PvpMatch.CurrentRule == PvpMatch.Rule.Cost ? "コスト制" : "ランダム配布") + "）・"
@@ -199,15 +200,20 @@ public class GameOverUI : MonoBehaviour
 
         var buttons = new VisualElement();
         buttons.style.flexDirection = FlexDirection.Row;
-        buttons.Add(UIFactory.Button("もう一度（同じルール）", () =>
+        if (!PvpMatch.Online)
         {
-            PvpMatch.RestartPending = true;
-            GameManager.SkipTitleOnce = false;
-            ReloadScene();
-        }, "c3-button--primary", "c3-button--big"));
+            buttons.Add(UIFactory.Button("もう一度（同じルール）", () =>
+            {
+                PvpMatch.RestartPending = true;
+                GameManager.SkipTitleOnce = false;
+                ReloadScene();
+            }, "c3-button--primary", "c3-button--big"));
+        }
         buttons.Add(UIFactory.Button("タイトルへ", () =>
         {
             PvpMatch.End();
+            ViewFlip.Set(false);
+            if (PvpOnline.Instance != null) PvpOnline.Instance.Leave();
             OnTitleClicked();
         }, "c3-button--big"));
         panel.Add(buttons);

@@ -14,7 +14,25 @@ public partial class GameManager
     /// <summary>この陣営を人が動かせるか（対人戦は両方。1人用は自軍だけ）</summary>
     public bool IsHumanTeam(Team team)
     {
-        return PvpMatch.Active || team == Team.Player;
+        if (PvpMatch.Active) return !PvpMatch.Online || team == PvpMatch.LocalTeam;
+        return team == Team.Player;
+    }
+
+    // 対人戦で並べた駒（陣営ごと、編成の順。オンラインの並べ方の受け渡しに使う）
+    private readonly List<PieceInstance> pvpFirstPieces = new List<PieceInstance>();
+    private readonly List<PieceInstance> pvpSecondPieces = new List<PieceInstance>();
+    private List<PieceInstance> PvpPiecesOf(Team team) { return team == Team.Player ? pvpFirstPieces : pvpSecondPieces; }
+
+    /// <summary>オンラインで相手が投了した</summary>
+    public void RemoteResign()
+    {
+        if (isGameOver || !PvpMatch.Active) return;
+        StopAllCoroutines();
+        isTurnProcessing = false;
+        Team loser = PvpMatch.LocalTeam == Team.Player ? Team.Enemy : Team.Player;
+        if (BattleLogUI.Instance != null)
+            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("相手", loser) + " は投了した");
+        EndPvp(PvpMatch.LocalTeam, "投了");
     }
 
     /// <summary>タイトルの「対人戦」: ルールを選ぶ画面から始める</summary>
@@ -28,6 +46,8 @@ public partial class GameManager
     private void ReturnToTitle()
     {
         PvpMatch.End();
+        ViewFlip.Set(false);
+        if (PvpOnline.Instance != null) PvpOnline.Instance.Leave();
         SkipTitleOnce = false;
         UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
     }
@@ -35,6 +55,8 @@ public partial class GameManager
     /// <summary>2人の編成がそろったら、盤を作って対局を始める</summary>
     public void StartPvpBattle()
     {
+        // オンラインの後手は、盤を180度回して見る（自分の駒が手前）
+        ViewFlip.Set(PvpMatch.Online && PvpMatch.LocalTeam == Team.Enemy);
         isGameOver = false;
         PvpDraw = false;
         currentTurn = Team.Player;
@@ -77,7 +99,9 @@ public partial class GameManager
             }
         }
 
-        // 編成した駒を自陣に並べる（いまは決まった順。手で並べるのは次の段）
+        // 編成した駒を自陣に決まった順で並べる（このあと並べ方で動かせる）
+        pvpFirstPieces.Clear();
+        pvpSecondPieces.Clear();
         foreach (var side in new[] { PvpMatch.First, PvpMatch.Second })
         {
             var order = PvpMatch.PlacementOrder(side.team);
@@ -92,6 +116,7 @@ public partial class GameManager
                 int atk = PiecePool.RecruitBonusATK(data);
                 if (hp > 0) p.AddMaxHP(hp);
                 p.bonusATK += atk;
+                PvpPiecesOf(side.team).Add(p);
                 next++;
             }
             if (side.team == Team.Player) playerOwnedPieces.AddRange(side.pieces);
@@ -102,6 +127,18 @@ public partial class GameManager
         foreach (var p in boardManager.GetTeamPieces(Team.Enemy)) ApplyPvpUpgrades(p);
 
         if (GameSim.Headless) { StartCoroutine(PvpIntroSequence()); return; }
+        if (PvpMatch.Online)
+        {
+            // オンライン: 自分の駒だけ並べて送り、相手の並べ方が届いたら入れて対局へ
+            Team me = PvpMatch.LocalTeam;
+            Team foe = me == Team.Player ? Team.Enemy : Team.Player;
+            PvpPlacement.Begin(me, () =>
+            {
+                PvpOnline.Instance.SendPlacement(PvpPiecesOf(me));
+                StartCoroutine(WaitPeerPlacement(foe));
+            });
+            return;
+        }
         // 並べ方: 先手 → 後手（並べているあいだ相手の駒は隠す）→ 対局
         PvpSetupUI.ShowHandoff(Team.Player, "の並べ方", () => PvpPlacement.Begin(Team.Player, () =>
             PvpSetupUI.ShowHandoff(Team.Enemy, "の並べ方", () => PvpPlacement.Begin(Team.Enemy, () =>
@@ -133,6 +170,17 @@ public partial class GameManager
         CombatResolver.RefreshStats(p);
     }
 
+    private IEnumerator WaitPeerPlacement(Team foe)
+    {
+        if (PvpOnline.Instance.PeerPlace == null)
+            PvpSetupUI.ShowWaiting("相手の並べ方を待っています");
+        while (PvpOnline.Instance.PeerPlace == null) yield return null;
+        PvpSetupUI.HideWaiting();
+        PvpOnline.ApplyPlacement(PvpOnline.Instance.PeerPlace, PvpPiecesOf(foe));
+        PvpPlacement.RevealAll();
+        yield return PvpIntroSequence();
+    }
+
     private IEnumerator PvpIntroSequence()
     {
         isTurnProcessing = true;
@@ -144,7 +192,9 @@ public partial class GameManager
         yield return new WaitForSeconds(StageIntroDuration);
         SetPhase(GamePhase.Battle);
         if (BattleLogUI.Instance != null)
-            BattleLogUI.Instance.AddLog("対人戦の始まり。" + BattleLogUI.ColorName("先手", Team.Player) + "から指す");
+            BattleLogUI.Instance.AddLog(PvpMatch.Online
+                ? "対人戦の始まり。" + (PvpMatch.LocalTeam == Team.Player ? "あなたが先手（先に指す）" : "あなたは後手（相手が先に指す）")
+                : "対人戦の始まり。" + BattleLogUI.ColorName("先手", Team.Player) + "から指す");
         yield return ExecuteTurnStartThenNotify(Team.Player);
         isTurnProcessing = false;
     }
