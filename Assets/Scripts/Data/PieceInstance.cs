@@ -29,7 +29,7 @@ public class PieceInstance
     public PieceInstance summoner;  // この駒を作った駒（中華を作ったヲツ。練度の活躍に数える）
     public bool awakened;           // 覚醒した（練度★3の部員が、その局で活躍を重ねた）
     public int awakenCharge;        // この局の活躍の数（覚醒まで）
-    public bool isSealed;             // けいの「デバッグ完了」で能力を封じられた（その局のあいだ）
+    public bool isSealed;             // 鶏炭の「デバッグ完了」で能力を封じられた（その局のあいだ）
     public int bokuStacks;          // 僕に強化された量（覚醒した僕の強化の上限）
     public int bokuBuffs;           // 僕に強化された回数（対人戦の上限 PvpBokuBuffCap）
     public bool substituteUsed;     // 覚醒した僕が身代わりを使った（1局に1回）
@@ -43,6 +43,7 @@ public class PieceInstance
     public int dailyCount;          // 寝癖のデイリーの進み
     public int dailyRewards;        // 寝癖のデイリーの報酬で上がった攻撃（その局のあいだ）
     public int allianceATK;         // 会長（寝癖）のえちち連合で上がっている攻撃（盤にいる仲間の数で決まる）
+    public int staffATK;            // 運営会議で上がっている攻撃（運営の部員が盤に2人以上いるあいだ）
     public bool bonfireUsed;        // 覚醒した無糖が篝火で蘇った（1局に1回）
 
     public int ATK { get { return (isPromoted ? data.promotedATK : data.baseATK) + bonusATK; } }
@@ -140,7 +141,7 @@ public class PieceInstance
         currentHP += amount;
     }
 
-    /// <summary>けいの「バグ修正」で下げられるか（攻撃・防御は0未満にならず、体力は0にならない）</summary>
+    /// <summary>鶏炭の「バグ修正」で下げられるか（攻撃・防御は0未満にならず、体力は0にならない）</summary>
     public bool CanLower(StatKind stat)
     {
         switch (stat)

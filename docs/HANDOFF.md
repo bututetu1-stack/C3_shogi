@@ -61,6 +61,12 @@ PR #16〜#21 はユーザーの指示で順に main にマージした。その�
   - 会長: 寝癖は盤にいる仲間1人につき攻撃+1（物鉄は2人分、+2まで。`NeguAllianceATK`・`NeguAllianceCap`）。前は「物鉄がいれば+1」だけだった。
   - 同志: 連合の部員は、周り1マスに同じ陣営の仲間がいると防御+1（`AllianceComradeDEF`）。並びで決まるので `PieceInstance.DEF` がその場で数える（`AbilitySystem.ComradeDEF`。AI の読みでもそのまま効く）。その駒自身の能力なので、能力無効のあいだは止まる。防御の数字は `PieceRenderer.UpdateDefense` で出し直す。
   - コードは `Core/AbilitySystem.Gamers.cs`（`IsAllianceMember`・`ComradeDEF`・`RefreshAlliance`）。確かめ方は `docs/snippets/test_alliance.cs`。
+- 運営と鯖缶（`feat/unei-sabakan`、#28 の上、2026-10-12）: ユーザーから「物鉄・なこ・光春・李白は部の運営、けい・ヲツ・僕は鯖缶（サーバー管理者）。えちち連合のようなバフや能力があってもいい」。ユーザーが選んだ案:
+  - 運営会議: 盤に運営の部員が2人以上いるあいだ、運営の部員はみな攻撃+1（`StaffMeetingATK`・`StaffMeetingMin`。なこの突撃のダメージにも乗る。光春は盤外にいるあいだ数えない）。手番の初めと終わりに数え直す（`RefreshStaffMeeting`）。
+  - 管理者権限: 鯖缶の部員と、その周り1マスの味方は、能力無効（結界・封印）にかからない（`SabakanAdminRange`、-1 で切る）。`IsSuppressed` が `AdminGuarded` を見る。
+  - 確かめ方は `docs/snippets/test_staff.cs`。
+  - 自動プレイ（同じ種120周、なしとの比べ）: 勝ち抜いた局 13.34 → 13.29（±0.11）、全クリア 28% → 24%（揺れの中。目安の20〜35%の中）。対人戦（AIどうし各600局）: 僕がコスト制で40%に下がった → コスト10→9で54%、札はすべて44〜59%。
+- 名前の変更（2026-10-12）: 「けい」は「鶏炭」（駒の面）・「けいたん」（名前。寝癖／ねぐせと同じ形）。成ると「異端」のまま。ねぐせの説明の「ソシャゲー」は「ソシャゲ」。このメモの古い節の「けい」は鶏炭のこと。
 - 案のページ: https://claude.ai/artifact/LAJyfC8RrBM5g4djYrc95D（ルールの叩き台・作り方・作る順番・4つの質問）。おすすめは「同じ手を両方で再生する」（ミニPCは手を中継するだけの Node.js + WebSocket。ゲームの乱数をゲーム用と演出用に分ける）。
 
 ## いまの状態（2026-10-11 の夜、ノート PC から引き継ぐとき）

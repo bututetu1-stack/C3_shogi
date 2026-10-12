@@ -1336,7 +1336,7 @@ public class BattleEffects : MonoBehaviour
         PlayNightOpening(size);
     }
 
-    /// <summary>光の粒が相手へ飛び、相手の上で細かい破片が散る（けいのバグ修正は緑、きぷの冷笑は水色）</summary>
+    /// <summary>光の粒が相手へ飛び、相手の上で細かい破片が散る（鶏炭のバグ修正は緑、きぷの冷笑は水色）</summary>
     public void PlayStream(Vector2Int from, Vector2Int to, Color color)
     {
         Vector3 a = World(from), b = World(to);

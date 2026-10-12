@@ -16,14 +16,15 @@ public partial class AbilitySystem
     // ============================================================
 
     /// <summary>
-    /// 能力が止まっているか: けいに封印された、または周り（BalanceTuning.KekkaiRange マス）に相手の結界がいる。
-    /// ★・覚醒の数値はそのまま、能力（手番の初め・終わりの能力、攻撃のときの能力、挑発など）だけが止まる
+    /// 能力が止まっているか: 鶏炭に封印された、または周り（BalanceTuning.KekkaiRange マス）に相手の結界がいる。
+    /// ★・覚醒の数値はそのまま、能力（手番の初め・終わりの能力、攻撃のときの能力、挑発など）だけが止まる。
+    /// 鯖缶の管理者権限で守られている駒は止まらない
     /// </summary>
     public static bool IsSuppressed(PieceInstance p)
     {
         if (p == null) return false;
-        if (p.isSealed) return true;
-        return NearKekkai(p);
+        if (!p.isSealed && !NearKekkai(p)) return false;
+        return !AdminGuarded(p);
     }
 
     /// <summary>周りに相手の結界がいる（封印ではなく、結界で止まっている）</summary>
