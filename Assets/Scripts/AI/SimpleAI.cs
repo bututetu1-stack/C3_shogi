@@ -118,6 +118,7 @@ public class SimpleAI : MonoBehaviour
 
     private void OnTurnChanged(Team team)
     {
+        if (PvpMatch.Active) return;   // 対人戦は2人とも人が指す
         if (team == Team.Enemy)
             StartCoroutine(DoAITurn());
     }

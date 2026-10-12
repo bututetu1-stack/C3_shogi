@@ -102,7 +102,8 @@ public enum GamePhase
     Battle,
     GameOver,
     Title,       // タイトル画面
-    StageClear   // ステージクリアの演出中
+    StageClear,  // ステージクリアの演出中
+    Placement    // 対人戦: 対局の前に自陣の駒を並べ替える
 }
 
 public enum Rarity
