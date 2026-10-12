@@ -23,28 +23,41 @@ public class RunSaveData
     public int totalKills, totalMoves, stagesCleared;
 }
 
-/// <summary>中断と続きから（Application.persistentDataPath/run.json）</summary>
+/// <summary>中断と続きから（Application.persistentDataPath/run.json。ブラウザ版は PlayerPrefs）</summary>
 public static class RunSave
 {
+#if UNITY_WEBGL && !UNITY_EDITOR
+    // ブラウザ版: ファイルは書き戻しを頼まないと残らないので、PlayerPrefs（Save でブラウザの IndexedDB に入る）に置く
+    private const string Key = "c3_run_save";
+
+    public static bool Exists { get { return PlayerPrefs.HasKey(Key); } }
+    private static string ReadText() { return PlayerPrefs.GetString(Key); }
+    private static void WriteText(string text) { PlayerPrefs.SetString(Key, text); PlayerPrefs.Save(); }
+    private static void DeleteText() { PlayerPrefs.DeleteKey(Key); PlayerPrefs.Save(); }
+#else
     private static string FilePath { get { return Path.Combine(Application.persistentDataPath, "run.json"); } }
 
     public static bool Exists { get { return File.Exists(FilePath); } }
+    private static string ReadText() { return File.ReadAllText(FilePath); }
+    private static void WriteText(string text) { File.WriteAllText(FilePath, text); }
+    private static void DeleteText() { File.Delete(FilePath); }
+#endif
 
     public static void Save(RunSaveData data)
     {
-        try { File.WriteAllText(FilePath, JsonUtility.ToJson(data)); }
+        try { WriteText(JsonUtility.ToJson(data)); }
         catch (System.Exception e) { Debug.LogWarning("中断データを保存できませんでした: " + e.Message); }
     }
 
     public static RunSaveData Load()
     {
-        try { return Exists ? JsonUtility.FromJson<RunSaveData>(File.ReadAllText(FilePath)) : null; }
+        try { return Exists ? JsonUtility.FromJson<RunSaveData>(ReadText()) : null; }
         catch (System.Exception e) { Debug.LogWarning("中断データを読めませんでした: " + e.Message); return null; }
     }
 
     public static void Delete()
     {
-        try { if (Exists) File.Delete(FilePath); }
+        try { if (Exists) DeleteText(); }
         catch (System.Exception e) { Debug.LogWarning("中断データを消せませんでした: " + e.Message); }
     }
 }

@@ -108,6 +108,7 @@ public class SettingsUI : MonoBehaviour
 
     private void Hide()
     {
+        PlayerPrefs.Save();   // 音量を残す（ブラウザ版は保存しないと次に開いたとき元に戻る）
         if (uiDocument != null && uiDocument.rootVisualElement != null)
         {
             uiDocument.rootVisualElement.Clear();

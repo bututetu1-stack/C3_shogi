@@ -19,7 +19,7 @@ public class SimCommandLine : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Boot()
     {
-        if (Application.isEditor || Array.IndexOf(Environment.GetCommandLineArgs(), "-c3sim") < 0) return;
+        if (Application.isEditor || Application.platform == RuntimePlatform.WebGLPlayer || Array.IndexOf(Environment.GetCommandLineArgs(), "-c3sim") < 0) return;
         new GameObject("SimCommandLine").AddComponent<SimCommandLine>();
     }
 
