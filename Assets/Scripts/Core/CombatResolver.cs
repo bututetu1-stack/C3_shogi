@@ -238,7 +238,7 @@ public static class CombatResolver
         // RN の弾き（ブロックで全部防いだ）、外跳の跳ね飛ばし・無糖（AC）のスタッガー、〆鯖のレスバ（言い返す）
         if (AbilitySystem.Instance != null)
         {
-            if (parried) AbilitySystem.Instance.OnParry(target, attacker);
+            if (blocked > 0) AbilitySystem.Instance.OnPostureHit(target, attacker, blocked, parried);
             AbilitySystem.Instance.OnHitAndSurvived(attacker, target);
             AbilitySystem.Instance.OnAttackedAndSurvived(attacker, target);
         }

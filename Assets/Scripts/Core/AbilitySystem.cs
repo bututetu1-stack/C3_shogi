@@ -206,6 +206,7 @@ public partial class AbilitySystem : MonoBehaviour
         foreach (var p in bm.GetTeamPieces(team))
         {
             if (!p.stunned) continue;
+            if (p.stunHeld) { p.stunHeld = false; continue; }   // 自分の手番のうちに動けなくなった（忍殺）: 次の手番まで
             p.stunned = false;
             CombatResolver.RefreshStats(p);
         }

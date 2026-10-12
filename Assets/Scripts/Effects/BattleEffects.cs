@@ -604,6 +604,18 @@ public class BattleEffects : MonoBehaviour
         if (good) StartCoroutine(Burst(p, 12, color, Color.white, 1.2f, 3f, 0.07f, 0.5f, 0f, SpriteFactory.Pixel));
     }
 
+    /// <summary>忍殺: RN から敵へ赤い一閃（画像 Deathblow があればそれ）</summary>
+    public void PlayDeathblow(Vector2Int from, Vector2Int to)
+    {
+        Play(Clip("Deathblow"), defeatClip);
+        Vector3 p = World(to);
+        PlaySlash(to, from);
+        if (!ArtFx("Deathblow", p, 0.8f, 1.9f, 0.6f))
+            StartCoroutine(Glow(p, new Color(1f, 0.15f, 0.12f, 0.95f), 0.5f, 2.2f, 0.55f));
+        StartCoroutine(RingWave(p, new Color(1f, 0.2f, 0.15f), 0.4f, 2.4f, 0.5f));
+        StartCoroutine(Burst(p, 14, new Color(1f, 0.2f, 0.15f), Color.white, 1.4f, 3.4f, 0.07f, 0.5f, 0f, SpriteFactory.Pixel));
+    }
+
     /// <summary>後光（先代部長の引退・覚醒した僕）</summary>
     public void PlayHaloEffect(Vector2Int pos)
     {

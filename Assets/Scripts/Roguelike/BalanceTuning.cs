@@ -175,7 +175,11 @@ public static class BalanceTuning
     public static int RnAwakenedBlockBonus = 2;
     /// <summary>RN（成った後）: ポケモンスリープ（動かなかった手番の終わりの回復）と SEKIRO の弾き（ブロックで全部防いだら相手に。防御無視）</summary>
     public static int RnSleepHeal = 1;
-    public static int RnParryDamage = 1;
+    public static int RnParryDamage = 1;   // （第9版で体幹に置き換えたので使っていない）
+    /// <summary>RN（3本同時プレイ）の SEKIRO: 全部防いだ「弾き」のとき、体幹に足す量（防いだ量に加えて）</summary>
+    public static int RnPostureParryBonus = 1;
+    /// <summary>忍殺でボス（雷帝・龍神・魔王）が失う体力 = 最大体力 ÷ この値（切り上げ）。ほかの敵はそのまま倒れる</summary>
+    public static int RnDeathblowBossRatio = 3;
     /// <summary>寝癖: デイリーが何手番で報酬（攻撃+1）になるか（外跳は短い。覚醒は毎手番）と、報酬の上限（その局のあいだ）</summary>
     public static int NeguDailyEvery = 3;
     public static int NeguPromotedDailyEvery = 2;
