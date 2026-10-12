@@ -128,6 +128,12 @@ public static class BalanceTuning
     public static bool AiAbilityAware = true;
     /// <summary>AI が覚醒した駒に上乗せする値打ち（守る・狙う重み）</summary>
     public static int AiAwakenedValue = 60;
+    /// <summary>
+    /// AI の読みの工夫（陣営ごと。ビットの和）: 1 = 時間が余れば6手先まで、2 = 手の順の工夫（キラー・ヒストリー）、
+    /// 4 = 取り合いの延長（静止探索）、8 = 能力の分かる評価、16 = 広く読む（内側の局面で14手ではなく24手）。新旧を対戦させて測るために陣営ごとに分けてある
+    /// </summary>
+    public static int AiFeaturesPlayer = 10;
+    public static int AiFeaturesEnemy = 14;
     /// <summary>覚醒した僕が1体を強化できる量の上限</summary>
     public static int BokuAwakenedCap = 1;
 

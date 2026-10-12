@@ -323,19 +323,18 @@ public class StageManager : MonoBehaviour
                 list.Add(new Placement(PieceType.Kyogan, c, top - 1));
                 list.Add(new Placement(PieceType.Kyogan, size - 1, top - 1));
                 break;
-            case 12: // 傀儡: C3 の前に傀儡
+            case 12: // 傀儡: C3 の前に傀儡（傀儡に攻撃を吸われるぶん、金将は置かない。置くと勝率94%と第一局にしては重かった）
                 list.Add(new Placement(PieceType.C3, c, top));
                 list.Add(new Placement(PieceType.Kugutsu, c, top - 1));
                 list.Add(new Placement(PieceType.Pawn, c - 1, top - 1));
                 list.Add(new Placement(PieceType.Pawn, c + 1, top - 1));
-                list.Add(new Placement(PieceType.Gold, c + 1, top));
                 break;
 
             // 第二局（5×5）
-            case 21: // 弓兵の陣
+            case 21: // 弓兵の陣（弓兵2体だと5×5の盤では毎手番2列が撃たれて重すぎた: 勝率82%。1体に）
                 list.Add(new Placement(PieceType.C3, c, top));
                 list.Add(new Placement(PieceType.Yumihei, c - 1, top));
-                list.Add(new Placement(PieceType.Yumihei, c + 1, top));
+                list.Add(new Placement(PieceType.Gold, c + 1, top));
                 list.Add(new Placement(PieceType.Silver, 0, top));
                 list.Add(new Placement(PieceType.Pawn, 0, top - 1));
                 list.Add(new Placement(PieceType.Pawn, c, top - 1));
@@ -352,14 +351,14 @@ public class StageManager : MonoBehaviour
                 break;
 
             // 第三局（7×7）
-            case 31: // 大盾の列: 大盾を前に、後ろから弓兵（横から攻めれば崩せる）
+            case 31: // 大盾の列: 大盾を前に（横から攻めれば崩せる。大盾2体と弓兵では勝率79%と重すぎたので、大盾1体と銀将に）
                 list.Add(new Placement(PieceType.C3, c, top));
                 list.Add(new Placement(PieceType.Ootate, c - 1, top - 2));
-                list.Add(new Placement(PieceType.Ootate, c + 1, top - 2));
+                list.Add(new Placement(PieceType.Pawn, c + 1, top - 2));
                 list.Add(new Placement(PieceType.Pawn, c, top - 2));
                 list.Add(new Placement(PieceType.Pawn, 0, top - 2));
                 list.Add(new Placement(PieceType.Pawn, size - 1, top - 2));
-                list.Add(new Placement(PieceType.Yumihei, 1, top - 1));
+                list.Add(new Placement(PieceType.Silver, 1, top - 1));   // 弓兵だと大盾1体でも勝率84%と重かった
                 list.Add(new Placement(PieceType.Gold, c - 1, top));
                 list.Add(new Placement(PieceType.Gold, c + 1, top));
                 break;

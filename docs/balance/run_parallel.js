@@ -100,7 +100,7 @@ const extra = [];
 opt.set.forEach(s => extra.push('-set', s));
 opt.piece.forEach(p => extra.push('-piece', p));
 const t0 = Date.now();
-let next = 0, finished = 0, runsDone = 0, failed = 0;
+let next = 0, finished = 0, runsDone = 0, failed = 0, exceptions = 0;
 
 function runTask(t) {
   return new Promise(resolve => {
@@ -118,7 +118,18 @@ function runTask(t) {
       if (code === 0 && n === t.runs) {
         fs.appendFileSync(path.join(outDir, t.job.name + '.jsonl'), lines);
         fs.unlinkSync(tmp);
-        if (fs.existsSync(log)) fs.unlinkSync(log);
+        // デバッグ: ログに例外が出ていたら残して知らせる（出ていなければ消す）
+        if (fs.existsSync(log)) {
+          const ex = fs.readFileSync(log, 'utf8').split('\n').filter(l => /Exception/.test(l));
+          if (ex.length) {
+            const keep = path.join(outDir, 'logs');
+            fs.mkdirSync(keep, { recursive: true });
+            fs.copyFileSync(log, path.join(keep, base + '.log'));
+            exceptions += ex.length;
+            console.error(`例外 ${ex.length}件: ${t.job.name} ${t.seed}〜 → ${path.join(keep, base + '.log')}（最初: ${ex[0].trim().slice(0, 160)}）`);
+          }
+          fs.unlinkSync(log);
+        }
         runsDone += n;
       } else {
         failed++;
@@ -138,7 +149,7 @@ async function worker() {
 
 Promise.all(Array.from({ length: Math.min(opt.workers, tasks.length) }, worker)).then(() => {
   const min = ((Date.now() - t0) / 60000).toFixed(1);
-  console.log(`${failed ? '一部失敗' : 'ALL DONE'}: ${runsDone}周、${min}分`);
+  console.log(`${failed ? '一部失敗' : 'ALL DONE'}: ${runsDone}周、${min}分` + (exceptions ? `（ログに例外 ${exceptions}件。${path.join(outDir, 'logs')}）` : ''));
   try { fs.rmdirSync(tmpDir); } catch (e) { /* 失敗したログが残っていれば消さない */ }
   process.exit(failed ? 1 : 0);
 });

@@ -42,6 +42,10 @@ public class SimRunRecord
     public float seconds;
     // AIが読み切れた深さの内訳（敵が4手先まで読めた手数／敵の全手数、自軍も同様）
     public int enemyDeepMoves, enemyMoves, playerDeepMoves, playerMoves;
+    // AI の読みの統計（読み切れた深さの合計・読んだ局面の数・考えた時間のミリ秒）
+    public int enemyDepthSum, playerDepthSum;
+    public long enemyNodes, playerNodes;
+    public float enemyMs, playerMs;
     public List<SimStageRecord> stages = new List<SimStageRecord>();
 }
 
@@ -171,8 +175,16 @@ public static class BalanceSimulator
                 if (ai.TryChooseMove(team, thinkMs, out piece, out move))
                 {
                     bool deep = ai.LastCompletedDepth >= 4;
-                    if (team == Team.Enemy) { run.enemyMoves++; if (deep) run.enemyDeepMoves++; }
-                    else { run.playerMoves++; if (deep) run.playerDeepMoves++; }
+                    if (team == Team.Enemy)
+                    {
+                        run.enemyMoves++; if (deep) run.enemyDeepMoves++;
+                        run.enemyDepthSum += ai.LastCompletedDepth; run.enemyNodes += ai.LastNodes; run.enemyMs += (float)ai.LastMs;
+                    }
+                    else
+                    {
+                        run.playerMoves++; if (deep) run.playerDeepMoves++;
+                        run.playerDepthSum += ai.LastCompletedDepth; run.playerNodes += ai.LastNodes; run.playerMs += (float)ai.LastMs;
+                    }
                     GameSim.RunSync(CombatResolver.ExecuteMove(piece, move));
                     // 再行動（ゾーン）
                     PieceInstance again = gm.TakeBonusMove();

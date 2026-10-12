@@ -44,6 +44,8 @@
   2. 速報: `node docs/balance/run_parallel.js`（通常40周）。本番: `--full`（通常300周＋駒ごとの実験。仲間が部員だけになって1周が長くなり、1時間ほどかかる）。候補を試すときは `--out BalanceReports/候補名 --set EnemyAtkDivisor=6` のように、ビルドし直さずに `BalanceTuning` や駒のデータ（`--piece C3={"baseHP":10}`）を変えられる。
   3. 部員の強さは `--jobs base,force_Boku,awaken_Boku` のように、`force_X`（第一局から持つ）と `awaken_X`（局の初めから覚醒）を同じ種で比べる。
   4. 集計は `node docs/balance/aggregate.js out.json BalanceReports/exp`（駒ごと。覚醒の回数も出る）、`node docs/balance/growth_stats.js 記録.jsonl`（練度）、`node docs/balance/fleet_stats.js 記録.jsonl`（艦隊戦）、`node docs/balance/compare.js <フォルダ> 名前…`（局ごとの勝率を並べる）。
+  5. デバッグと AI の比べ方（2026-10-12）: `node docs/balance/sanity.js 記録.jsonl`（時間切れ・手数の上限・記録の食い違いと、AI の読みの深さ・局面数・時間）、`node docs/balance/paired.js A.jsonl B.jsonl`（同じ種どうしの差と揺れ）、`node docs/balance/stage_margin.js A.jsonl B.jsonl`（局ごとの勝率・勝つまでの手数・自軍 C3 の残り体力。周の結果より揺れが小さいので、AI の強さはこちらで見る）。`run_parallel.js` はビルドのログに例外があれば `<out>/logs` に残して知らせる。並列の数は `--chunk`（1本が回す周）で決まるので、`周 ÷ chunk` が `--workers` 以上になるようにする。
+  6. AI の読みの工夫は陣営ごとに `BalanceTuning.AiFeaturesPlayer` / `AiFeaturesEnemy`（ビットの和: 1 深く読む・2 手の順・4 取り合いの延長・8 能力の分かる評価）。`--set AiFeaturesEnemy=15` のように新旧を対戦させて測る。読みの中身は `docs/snippets/test_ai_tactics.cs`（`SimpleAI.dumpRoot`）、速さは `docs/snippets/bench_ai.cs`。
 - **確認は短く**: 変えた駒・設定だけを、同じ種で60周の速報（数分）で確かめるのが基本。全部まとめた確認は頼まれたときだけにして、回すときも裏に回して待たずに話を進める（ユーザーは長い待ち時間を嫌う。2026-10-10 に2回止められた）。回す前に時間を見積もり、10分を超えそうなら先に短い案を出す。
 - エディタの中で回すとき: メニュー「C3将棋 > バランステスト（自動プレイ）」、またはプレイ中に `BalanceSimulator.RunBatch(周回数, 最初の種, 思考ms, 出力jsonl, null, SimOptions)`。シーン（`Assets/Scenes/SampleScene.unity`）を開いてからプレイする。`run_experiments.ps1` もあるが、1本ずつなので本番だと3〜4時間かかる。
 - 調整前の基準値は `docs/balance/baseline_2026-10-10.json`。報告ページ: https://claude.ai/artifact/Jp2KngEe49sWEQRFNfBRDo

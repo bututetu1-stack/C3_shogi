@@ -22,10 +22,28 @@ public class SimpleAI : MonoBehaviour
     public float thinkBudgetMs = 150f;
     [Tooltip("探索の統計をコンソールに出す")]
     public bool logSearchStats;
+    /// <summary>デバッグ用: true なら、直前の手の候補と点（上位12手）を LastRootDump に残す</summary>
+    [System.NonSerialized] public bool dumpRoot;
+    public string LastRootDump { get; private set; }
 
     // 反復深化で試す深さ（自分の手→相手の応手 で1組）
     private static readonly int[] ShallowDepths = { 2 };
     private static readonly int[] FullDepths = { 2, 4 };
+    private static readonly int[] DeepDepths = { 2, 4, 6 };
+
+    // 読みの工夫（BalanceTuning.AiFeaturesPlayer / AiFeaturesEnemy のビット）
+    public const int FeatureDeep = 1, FeatureOrdering = 2, FeatureQuiesce = 4, FeatureEval = 8, FeatureWide = 16;
+    // 広く読む（16）ときに内側の局面で読む手の数
+    private const int WideMaxMoves = 24;
+    private int features;
+    private bool Has(int feature) { return (features & feature) != 0; }
+    // 取り合いの延長で読む手数の上限と、1つの局面で読む取る手の数
+    private const int QuiesceDepth = 2;
+    private const int QuiesceMaxMoves = 6;
+
+    /// <summary>直前の手で読んだ局面の数と、かかった時間（ミリ秒）。自動プレイの統計用</summary>
+    public int LastNodes { get; private set; }
+    public double LastMs { get; private set; }
     // 各ノードで読む手の上限（ルートは全手）
     private const int InnerMaxMoves = 14;
 
@@ -36,13 +54,20 @@ public class SimpleAI : MonoBehaviour
 
     private void ConfigureDifficulty(Team team)
     {
+        features = team == Team.Player ? BalanceTuning.AiFeaturesPlayer : BalanceTuning.AiFeaturesEnemy;
         // 自動プレイで自軍を指すときは、いちばん強い設定で指す
-        if (team == Team.Player) { searchDepths = FullDepths; randomMargin = 15; return; }
-        int stage = StageManager.Instance != null ? StageManager.Instance.currentStage : 5;
-        if (stage <= 2) { searchDepths = ShallowDepths; randomMargin = 140; }
-        else if (stage <= 4) { searchDepths = ShallowDepths; randomMargin = 60; }
-        else if (stage <= 9) { searchDepths = FullDepths; randomMargin = 30; }
-        else { searchDepths = FullDepths; randomMargin = 15; }
+        if (team == Team.Player) { searchDepths = FullDepths; randomMargin = 15; }
+        else
+        {
+            int stage = StageManager.Instance != null ? StageManager.Instance.currentStage : 5;
+            // 序盤（浅く読む局）は工夫を使わない（前半はスムーズに）
+            if (stage <= 2) { searchDepths = ShallowDepths; randomMargin = 140; features = 0; }
+            else if (stage <= 4) { searchDepths = ShallowDepths; randomMargin = 60; features = 0; }
+            else if (stage <= 9) { searchDepths = FullDepths; randomMargin = 30; }
+            else { searchDepths = FullDepths; randomMargin = 15; }
+        }
+        // 時間が余れば6手先まで読む（序盤の手加減で浅く読む局はそのまま）
+        if (Has(FeatureDeep) && searchDepths == FullDepths) searchDepths = DeepDepths;
     }
 
     private const int WinScore = 100000;
@@ -149,17 +174,26 @@ public class SimpleAI : MonoBehaviour
 
     private MoveEntry? ChooseMove(Team team, float budget, PieceInstance onlyPiece = null)
     {
+        MoveEntry? choice = ChooseMoveCore(team, budget, onlyPiece);
+        LastNodes = nodes;
+        LastMs = clock.Elapsed.TotalMilliseconds;
+        return choice;
+    }
+
+    private MoveEntry? ChooseMoveCore(Team team, float budget, PieceInstance onlyPiece)
+    {
         clock = System.Diagnostics.Stopwatch.StartNew();
         timeUp = false;
         nodes = 0;
         budgetMs = budget;
         ConfigureDifficulty(team);
+        ResetOrdering();
         bool forEnemy = team == Team.Enemy;
         Team opponent = forEnemy ? Team.Player : Team.Enemy;
 
         BoardManager bm = BoardManager.Instance;
         List<MoveEntry> root = new List<MoveEntry>();
-        GenerateOrderedMoves(team, root, GetPieceBuffer(0));
+        GenerateOrderedMoves(team, root, GetPieceBuffer(0), 0);
         if (onlyPiece != null) root.RemoveAll(e => e.piece != onlyPiece);
         if (root.Count == 0) return null;
 
@@ -220,11 +254,19 @@ public class SimpleAI : MonoBehaviour
         LastCompletedDepth = completedDepth;
         if (best == null || best.Count == 0) return root[0];
 
-        // ほぼ同点の手からランダムに選ぶ
+        // ほぼ同点の手からランダムに選ぶ。読みの窓の端（ちょうど top − 幅）の点は「それ以下」という見積もりなので入れない
         int top = best[0].score;
         int count = 1;
-        while (count < best.Count && best[count].score >= top - randomMargin) count++;
+        while (count < best.Count && best[count].score > top - randomMargin) count++;
         MoveEntry chosen = best[Random.Range(0, count)];
+        if (dumpRoot)
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.Append("深さ" + completedDepth + " " + nodes + "局面: ");
+            for (int i = 0; i < Mathf.Min(12, best.Count); i++)
+                sb.Append(best[i].piece.DisplayName + best[i].move.position + (best[i].move.isAttack ? "攻" : "") + "=" + best[i].score + " ");
+            LastRootDump = sb.ToString();
+        }
 
         if (logSearchStats)
             Debug.Log("[AI] depth=" + completedDepth + " nodes=" + nodes + " time=" + clock.ElapsedMilliseconds + "ms"
@@ -282,11 +324,11 @@ public class SimpleAI : MonoBehaviour
         if (bm.FindC3(Team.Enemy) == null) return -WinScore + ply;
 
         if (depth <= 0)
-            return Evaluate(maximizing ? Team.Enemy : Team.Player);
+            return Has(FeatureQuiesce) ? Quiesce(maximizing, alpha, beta, ply, QuiesceDepth) : Evaluate(maximizing ? Team.Enemy : Team.Player);
 
         List<MoveEntry> moves = GetBuffer(ply);
-        GenerateOrderedMoves(maximizing ? Team.Enemy : Team.Player, moves, GetPieceBuffer(ply));
-        int moveCount = Mathf.Min(moves.Count, InnerMaxMoves);
+        GenerateOrderedMoves(maximizing ? Team.Enemy : Team.Player, moves, GetPieceBuffer(ply), ply);
+        int moveCount = Mathf.Min(moves.Count, Has(FeatureWide) ? WideMaxMoves : InnerMaxMoves);
 
         // 動ける手がなければパスとして相手番へ
         if (moveCount == 0)
@@ -303,7 +345,7 @@ public class SimpleAI : MonoBehaviour
                 if (timeUp) return 0;
                 if (score > best) best = score;
                 if (score > alpha) alpha = score;
-                if (alpha >= beta) break;
+                if (alpha >= beta) { RememberCutoff(moves[i], ply, depth); break; }
             }
             return best;
         }
@@ -318,7 +360,7 @@ public class SimpleAI : MonoBehaviour
                 if (timeUp) return 0;
                 if (score < best) best = score;
                 if (score < beta) beta = score;
-                if (alpha >= beta) break;
+                if (alpha >= beta) { RememberCutoff(moves[i], ply, depth); break; }
             }
             return best;
         }
@@ -334,6 +376,113 @@ public class SimpleAI : MonoBehaviour
     {
         while (pieceBuffers.Count <= ply) pieceBuffers.Add(new List<PieceInstance>());
         return pieceBuffers[ply];
+    }
+
+    // ================================================================
+    // 手の順の工夫（キラー・ヒストリー）: 枝刈りを起こした静かな手を、ほかの局面でも先に読む
+    // ================================================================
+    private const int MaxPly = 32;
+    private readonly PieceInstance[,] killerPiece = new PieceInstance[MaxPly, 2];
+    private readonly Vector2Int[,] killerPos = new Vector2Int[MaxPly, 2];
+    private readonly Dictionary<PieceInstance, int[]> history = new Dictionary<PieceInstance, int[]>();
+
+    private void ResetOrdering()
+    {
+        System.Array.Clear(killerPiece, 0, killerPiece.Length);
+        history.Clear();
+    }
+
+    private void RememberCutoff(MoveEntry m, int ply, int depth)
+    {
+        if (!Has(FeatureOrdering) || m.move.isAttack || ply >= MaxPly) return;
+        if (killerPiece[ply, 0] != m.piece || killerPos[ply, 0] != m.move.position)
+        {
+            killerPiece[ply, 1] = killerPiece[ply, 0];
+            killerPos[ply, 1] = killerPos[ply, 0];
+            killerPiece[ply, 0] = m.piece;
+            killerPos[ply, 0] = m.move.position;
+        }
+        int size = BoardManager.Instance.CurrentBoardSize;
+        int[] h;
+        if (!history.TryGetValue(m.piece, out h)) { h = new int[size * size]; history[m.piece] = h; }
+        int idx = m.move.position.x + m.move.position.y * size;
+        if (idx >= 0 && idx < h.Length) h[idx] += depth * depth;
+    }
+
+    /// <summary>静かな手の順の上乗せ（キラーは取る手のすぐあと、ヒストリーは静かな手の中で前へ）</summary>
+    private int OrderingBonus(PieceInstance piece, Vector2Int pos, int ply)
+    {
+        if (ply < MaxPly)
+        {
+            if (killerPiece[ply, 0] == piece && killerPos[ply, 0] == pos) return 2500;
+            if (killerPiece[ply, 1] == piece && killerPos[ply, 1] == pos) return 2400;
+        }
+        int[] h;
+        if (!history.TryGetValue(piece, out h)) return 0;
+        int idx = pos.x + pos.y * BoardManager.Instance.CurrentBoardSize;
+        return idx >= 0 && idx < h.Length ? Mathf.Min(600, h[idx] * 4) : 0;
+    }
+
+    // ================================================================
+    // 取り合いの延長（静止探索）: 読みの終わりで、倒せる手だけをもう少し読む（取られ損・取り返しの見落としを減らす）
+    // ================================================================
+    private int Quiesce(bool maximizing, int alpha, int beta, int ply, int qdepth)
+    {
+        nodes++;
+        if ((nodes & 63) == 0 && clock.Elapsed.TotalMilliseconds > budgetMs) timeUp = true;
+        if (timeUp) return 0;
+
+        BoardManager bm = BoardManager.Instance;
+        if (bm.FindC3(Team.Player) == null) return WinScore - ply;
+        if (bm.FindC3(Team.Enemy) == null) return -WinScore + ply;
+
+        Team toMove = maximizing ? Team.Enemy : Team.Player;
+        int stand = Evaluate(toMove);
+        if (qdepth <= 0) return stand;
+        // 取らずに済ませることもできる（その局面の評価が下限／上限）
+        if (maximizing) { if (stand >= beta) return stand; if (stand > alpha) alpha = stand; }
+        else { if (stand <= alpha) return stand; if (stand < beta) beta = stand; }
+
+        List<MoveEntry> kills = GetBuffer(ply);
+        GenerateKills(toMove, kills, GetPieceBuffer(ply));
+        int n = Mathf.Min(kills.Count, QuiesceMaxMoves);
+        int best = stand;
+        for (int i = 0; i < n; i++)
+        {
+            int mark = Simulate(kills[i].piece, kills[i].move);
+            int score = Quiesce(!maximizing, alpha, beta, ply + 1, qdepth - 1);
+            Restore(mark);
+            if (timeUp) return 0;
+            if (maximizing) { if (score > best) best = score; if (score > alpha) alpha = score; }
+            else { if (score < best) best = score; if (score < beta) beta = score; }
+            if (alpha >= beta) break;
+        }
+        return best;
+    }
+
+    /// <summary>相手の駒を倒せる手だけ（C3 を倒す手がいちばん前）</summary>
+    private void GenerateKills(Team team, List<MoveEntry> entries, List<PieceInstance> pieces)
+    {
+        entries.Clear();
+        BoardManager bm = BoardManager.Instance;
+        bm.GetTeamPieces(team, pieces);
+        foreach (PieceInstance piece in pieces)
+        {
+            if (!IsControllable(piece)) continue;
+            MoveValidator.GetValidMoves(piece, moveScratch);
+            for (int m = 0; m < moveScratch.Count; m++)
+            {
+                MoveValidator.MoveResult move = moveScratch[m];
+                if (!move.isAttack) continue;
+                PieceInstance target = bm.GetPieceAt(move.position);
+                if (target == null) continue;
+                int damage = CombatResolver.CalcDamage(piece, target);
+                if (damage <= 0 || damage < target.currentHP) continue;
+                int priority = target.data.pieceType == PieceType.C3 ? 50000 : 5000 + PieceValue(target) - PieceValue(piece) / 4;
+                entries.Add(new MoveEntry { piece = piece, move = move, priority = priority });
+            }
+        }
+        entries.Sort((a, b) => b.priority.CompareTo(a.priority));
     }
 
     // ================================================================
@@ -353,7 +502,7 @@ public class SimpleAI : MonoBehaviour
         return true;
     }
 
-    private void GenerateOrderedMoves(Team team, List<MoveEntry> entries, List<PieceInstance> pieces)
+    private void GenerateOrderedMoves(Team team, List<MoveEntry> entries, List<PieceInstance> pieces, int ply)
     {
         entries.Clear();
         BoardManager bm = BoardManager.Instance;
@@ -407,6 +556,7 @@ public class SimpleAI : MonoBehaviour
                     if (!piece.isPromoted && piece.data.canPromote
                         && (piece.CanPromoteAt(piece.boardPosition.y, size) || piece.CanPromoteAt(move.position.y, size)))
                         priority += piece.data.diesOnPromotion ? -3000 : 300;
+                    if (Has(FeatureOrdering)) priority += OrderingBonus(piece, move.position, ply);
                 }
 
                 entries.Add(new MoveEntry { piece = piece, move = move, priority = priority });
@@ -546,7 +696,25 @@ public class SimpleAI : MonoBehaviour
         int v = p.ATK * 30 + p.DEF * 22 + hp * 18 + 20;
         if (p.isPromoted) v += 30;
         if (BalanceTuning.AiAbilityAware) v += AbilityValue(p);
+        if (Has(FeatureEval)) v += NewMemberValue(p);
         return v;
+    }
+
+    /// <summary>2026-10-11 に加わった部員と艦隊の能力の値打ち（評価の工夫を使うときだけ。ニコ・翡翠は支援役として高め）</summary>
+    private static int NewMemberValue(PieceInstance p)
+    {
+        switch (p.data.pieceType)
+        {
+            case PieceType.Niko: return 55;
+            case PieceType.Kawasemi: return 40;
+            case PieceType.Shimesaba: return 40;
+            case PieceType.Mitsuharu: return 25;
+            case PieceType.RN: return 30;
+            case PieceType.Negu: return 30;
+            case PieceType.Mutou: return 30;
+            case PieceType.KanmusuSS: return -40;   // 囮。追っても得が少ない
+            default: return 0;
+        }
     }
 
     /// <summary>能力の値打ち（数値に表れない分）。支援役・提督・覚醒した駒は高く、倒すと爆発する髑髏は低く見る</summary>
@@ -678,7 +846,10 @@ public class SimpleAI : MonoBehaviour
         if (BalanceTuning.AiAbilityAware)
             score += AbilitySynergy(evalEnemy, Team.Enemy) - AbilitySynergy(evalPlayer, Team.Player);
 
-        // 7. 前進と敵C3への接近（動かせる駒のみ）
+        // 7. 能力の分かる評価（陣地の広さ・結界で止まる能力・弓兵の射線）
+        if (Has(FeatureEval)) score += EvalAbilities(size);
+
+        // 8. 前進と敵C3への接近（動かせる駒のみ）
         foreach (var p in evalEnemy)
         {
             if (!IsControllable(p)) continue;
@@ -693,6 +864,56 @@ public class SimpleAI : MonoBehaviour
         }
 
         return score;
+    }
+
+    /// <summary>
+    /// 能力の分かる評価（敵が有利なほど正）:
+    /// 陣地の広さ（次の手で届くマスの数の差）、結界や封印で止まっている能力駒、弓兵の射線に立っている自軍の駒
+    /// </summary>
+    private int EvalAbilities(int size)
+    {
+        BoardManager bm = BoardManager.Instance;
+        int s = 0;
+
+        // 陣地の広さ
+        int n = size * size, spaceE = 0, spaceP = 0;
+        for (int i = 0; i < n; i++)
+        {
+            if (reachCountE[i] > 0) spaceE++;
+            if (reachCountP[i] > 0) spaceP++;
+        }
+        s += (spaceE - spaceP) * 2;
+
+        // 結界・封印で止まっている能力駒は、能力の値打ちの半分を失う
+        bool kekkai = false;
+        foreach (var p in evalEnemy) if (p.data.pieceType == PieceType.Kekkai) { kekkai = true; break; }
+        foreach (var p in evalPlayer)
+        {
+            if (p.data.pieceType == PieceType.C3) continue;
+            if (!p.isSealed && !kekkai) continue;
+            if (!AbilitySystem.IsSuppressed(p)) continue;
+            s += Mathf.Max(0, AbilityValue(p)) / 2;
+        }
+        foreach (var p in evalEnemy)
+            if (p.isSealed && p.data.pieceType != PieceType.C3) s -= Mathf.Max(0, AbilityValue(p)) / 2;
+
+        // 弓兵の射線: 手番の終わりに、前の直線上いちばん近い相手の駒に当たる
+        foreach (var archer in evalEnemy)
+        {
+            if (archer.data.pieceType != PieceType.Yumihei || archer.isSealed) continue;
+            for (int y = archer.boardPosition.y - 1; y >= 0; y--)
+            {
+                PieceInstance p = bm.GetPieceAt(new Vector2Int(archer.boardPosition.x, y));
+                if (p == null || AbilitySystem.IsSubmerged(p)) continue;
+                if (p.team == Team.Player && p.data.pieceType != PieceType.C3)
+                {
+                    s += 20;
+                    if (p.currentHP <= CombatResolver.AbilityDamage(archer, BalanceTuning.YumiheiDamage)) s += PieceValue(p) / 2;
+                }
+                break;
+            }
+        }
+        return s;
     }
 
     /// <summary>陣営の駒が次の手で攻撃できるマスを集計する（自動移動の門人も含む）</summary>
