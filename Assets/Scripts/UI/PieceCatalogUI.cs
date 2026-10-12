@@ -157,7 +157,7 @@ public class PieceCatalogUI : MonoBehaviour
         body.Add(scroll);
 
         var detailScroll = UIFactory.Scroll();
-        detailScroll.style.width = 560;
+        detailScroll.style.width = MobileUI.Active ? 410 : 560;   // スマホの表示では札を3列並べるため、説明を狭く
         detailScroll.style.flexShrink = 0;
         detailScroll.style.marginLeft = 18;
         detailScroll.style.paddingLeft = 18;
@@ -239,7 +239,8 @@ public class PieceCatalogUI : MonoBehaviour
     {
         var card = new VisualElement();
         card.AddToClassList("c3-card");
-        card.style.width = 150;
+        bool mobile = MobileUI.Active;
+        card.style.width = mobile ? 116 : 150;
         card.style.marginRight = 10;
         card.style.marginBottom = 10;
         card.style.paddingTop = 10;
@@ -247,8 +248,8 @@ public class PieceCatalogUI : MonoBehaviour
         card.userData = data;
 
         // 駒の絵は敵の駒も正位置で
-        card.Add(UIFactory.PieceIcon(data, false, 76f));
-        var name = UIFactory.Label(CardName(data), 21, Palette.Text, "c3-mincho");
+        card.Add(UIFactory.PieceIcon(data, false, mobile ? 62f : 76f));
+        var name = UIFactory.Label(CardName(data), mobile ? 18 : 21, Palette.Text, "c3-mincho");
         name.style.marginTop = 6;
         card.Add(name);
         var chip = UIFactory.Chip(Palette.RarityName(data.rarity), Palette.RarityLabel(data.rarity));

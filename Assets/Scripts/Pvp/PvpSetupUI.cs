@@ -78,6 +78,19 @@ public class PvpSetupUI : MonoBehaviour
         root.pickingMode = PickingMode.Position;
         root.style.backgroundColor = new Color(0.03f, 0.025f, 0.02f, 1f);
         // 画面ごとに中身の入れ物を作る（画面を切り替えると、その画面の見張り（schedule）も一緒に止まる）
+        if (MobileUI.Active)
+        {
+            // スマホの表示: 文字が大きいぶん画面に収まらないことがあるので、縦に動かせるようにする
+            var scroll = UIFactory.Scroll();
+            scroll.style.position = Position.Absolute;
+            scroll.style.left = scroll.style.right = scroll.style.top = scroll.style.bottom = 0;
+            scroll.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            var content = scroll.contentContainer;
+            content.style.alignItems = Align.Center;
+            content.style.paddingTop = content.style.paddingBottom = 14;
+            root.Add(scroll);
+            return content;
+        }
         var screen = new VisualElement();
         screen.style.position = Position.Absolute;
         screen.style.left = screen.style.right = screen.style.top = screen.style.bottom = 0;
@@ -179,7 +192,7 @@ public class PvpSetupUI : MonoBehaviour
     private VisualElement ModeCard(string name, string text, string button, Action onClick)
     {
         var card = UIFactory.Panel();
-        card.style.width = 340;
+        card.style.width = MobileUI.Active ? 290 : 340;
         card.style.marginLeft = card.style.marginRight = 12;
         card.style.paddingTop = 20;
         card.style.paddingBottom = 20;
@@ -213,6 +226,31 @@ public class PvpSetupUI : MonoBehaviour
         field.style.width = 240;
         field.style.fontSize = 40;
         r.Add(field);
+        // スマホの表示: ブラウザによっては入力欄でキーボードが出ないので、数字のボタンを並べる
+        if (MobileUI.Active)
+        {
+            var pad = new VisualElement();
+            pad.style.flexDirection = FlexDirection.Row;
+            pad.style.flexWrap = Wrap.Wrap;
+            pad.style.justifyContent = Justify.Center;
+            pad.style.width = 520;
+            pad.style.marginTop = 8;
+            foreach (string key in new[] { "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "消す" })
+            {
+                string k = key;
+                var b = UIFactory.Button(k, () =>
+                {
+                    string v = field.value ?? "";
+                    if (k == "消す") field.value = v.Length > 0 ? v.Substring(0, v.Length - 1) : "";
+                    else if (v.Length < 4) field.value = v + k;
+                });
+                b.style.width = k == "消す" ? 120 : 80;
+                b.style.marginLeft = b.style.marginRight = b.style.marginBottom = 4;
+                b.style.fontSize = 24;
+                pad.Add(b);
+            }
+            r.Add(pad);
+        }
         var status = UIFactory.Label("", 18, Palette.EnemyLight);
         status.style.marginTop = 8;
         r.Add(status);
@@ -526,7 +564,7 @@ public class PvpSetupUI : MonoBehaviour
             }));
         }
         right.Add(chosen);
-        var hint = UIFactory.Label("選んだ駒をクリックすると外せます", 14, Palette.TextSub);
+        var hint = UIFactory.Label(MobileUI.Tap("選んだ駒をクリックすると外せます"), 14, Palette.TextSub);
         hint.style.marginBottom = 8;
         right.Add(hint);
 
@@ -686,7 +724,7 @@ public class PvpSetupUI : MonoBehaviour
         }
         else
         {
-            detail.Add(UIFactory.Paragraph("左の札をクリックすると、ここに説明と「加える」が出ます。駒は自陣（手前の3段）に、選んだ順に並びます。", 17, Palette.TextSub));
+            detail.Add(UIFactory.Paragraph(MobileUI.Tap("左の札をクリックすると、ここに説明と「加える」が出ます。駒は自陣（手前の3段）に、選んだ順に並びます。"), 17, Palette.TextSub));
         }
     }
 

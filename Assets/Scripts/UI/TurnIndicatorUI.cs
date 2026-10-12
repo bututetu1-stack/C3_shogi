@@ -25,7 +25,7 @@ public class TurnIndicatorUI : MonoBehaviour
 
         bar = new VisualElement();
         bar.style.position = Position.Absolute;
-        bar.style.top = 14;
+        bar.style.top = MobileUI.Active ? 6 : 14;   // スマホの表示は上に詰めて、盤と右の欄の場所をあける
         bar.style.left = 0;
         bar.style.right = 0;
         bar.style.flexDirection = FlexDirection.Row;
