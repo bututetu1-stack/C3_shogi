@@ -236,7 +236,7 @@ public partial class AbilitySystem
                 }
                 else
                 {
-                    to.bonusATK += 1;
+                    to.AddATK(1, "お土産");
                     CombatResolver.RefreshStats(to);
                     FloatingText.Spawn(to.boardPosition, "攻+1", Palette.ATK, 3f);
                     gift = "攻撃+1";
@@ -501,7 +501,7 @@ public partial class AbilitySystem
                 if (allies.Count == 0) return false;
                 PieceInstance ally = allies[GameRng.Range(0, allies.Count)];
                 bool atk = ally.ATK <= ally.DEF;
-                if (atk) ally.bonusATK += 1; else ally.bonusDEF += 1;
+                if (atk) ally.AddATK(1, "ニコの札"); else ally.bonusDEF += 1;
                 smallBuffs[ally] = SmallBuffOf(ally) + 1;
                 CombatResolver.RefreshStats(ally);
                 FloatingText.Spawn(ally.boardPosition, atk ? "攻+1" : "防+1", atk ? Palette.ATK : Palette.DEF);
@@ -574,7 +574,7 @@ public partial class AbilitySystem
                 // 小錦は防御、ユウは攻撃（ニコ自身。上限あり）
                 if (SmallBuffOf(niko) >= BalanceTuning.NikoBuffCap + CardBonus(niko)) return false;
                 bool atk = task.type == PieceType.Yuu;
-                if (atk) niko.bonusATK += 1; else niko.bonusDEF += 1;
+                if (atk) niko.AddATK(1, "ニコの札"); else niko.bonusDEF += 1;
                 smallBuffs[niko] = SmallBuffOf(niko) + 1;
                 CombatResolver.RefreshStats(niko);
                 FloatingText.Spawn(niko.boardPosition, atk ? "攻+1" : "防+1", atk ? Palette.ATK : Palette.DEF);
@@ -758,7 +758,7 @@ public partial class AbilitySystem
                     {
                         PieceType t = a.data.pieceType;
                         if (t == PieceType.Chuka || t == PieceType.Dopa || SmallBuffOf(a) >= BalanceTuning.NikoBuffCap) continue;
-                        a.bonusATK += 1;
+                        a.AddATK(1, "オーバークロック");
                         smallBuffs[a] = SmallBuffOf(a) + 1;
                         CombatResolver.RefreshStats(a);
                         FloatingText.Spawn(a.boardPosition, "攻+1", Palette.ATK);

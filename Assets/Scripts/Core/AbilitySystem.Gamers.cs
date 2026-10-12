@@ -182,7 +182,7 @@ public partial class AbilitySystem
             int atk = meeting && !IsSuppressed(s) ? BalanceTuning.StaffMeetingATK : 0;
             if (atk == s.staffATK) continue;
             changed = changed || (atk > 0) != (s.staffATK > 0);
-            s.bonusATK += atk - s.staffATK;
+            s.AddATK(atk - s.staffATK, "運営会議");
             s.staffATK = atk;
             CombatResolver.RefreshStats(s);
         }
@@ -205,7 +205,7 @@ public partial class AbilitySystem
         {
             int atk = IsSuppressed(n) ? 0 : Mathf.Min(BalanceTuning.NeguAllianceCap, members * BalanceTuning.NeguAllianceATK);
             if (atk == n.allianceATK) continue;
-            n.bonusATK += atk - n.allianceATK;
+            n.AddATK(atk - n.allianceATK, "えちち連合");
             n.allianceATK = atk;
             CombatResolver.RefreshStats(n);
             FloatingText.Spawn(n.boardPosition, atk > 0 ? "えちち連合 攻撃+" + atk : "連合解散", DailyPink, 3f, 0.2f);
@@ -247,7 +247,7 @@ public partial class AbilitySystem
             }
             n.dailyCount = 0;
             n.dailyRewards++;
-            n.bonusATK += 1;
+            n.AddATK(1, "デイリー");
             CombatResolver.RefreshStats(n);
             FloatingText.Spawn(n.boardPosition, "デイリー報酬 攻+1", DailyPink, 3f);
             if (BattleEffects.Instance != null)
@@ -411,7 +411,7 @@ public partial class AbilitySystem
         // 篝火: 覚醒していれば、1局に1回、自陣のいちばん手前から体力半分で蘇る
         if (!m.awakened || m.bonfireUsed) return false;
         m.bonfireUsed = true;
-        if (learned) m.bonusATK += 1;   // 覚えたことは、その場でも活かす
+        if (learned) m.AddATK(1, "死んで覚える");   // 覚えたことは、その場でも活かす
         m.staggered = false;
         m.block = 0;
         m.currentHP = Mathf.Max(1, (m.MaxHP + 1) / 2);
@@ -454,7 +454,7 @@ public partial class AbilitySystem
                 allies.RemoveAll(a => SmallBuffOf(a) >= BalanceTuning.NikoBuffCap + CardBonus(niko));
                 if (allies.Count == 0) return false;
                 PieceInstance ally = allies[GameRng.Range(0, allies.Count)];
-                ally.bonusATK += 1;
+                ally.AddATK(1, "ニコの札");
                 smallBuffs[ally] = SmallBuffOf(ally) + 1;
                 CombatResolver.RefreshStats(ally);
                 FloatingText.Spawn(ally.boardPosition, "攻+1", Palette.ATK);

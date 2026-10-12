@@ -212,7 +212,7 @@ public partial class GameManager : MonoBehaviour
         if (hp > 0 || atk > 0)
         {
             piece.AddMaxHP(hp);
-            piece.bonusATK += atk;
+            piece.AddATK(atk, "仲間入り");
             CombatResolver.RefreshStats(piece);
         }
         return piece;
@@ -308,14 +308,14 @@ public partial class GameManager : MonoBehaviour
         }
         else
         {
-            p.bonusATK += RunBonusATK;
+            p.AddATK(RunBonusATK, "全軍強化");
             p.bonusDEF += RunBonusDEF;
             p.AddMaxHP(RunBonusHP);
             // 部員の練度（★）
             RunMember m = p.team == Team.Player ? Roster.Get(p.data.pieceType) : null;
             if (m != null) RunRoster.ApplyStars(p, 0, m.stars);
             // 無糖の死んで覚える（倒された回数ぶん攻撃が上がる）
-            if (m != null) p.bonusATK += Roster.DeathBonus(p.data.pieceType);
+            if (m != null) p.AddATK(Roster.DeathBonus(p.data.pieceType), "死んで覚える");
         }
         CombatResolver.RefreshStats(p);
     }
@@ -333,7 +333,7 @@ public partial class GameManager : MonoBehaviour
         {
             // 深海の体力はランクで決まっているので、局による強化は攻撃だけ
             p.stageBonusATK = StageManager.EnemyStageAtk(stage);
-            p.bonusATK += p.stageBonusATK;
+            p.AddATK(p.stageBonusATK, "局の強化");
             CombatResolver.RefreshStats(p);
         }
         else if (p.team == Team.Enemy)
@@ -348,7 +348,7 @@ public partial class GameManager : MonoBehaviour
             if (PieceTypes.IsKanmusu(p.data.pieceType))
             {
                 p.stageBonusATK = StageManager.EnemyStageAtk(stage);
-                p.bonusATK += p.stageBonusATK;
+                p.AddATK(p.stageBonusATK, "局の強化");
                 CombatResolver.RefreshStats(p);
             }
         }
@@ -533,7 +533,7 @@ public partial class GameManager : MonoBehaviour
                 {
                     if (e.data.pieceType == PieceType.C3) continue;
                     if (pendingEnemyHp > 0) e.AddMaxHP(pendingEnemyHp);
-                    e.bonusATK += pendingEnemyAtk;
+                    e.AddATK(pendingEnemyAtk, "強敵");
                     CombatResolver.RefreshStats(e);
                 }
                 pendingEnemyHp = 0;

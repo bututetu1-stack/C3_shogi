@@ -127,6 +127,17 @@ public class PieceDetailUI : MonoBehaviour
             ? UIFactory.FormatHP(piece.currentHP) + (piece.currentHP >= 999 ? "" : "/" + UIFactory.FormatHP(hpMax))
             : UIFactory.FormatHP(hpMax);
         content.Add(UIFactory.StatRow(atk, def, hpText));
+        // 攻撃の上乗せ（能力のダメージにも足される。説明の「攻撃の上乗せぶん増える」はこの量）
+        if (isCurrentForm && piece.bonusATK != 0)
+        {
+            // 説明に「攻撃の上乗せぶん増える」とある駒は、能力のダメージにも足されることを添える
+            bool abilityUsesBonus = (d.description ?? "").Contains("上乗せ") || (d.promotedDescription ?? "").Contains("上乗せ")
+                || (d.awakenedDescription ?? "").Contains("上乗せ");
+            var bonus = UIFactory.Paragraph("攻撃の上乗せ " + (piece.bonusATK > 0 ? "+" : "") + piece.bonusATK + "（" + piece.AtkBonusBreakdown() + "）"
+                + (abilityUsesBonus ? "\n能力のダメージにも、この分が足される" : ""), 16, Palette.ATK);
+            bonus.style.marginTop = 6;
+            content.Add(bonus);
+        }
 
         // 部員の練度（周のあいだ残る）
         RunMember member = piece.team == Team.Player && GameManager.Instance != null ? GameManager.Instance.Roster.Get(d.pieceType) : null;
