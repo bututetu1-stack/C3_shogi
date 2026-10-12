@@ -20,6 +20,8 @@
 | `test_ai_tactics.cs` | AI の読みの確かめ（ただで取れる駒・C3 を狙う飛車への受け）。工夫なしと全部入りで1手を選び、候補の点も返す（`SimpleAI.dumpRoot`） |
 | `bench_ai.cs` | AI の速さ（評価1回・手の生成・工夫ごとに1手を選ぶ時間と局面数） |
 | `visual_autoplay.cs` | 演出つきで AI どうしに1局指させる（第十局・物鉄★3をすぐ成らせる）。play_mode_step で進め、console_read_logs で演出の側の例外を探す |
+| `cap_frames_setup.cs` → `cap_frame.cs`（くり返す）→ `cap_frames_teardown.cs` | サムネイルの GIF 用のコマ撮り。1フレームを 1/30 秒に固定して、`play_mode_step --count 3` と `cap_frame.cs` をくり返す（10コマ/秒。`Builds/Media/frames` に 640x360、10コマごとに `Builds/Media/stills` に 1920x1080 の写真）。呼び出しが速すぎると Windows の通信の口が足りなくなる（NoBufferSpaceAvailable）ので、300コマくらいまでにする。GIF は `node docs/media/make_gif.js Builds/Media/frames 出力.gif 52-78,120-200` |
+| `cap_still.cs` | いまの画面を `Builds/Media/stills/NAME.png`（1920x1080）に保存する（`cap_frames_setup.cs` のあと。NAME を置き換える） |
 | `dump_pieces.cs` | 駒のデータ（数値・動き・説明・覚醒）を `BalanceReports/pieces_dump.json` に書き出す。駒一覧のページ（https://claude.ai/artifact/FQyUcJnkbyCc9NGA14utpw）を作り直すときに使う |
 
 画面の確認の流れ（PowerShell）:
