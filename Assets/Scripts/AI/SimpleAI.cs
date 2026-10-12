@@ -266,7 +266,7 @@ public class SimpleAI : MonoBehaviour
         int top = best[0].score;
         int count = 1;
         while (count < best.Count && best[count].score > top - randomMargin) count++;
-        MoveEntry chosen = best[Random.Range(0, count)];
+        MoveEntry chosen = best[GameRng.Range(0, count)];
         if (dumpRoot)
         {
             var sb = new System.Text.StringBuilder();

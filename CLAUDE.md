@@ -13,6 +13,7 @@
 ## Unity の操作
 - シェルから `isuzu-unity-cli` で操作する（`verify`、`verify --test --filter '.'`、`call execute_code --file`、`call play_mode_play` / `play_mode_step --seconds` / `play_mode_stop`、`call console_read_logs`）。
 - エディタが背面にあると時間が進まないので、プレイ中は `play_mode_step` で進める。
+- 勝ち負けに関わる乱数（能力の向きや的・AI の手の選び方・仲間の候補・布陣の型・部の時間）は `GameRng`、演出の乱数（揺れ・火の粉など）は `UnityEngine.Random` を使う。混ぜると対人戦で2人の盤がずれる（2026-10-12）。
 - 画面の確認は、PanelSettings とカメラの両方に RenderTexture を設定して数フレーム進め、ReadPixels で保存する。使うスクリプトは `docs/snippets/`（タイトルを閉じる・対局の準備・撮影・駒のデータの書き出し）。
 
 ## デザインの方針（ユーザーと決めたこと）
