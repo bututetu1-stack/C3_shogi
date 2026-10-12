@@ -16,6 +16,11 @@ public class PieceRenderer : MonoBehaviour
     public const int OrderBadge = 12;
     public const int OrderBadgeText = 13;
 
+    // 数字の札の大きさと、数字の大きさ（1桁・2桁）
+    private const float BadgeSize = 0.31f;
+    private const float BadgeFont = 2.3f;
+    private const float BadgeFontWide = 1.95f;
+
     private static readonly Vector3 ShadowOffset = new Vector3(0.035f, -0.055f, 0f);
     private static readonly Color StunnedTint = new Color(0.6f, 0.72f, 0.9f);
     private static readonly Color SealedTint = new Color(0.72f, 1f, 0.78f);
@@ -206,10 +211,11 @@ public class PieceRenderer : MonoBehaviour
         fireRenderer.sortingOrder = OrderBadge;
         fireRenderer.enabled = false;
 
-        atkBadge = CreateBadge("ATK", SpriteFactory.Circle, Palette.ATK, new Vector3(-0.34f, 0.34f, 0f) * flip, 0.27f);
-        defBadge = CreateBadge("DEF", SpriteFactory.Shield, Palette.DEF, new Vector3(0.34f, 0.34f, 0f) * flip, 0.27f);
-        hpBadge = CreateBadge("HP", SpriteFactory.Circle, Palette.HP, new Vector3(0.34f, -0.36f, 0f) * flip, 0.27f);
-        blockBadge = CreateBadge("BLOCK", SpriteFactory.Shield, BlockSteel, new Vector3(0.34f, 0.07f, 0f) * flip, 0.27f);
+        // 数字の札は少し大きめ（小さいと読みにくいため、2026-10-12）
+        atkBadge = CreateBadge("ATK", SpriteFactory.Circle, Palette.ATK, new Vector3(-0.34f, 0.34f, 0f) * flip, BadgeSize);
+        defBadge = CreateBadge("DEF", SpriteFactory.Shield, Palette.DEF, new Vector3(0.34f, 0.34f, 0f) * flip, BadgeSize);
+        hpBadge = CreateBadge("HP", SpriteFactory.Circle, Palette.HP, new Vector3(0.34f, -0.35f, 0f) * flip, BadgeSize);
+        blockBadge = CreateBadge("BLOCK", SpriteFactory.Shield, BlockSteel, new Vector3(0.34f, 0.08f, 0f) * flip, BadgeSize);
         blockBadge.root.SetActive(false);
 
         appliedName = null;
@@ -279,7 +285,7 @@ public class PieceRenderer : MonoBehaviour
         badge.text = textObj.AddComponent<TextMeshPro>();
         badge.text.font = GameFonts.NumberTMP;
         if (GameFonts.NumberOutlineMaterial != null) badge.text.fontSharedMaterial = GameFonts.NumberOutlineMaterial;
-        badge.text.fontSize = 1.9f;
+        badge.text.fontSize = BadgeFont;
         badge.text.alignment = TextAlignmentOptions.Center;
         badge.text.textWrappingMode = TextWrappingModes.NoWrap;
         badge.text.color = Color.white;
@@ -317,6 +323,7 @@ public class PieceRenderer : MonoBehaviour
     {
         badge.root.SetActive(value > 0);
         badge.text.text = value.ToString();
+        badge.text.fontSize = value >= 10 ? BadgeFontWide : BadgeFont;
     }
 
     private void SetHPBadge()
@@ -324,7 +331,7 @@ public class PieceRenderer : MonoBehaviour
         int hp = pieceInstance.currentHP;
         string text = hp >= 999 ? "∞" : hp.ToString();
         hpBadge.text.text = text;
-        hpBadge.text.fontSize = text.Length >= 2 ? 1.6f : 1.9f;
+        hpBadge.text.fontSize = text.Length >= 2 ? BadgeFontWide : BadgeFont;
         hpBadge.root.SetActive(hp > 0);
     }
 
@@ -455,7 +462,7 @@ public class PieceRenderer : MonoBehaviour
         shownBlock = b;
         blockBadge.root.SetActive(b > 0);
         blockBadge.text.text = "+" + b;
-        blockBadge.text.fontSize = 1.6f;
+        blockBadge.text.fontSize = BadgeFontWide;
     }
 
     /// <summary>
