@@ -1,17 +1,25 @@
+#if UNITY_WEBGL && !UNITY_EDITOR
+#define BROWSER_SOCKET
+#endif
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+#if BROWSER_SOCKET
+using System.Runtime.InteropServices;
+#else
+using System.Net.WebSockets;
+#endif
 
 /// <summary>
 /// 対人戦の通信（中継サーバー server/worker.js・server/local-relay.js と話す）。
 /// 部屋コードで入り、相手への手（Msg）を送り合う。サーバーは中身を知らず、記録を残して相手に渡すだけ。
 /// つなぎ直すとサーバーが記録を全部送り直すので、読み終えた分は飛ばす。
 /// 受け取ったものは Update でメインスレッドに渡す（OnMessage・OnPeer・OnWelcome）。
+/// ブラウザ版（unityroom）は ClientWebSocket が動かないので、ブラウザの WebSocket を使う（Plugins/WebGL/PvpSocket.jslib）。
 /// </summary>
 public class PvpNet : MonoBehaviour
 {
@@ -59,11 +67,16 @@ public class PvpNet : MonoBehaviour
     public event Action<Msg> OnMessage;
     public event Action<string> OnClosed;
 
+#if BROWSER_SOCKET
+    // ブラウザの WebSocket の番号（PvpSocket.jslib が配る。0 はつないでいない）
+    private int socket;
+#else
     private ClientWebSocket ws;
     private CancellationTokenSource cts;
+    private readonly SemaphoreSlim sendLock = new SemaphoreSlim(1, 1);
+#endif
     private readonly ConcurrentQueue<string> inbox = new ConcurrentQueue<string>();
     private readonly ConcurrentQueue<string> closed = new ConcurrentQueue<string>();
-    private readonly SemaphoreSlim sendLock = new SemaphoreSlim(1, 1);
     private string serverUrl;
     private string clientId;
     // 読み終えた相手の手の数（つなぎ直したとき、記録のうちここまでは飛ばす）
@@ -115,6 +128,48 @@ public class PvpNet : MonoBehaviour
         await Open();
     }
 
+    private string RoomUrl { get { return serverUrl + "/room/" + RoomCode + "?client=" + clientId; } }
+
+#if BROWSER_SOCKET
+    [DllImport("__Internal")] private static extern int PvpSocketOpen(string url, string receiver);
+    [DllImport("__Internal")] private static extern int PvpSocketSend(int id, string text);
+    [DllImport("__Internal")] private static extern void PvpSocketClose(int id);
+
+    private Task Open()
+    {
+        LastError = null;
+        socket = PvpSocketOpen(RoomUrl, gameObject.name);
+        return Task.CompletedTask;
+    }
+
+    // ここから下の3つはブラウザから SendMessage で呼ばれる（"接続の番号|本文"）。閉じた古い接続の分は捨てる
+    private string FromCurrent(string arg)
+    {
+        int bar = arg.IndexOf('|');
+        if (socket == 0 || bar < 0 || arg.Substring(0, bar) != socket.ToString()) return null;
+        return arg.Substring(bar + 1);
+    }
+
+    void JsOpen(string arg)
+    {
+        if (FromCurrent(arg) != null) Connected = true;
+    }
+
+    void JsMessage(string arg)
+    {
+        string text = FromCurrent(arg);
+        if (text != null) inbox.Enqueue(text);
+    }
+
+    void JsClose(string arg)
+    {
+        string why = FromCurrent(arg);
+        if (why == null) return;
+        if (!Connected) LastError = why;
+        socket = 0;
+        closed.Enqueue(why);
+    }
+#else
     private async Task Open()
     {
         LastError = null;
@@ -122,7 +177,7 @@ public class PvpNet : MonoBehaviour
         ws = new ClientWebSocket();
         try
         {
-            var uri = new Uri(serverUrl + "/room/" + RoomCode + "?client=" + clientId);
+            var uri = new Uri(RoomUrl);
             await ws.ConnectAsync(uri, cts.Token);
             Connected = true;
             _ = ReceiveLoop(ws, cts.Token);
@@ -159,22 +214,36 @@ public class PvpNet : MonoBehaviour
         if (!token.IsCancellationRequested) closed.Enqueue("切れた");
     }
 
-    /// <summary>相手に手を送る</summary>
-    public async void Send(Msg m)
+    private async void SendText(string json)
     {
-        if (ws == null || ws.State != WebSocketState.Open) { LastError = "つながっていない"; return; }
-        string json = JsonUtility.ToJson(new Outgoing { m = m });
         byte[] bytes = Encoding.UTF8.GetBytes(json);
         await sendLock.WaitAsync();
         try { await ws.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, cts.Token); }
         catch (Exception e) { LastError = e.Message; }
         finally { sendLock.Release(); }
     }
+#endif
+
+    /// <summary>相手に手を送る</summary>
+    public void Send(Msg m)
+    {
+        string json = JsonUtility.ToJson(new Outgoing { m = m });
+#if BROWSER_SOCKET
+        if (socket == 0 || PvpSocketSend(socket, json) == 0) LastError = "つながっていない";
+#else
+        if (ws == null || ws.State != WebSocketState.Open) { LastError = "つながっていない"; return; }
+        SendText(json);
+#endif
+    }
 
     public void Close(string reason)
     {
         Connected = false;
         PeerConnected = false;
+#if BROWSER_SOCKET
+        if (socket != 0) PvpSocketClose(socket);
+        socket = 0;
+#else
         if (cts != null) cts.Cancel();
         if (ws != null)
         {
@@ -182,6 +251,7 @@ public class PvpNet : MonoBehaviour
             ws.Dispose();
         }
         ws = null;
+#endif
     }
 
     void Update()

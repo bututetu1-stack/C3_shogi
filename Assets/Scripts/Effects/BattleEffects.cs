@@ -57,6 +57,10 @@ public class BattleEffects : MonoBehaviour
         promoteClip = Resources.Load<AudioClip>("Audio/Promote");
         clickClip = Resources.Load<AudioClip>("Audio/Click");
         stageClearClip = Resources.Load<AudioClip>("Audio/StageClear");
+#if UNITY_WEBGL && !UNITY_EDITOR
+        // ブラウザ版は音を鳴らす直前に読み込むと、初めの1回は長さが分からない（長い音を切って鳴らせない）ので、先に全部読み込んでおく
+        foreach (AudioClip c in Resources.LoadAll<AudioClip>("Audio")) c.LoadAudioData();
+#endif
 
         bgmSource = gameObject.AddComponent<AudioSource>();
         bgmSource.playOnAwake = false;
@@ -134,6 +138,9 @@ public class BattleEffects : MonoBehaviour
         float start;
         if (loudStart.TryGetValue(clip, out start)) return start;
         start = 0f;
+#if UNITY_WEBGL && !UNITY_EDITOR
+        // ブラウザ版は波形を読めない（GetData がない）ので頭から鳴らす
+#else
         try
         {
             var data = new float[clip.samples * clip.channels];
@@ -157,6 +164,7 @@ public class BattleEffects : MonoBehaviour
             }
         }
         catch (System.Exception) { start = 0f; }
+#endif
         loudStart[clip] = start;
         return start;
     }

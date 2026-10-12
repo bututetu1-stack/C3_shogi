@@ -13,6 +13,18 @@
 .c3-sub { color: rgb(191, 179, 160); }
 .c3-gold { color: rgb(212, 175, 95); }
 
+/* ---------------- 入力欄（対人戦のサーバー・部屋コード）。地を暗くして、生成りの文字を読めるように ---------------- */
+.unity-base-text-field__input {
+    background-color: rgba(0, 0, 0, 0.55);
+    border-width: 1px;
+    border-color: rgba(212, 175, 95, 0.6);
+    border-radius: 6px;
+    color: rgb(243, 235, 221);
+    padding: 4px 8px;
+    --unity-cursor-color: rgb(243, 235, 221);
+    --unity-selection-color: rgba(212, 175, 95, 0.45);
+}
+
 /* ---------------- パネル ---------------- */
 .c3-panel {
     background-color: rgba(20, 16, 14, 0.93);
