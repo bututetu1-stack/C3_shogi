@@ -283,7 +283,7 @@ public partial class AbilitySystem : MonoBehaviour
                             && target.data.pieceType != PieceType.C3
                             && target.gundaishouStacks < MaxGundaishouStacks)
                         {
-                            target.bonusATK += 1;
+                            target.AddATK(1, "軍将の鼓舞");
                             target.gundaishouStacks++;
                             CombatResolver.RefreshStats(target);
                             FloatingText.Spawn(target.boardPosition, "攻+1", Palette.ATK);
@@ -630,7 +630,7 @@ public partial class AbilitySystem : MonoBehaviour
             if (rihaku.awakened && rihaku.poetStacks < BalanceTuning.RihakuPoetMax)
             {
                 rihaku.poetStacks++;
-                rihaku.bonusATK += 1;
+                rihaku.AddATK(1, "詩仙");
                 CombatResolver.RefreshStats(rihaku);
                 FloatingText.Spawn(rihaku.boardPosition, "攻+1", Palette.ATK, 2.8f, 0.35f);
             }
@@ -1069,7 +1069,7 @@ public partial class AbilitySystem : MonoBehaviour
                     && target.fullCount < fullMax)
                 {
                     target.fullCount++;
-                    target.bonusATK += 1;
+                    target.AddATK(1, "満腹");
                     helped = true;
                     CombatResolver.RefreshStats(target);
                     FloatingText.Spawn(target.boardPosition, "満腹 攻+1", Palette.ATK, 2.8f, 0.3f);
@@ -1096,7 +1096,7 @@ public partial class AbilitySystem : MonoBehaviour
                 if (ally.data.pieceType == PieceType.C3 || ally.data.pieceType == PieceType.Konishiki) continue;
                 if (ally.sympathyCount >= BalanceTuning.KonishikiSympathyMax) continue;
                 ally.sympathyCount++;
-                ally.bonusATK += 1;
+                ally.AddATK(1, "同情");
                 CombatResolver.RefreshStats(ally);
                 FloatingText.Spawn(ally.boardPosition, "同情 攻+1", Palette.ATK, 2.8f, 0.2f);
                 if (BattleEffects.Instance != null) BattleEffects.Instance.PlayBuffEffect(ally.boardPosition, true);
@@ -1270,7 +1270,7 @@ public partial class AbilitySystem : MonoBehaviour
                     string statName;
                     if (buffATK)
                     {
-                        ally.bonusATK += buffAmount;
+                        ally.AddATK(buffAmount, "僕の面倒見");
                         statName = "ATK";
                     }
                     else

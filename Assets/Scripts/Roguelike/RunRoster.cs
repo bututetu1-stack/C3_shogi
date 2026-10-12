@@ -121,7 +121,7 @@ public class RunRoster
     {
         for (int s = from + 1; s <= to; s++)
         {
-            if (s == 1) p.bonusATK += BalanceTuning.StarATK;
+            if (s == 1) p.AddATK(BalanceTuning.StarATK, "練度★1");
             else if (s == 2) p.AddMaxHP(BalanceTuning.StarHP);
             else if (s == 3) p.bonusDEF += BalanceTuning.StarDEF;
         }
