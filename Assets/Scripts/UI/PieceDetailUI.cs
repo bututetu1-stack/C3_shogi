@@ -148,15 +148,15 @@ public class PieceDetailUI : MonoBehaviour
                 + (d.pieceType == PieceType.Monotetsu ? "\n★3なら、着任した艦娘が最初から改になる" : ""), 15, Palette.TextSub);
             featText.style.marginTop = 4;
             content.Add(featText);
-            if (d.canAwaken)
+            // 覚醒: 名前のあとに覚醒した能力を書き、覚醒のしかた（あといくつ）は後ろに添える。
+            // 覚醒しているあいだは、下の説明の枠に覚醒の能力が出る
+            if (d.canAwaken && !piece.awakened)
             {
-                string name = "覚醒「" + d.awakenedName + "」";
-                string awake = piece.awakened ? name + "（この局のあいだ）"
-                    : member.stars >= 3 ? name + "まで: この局の活躍あと" + Mathf.Max(0, BalanceTuning.AwakenActivities - piece.awakenCharge)
-                    : name + ": ★3になると、局の中で活躍を" + BalanceTuning.AwakenActivities + "回重ねてその場で覚醒する";
-                var a = UIFactory.Paragraph(awake, 17, d.awakenColor, "c3-bold");
-                a.style.marginTop = 6;
-                content.Add(a);
+                string how = member.stars >= 3
+                    ? "覚醒まで: この局の活躍あと" + Mathf.Max(0, BalanceTuning.AwakenActivities - piece.awakenCharge)
+                    : "★3になると、局の中で活躍を" + BalanceTuning.AwakenActivities + "回重ねてその場で覚醒する";
+                content.Add(UIFactory.AbilityBox("覚醒「" + d.awakenedName + "」",
+                    (string.IsNullOrEmpty(d.awakenedDescription) ? "" : d.awakenedDescription + "\n") + "（" + how + "）", 16, d.awakenColor));
             }
         }
         string status = AbilitySystem.StatusLine(piece);
@@ -179,7 +179,7 @@ public class PieceDetailUI : MonoBehaviour
         if (!string.IsNullOrEmpty(flavorText)) content.Add(UIFactory.FlavorBox(flavorText, 17));
         if (isCurrentForm && piece.awakened && !string.IsNullOrEmpty(d.awakenedDescription))
         {
-            content.Add(UIFactory.AbilityBox("覚醒「" + d.awakenedName + "」", d.awakenedDescription, 18, d.awakenColor));
+            content.Add(UIFactory.AbilityBox("覚醒「" + d.awakenedName + "」（この局のあいだ）", d.awakenedDescription, 18, d.awakenColor));
             string baseDesc = piece.isPromoted ? d.promotedDescription
                 : (piece.IsVeteran && !string.IsNullOrEmpty(d.veteranDescription) ? d.veteranDescription : d.description);
             if (!string.IsNullOrEmpty(baseDesc)) content.Add(UIFactory.AbilityBox("覚醒する前からの能力", baseDesc, 17, Palette.GoldLight));
