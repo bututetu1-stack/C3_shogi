@@ -511,7 +511,7 @@ public partial class AbilitySystem : MonoBehaviour
     }
 
     // ============================================================
-    // きぷ／へるの冷笑（自分の手番の終わりに、周囲1マスの敵を2体まで冷笑し、次の手番は動けなくする。へるは周りの敵すべて）
+    // きぷ／へるの冷笑（自分の手番の終わりに、周囲1マスの敵を3体まで冷笑し、次の手番は動けなくする。へるは周りの敵すべて）
     // ============================================================
     private static readonly Color SneerBlue = new Color(0.62f, 0.85f, 1f);
 
@@ -531,7 +531,7 @@ public partial class AbilitySystem : MonoBehaviour
         var targets = kipu.awakened
             ? GetEnemiesInRange(kipu.boardPosition, BalanceTuning.KipuAwakenedRange, kipu.team == Team.Player ? Team.Enemy : Team.Player, null)
             : AdjacentEnemies(kipu);
-        targets.RemoveAll(target => target.stunned || !CanEverMove(target));
+        targets.RemoveAll(target => target.stunned || !CanEverMove(target) || ResistsBinding(target));
         if (targets.Count == 0) yield break;
         int maxTargets = kipu.isPromoted && !kipu.awakened ? int.MaxValue
             : kipu.awakened ? Mathf.Max(BalanceTuning.KipuAwakenedTargets, kipu.isPromoted ? targets.Count : 0) : BalanceTuning.KipuSneerTargets;
@@ -595,7 +595,7 @@ public partial class AbilitySystem : MonoBehaviour
                 if (target != null && target != rihaku
                     && target.data.pieceType != PieceType.C3
                     && !target.data.immuneToFlip
-                    && (!rihaku.awakened || WorthFlipping(rihaku, target)))
+                    && (!(rihaku.awakened || BalanceTuning.RihakuSmartFlip) || WorthFlipping(rihaku, target)))
                     candidates.Add(target);
             }
         }
@@ -695,8 +695,21 @@ public partial class AbilitySystem : MonoBehaviour
         new Vector2Int(-1, 1), new Vector2Int(-1, -1)
     };
 
+    // なこが盤で迎えた自分の手番の数（突撃の間隔を数える。局の初めに空にする）
+    private readonly Dictionary<PieceInstance, int> nakoTurns = new Dictionary<PieceInstance, int>();
+
     private IEnumerator ExecuteNakoAbility(PieceInstance nako)
     {
+        int turn;
+        nakoTurns.TryGetValue(nako, out turn);
+        nakoTurns[nako] = turn + 1;
+        int interval = Mathf.Max(1, nako.isPromoted ? BalanceTuning.NakoPromotedInterval : BalanceTuning.NakoDashInterval);
+        if (turn % interval != 0)
+        {
+            // ドーパミン切れ: この手番は休む
+            FloatingText.Spawn(nako.boardPosition, "ドパ切れ", NakoPink, 3f);
+            yield break;
+        }
         GameSim.AbilitySource = nako;
         yield return NakoAbilityBody(nako);
         GameSim.AbilitySource = null;
@@ -708,7 +721,7 @@ public partial class AbilitySystem : MonoBehaviour
 
         // 能力中に成った場合も2回目が発動するよう、毎回回数を評価する。覚醒（ドパ・オーバードライブ）は倒すたびにもう一度
         int chain = 0;
-        for (int run = 0; run < (nako.isPromoted ? 2 : 1) + chain; run++)
+        for (int run = 0; run < (nako.isPromoted ? BalanceTuning.NakoPromotedDashes : 1) + chain; run++)
         {
             if (!nako.isAlive) yield break;
 
@@ -728,6 +741,12 @@ public partial class AbilitySystem : MonoBehaviour
             }
 
             if (candidates.Count == 0) yield break;
+            if (BalanceTuning.NakoAvoidCamp && !nako.isPromoted && GameRng.Range(0, 100) >= BalanceTuning.NakoCampPercent)
+            {
+                int size = bm.CurrentBoardSize;
+                var outside = candidates.FindAll(c => !nako.CanPromoteAt(c.y, size));
+                if (outside.Count > 0) candidates = outside;
+            }
 
             // 覚醒したなこは狙って出す。素のなこも NakoBaseAimPercent の割合で狙う（既定は0＝でたらめ）
             bool aim = (nako.awakened && BalanceTuning.NakoAwakenedAim) || (BalanceTuning.NakoBaseAimPercent > 0 && GameRng.Range(0, 100) < BalanceTuning.NakoBaseAimPercent);
@@ -782,16 +801,19 @@ public partial class AbilitySystem : MonoBehaviour
                 nakoPC.MoveTo(nakoPos);
 
             // パス上の敵駒に2ダメージ（スライド到着後。攻撃の上乗せぶん増える）。C3は能力の影響を受けない
-            int dash = CombatResolver.AbilityDamage(nako, 2);
+            int dash = BalanceTuning.NakoDashScales ? CombatResolver.AbilityDamage(nako, BalanceTuning.NakoDashDamage) : BalanceTuning.NakoDashDamage;
             bool hitAny = false;
             bool killedAny = false;
+            int hits = 0;
             foreach (var pos in path)
             {
+                if (BalanceTuning.NakoDashMaxHits > 0 && hits >= BalanceTuning.NakoDashMaxHits) break;
                 PieceInstance target = bm.GetPieceAt(pos);
                 if (target != null && target.team != nako.team && target.isAlive
                     && !ResistsAbilities(target))
                 {
                     hitAny = true;
+                    hits++;
                     if (BattleLogUI.Instance != null)
                         BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("なこ", nako.team) + "の突撃！" + BattleLogUI.ColorName(target.DisplayName, target.team) + " に" + dash + "ダメージ");
                     if (CombatResolver.ApplyDamage(target, dash, false)) killedAny = true;
@@ -1308,7 +1330,7 @@ public partial class AbilitySystem : MonoBehaviour
     }
 
     // ============================================================
-    // 髑髏の死亡時爆発（隣接全駒に貫通1ダメージ）
+    // 髑髏の死亡時爆発（隣接全駒に、防御を無視して1ダメージ。がしゃ髑髏は2）
     // ============================================================
     public void OnPieceDeath(PieceInstance piece, Vector2Int deathPos)
     {
@@ -1326,9 +1348,9 @@ public partial class AbilitySystem : MonoBehaviour
         if (BattleEffects.Instance != null)
             BattleEffects.Instance.PlayExplosionEffect(deathPos);
         if (BattleLogUI.Instance != null)
-            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("髑髏", piece.team) + " が爆発！隣の駒に" + (BalanceTuning.LegacyPierce ? "貫通" + blast : (blast + BalanceTuning.PierceCompensation) + "（防御で減る）") + "ダメージ");
+            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("髑髏", piece.team) + " が爆発！隣の駒に防御を無視して" + blast + "ダメージ");
 
-        // 隣接全セルに貫通1ダメージ（攻撃の上乗せぶん増える。C3は能力の影響を受けない）
+        // 隣接全セルに防御を無視して1ダメージ（攻撃の上乗せぶん増える。C3は能力の影響を受けない）
         var victims = new List<PieceInstance>();
         for (int dx = -1; dx <= 1; dx++)
         {
@@ -1345,7 +1367,7 @@ public partial class AbilitySystem : MonoBehaviour
 
         var source = GameSim.BeginSource(piece);
         foreach (var victim in victims)
-            CombatResolver.AbilityHit(victim, blast);
+            CombatResolver.ApplyDamage(victim, blast, true);
         GameSim.EndSource(source);
 
         explodingPositions.Remove(deathPos);

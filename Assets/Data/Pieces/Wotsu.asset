@@ -21,7 +21,7 @@ MonoBehaviour:
     \u81EA\u5206\u3068\u5468\u308A1\u30DE\u30B9\u306E\u5473\u65B9\u306F\u3001\u80FD\u529B\u7121\u52B9\uFF08\u7D50\u754C\u30FB\u5C01\u5370\uFF09\u306B\u304B\u304B\u3089\u306A\u3044\u3002"
   baseATK: 0
   baseDEF: 0
-  baseHP: 1
+  baseHP: 2
   rarity: 1
   moveDirections:
   - direction: {x: 0, y: 1}
@@ -55,7 +55,7 @@ MonoBehaviour:
   promotedDescription: "\u81EA\u5206\u306E\u624B\u756A\u306E\u521D\u3081\u306B\u3001\u5473\u65B9\u306E\u305D\u3070\u306B\u300C\u4E2D\u83EF\u300D\u30923\u3064\u4F5C\u308B\u3002\u305D\u306E\u307B\u304B\u306F\u6210\u308B\u524D\u3068\u540C\u3058\u3002"
   promotedATK: 2
   promotedDEF: 1
-  promotedHP: 1
+  promotedHP: 2
   promotedMoveDirections:
   - direction: {x: 0, y: 1}
     maxDistance: 1

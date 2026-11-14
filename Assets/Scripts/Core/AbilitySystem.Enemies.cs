@@ -38,6 +38,17 @@ public partial class AbilitySystem
         return p.data.pieceType == PieceType.Souhei && !IsSuppressed(p);
     }
 
+    /// <summary>
+    /// 動きを封じる能力（冷笑・組み止め）を受けない駒: 能力を受けない駒と、レジェンドの駒（雷帝・龍神・魔王など）。
+    /// レジェンドの駒は、能力のダメージや弱体は受ける（2026-10-12 ユーザー「魔王がレア駒の冷笑で動けなくなるのはまずい」）。
+    /// 格の決まりなので、能力無効（結界・封印）のあいだも変わらない
+    /// </summary>
+    public static bool ResistsBinding(PieceInstance p)
+    {
+        if (p == null) return false;
+        return ResistsAbilities(p) || p.CurrentRarity == Rarity.Legend;
+    }
+
     /// <summary>亡霊（怨霊）: 通常の攻撃をすり抜ける（能力のダメージは受ける）。能力無効のあいだは攻撃が当たる</summary>
     public static bool IsPhantom(PieceInstance p)
     {

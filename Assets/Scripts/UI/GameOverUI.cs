@@ -89,30 +89,62 @@ public class GameOverUI : MonoBehaviour
             // 連れていた仲間
             if (gm.OwnedPieces.Count > 0)
             {
+                bool mobile = MobileUI.Active;
+                float iconSize = mobile ? 46 : 56;
                 panel.Add(UIFactory.Label("共に戦った仲間", 15, Palette.Gold, "c3-bold"));
                 var team = new VisualElement();
                 team.style.flexDirection = FlexDirection.Row;
                 team.style.flexWrap = Wrap.Wrap;
                 team.style.justifyContent = Justify.Center;
-                team.style.marginTop = 6;
-                team.style.marginBottom = MobileUI.Active ? 6 : 18;
+                team.style.flexShrink = 0;   // 縦に詰められて駒の下が切れないように
+                if (mobile)
+                {
+                    // スマホの表示は画面が低いので、仲間が多いときは仲間の欄だけ縦に動かす（決着のボタンが隠れないように）
+                    var scroll = UIFactory.Scroll();
+                    scroll.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+                    scroll.style.width = 600;
+                    scroll.style.maxHeight = 2 * MobileTeamRow + 4;   // 2段まではそのまま見える
+                    scroll.style.flexShrink = 0;
+                    scroll.style.marginTop = 4;
+                    scroll.style.marginBottom = 6;
+                    scroll.contentContainer.style.flexDirection = FlexDirection.Row;
+                    scroll.contentContainer.style.flexWrap = Wrap.Wrap;
+                    scroll.contentContainer.style.justifyContent = Justify.Center;
+                    team = scroll.contentContainer;
+                    panel.Add(scroll);
+                }
+                else
+                {
+                    team.style.marginTop = 6;
+                    team.style.marginBottom = 18;
+                    panel.Add(team);
+                }
                 foreach (var data in gm.OwnedPieces)
                 {
-                    // 駒の下に練度の★と、この周で倒した数
+                    // 駒の下に練度の★と、この周で倒した数（列の幅を決めて、駒の真ん中にそろえる）
                     var col = new VisualElement();
                     col.style.alignItems = Align.Center;
-                    col.style.marginLeft = 4;
-                    col.style.marginRight = 4;
-                    col.Add(UIFactory.PieceIcon(data, false, 56));
+                    col.style.width = iconSize + 12;
+                    col.style.flexShrink = 0;
+                    col.style.marginBottom = 4;
+                    if (mobile) col.style.height = MobileTeamRow;
+                    col.Add(UIFactory.PieceIcon(data, false, iconSize));
                     RunMember m = gm.Roster.Get(data.pieceType);
                     if (m != null)
                     {
-                        col.Add(UIFactory.Label(PieceSelectionUI.StarText(m.stars), 13, Palette.GoldLight, "c3-bold"));
-                        col.Add(UIFactory.Label(m.kills + "体", 12, Palette.TextSub));
+                        var stars = UIFactory.CenteredLabel(PieceSelectionUI.StarText(m.stars), mobile ? 12 : 13, Palette.GoldLight, "c3-bold");
+                        var kills = UIFactory.CenteredLabel(m.kills + "体", mobile ? 11 : 12, Palette.TextSub);
+                        if (mobile)
+                        {
+                            // スマホの表示は行を詰める（2段で収まるように）
+                            stars.style.paddingTop = stars.style.paddingBottom = 0;
+                            kills.style.paddingTop = kills.style.paddingBottom = 0;
+                        }
+                        col.Add(stars);
+                        col.Add(kills);
                     }
                     team.Add(col);
                 }
-                panel.Add(team);
             }
 
             string bonus = "";
@@ -222,12 +254,25 @@ public class GameOverUI : MonoBehaviour
         root.Add(panel);
     }
 
+    /// <summary>スマホの表示の「共に戦った仲間」1段の高さ（駒・★・倒した数）</summary>
+    private const float MobileTeamRow = 96f;
+
     private static VisualElement StatBox(string label, string value)
     {
         var box = new VisualElement();
         box.style.alignItems = Align.Center;
         box.style.marginLeft = 18;
         box.style.marginRight = 18;
+        if (MobileUI.Active)
+        {
+            // スマホの表示は「突破した局 15」のように1行にして、仲間の欄の場所を空ける
+            box.style.flexDirection = FlexDirection.Row;
+            box.Add(UIFactory.Label(label, 14, Palette.TextSub));
+            var v = UIFactory.Label(value, 24, Palette.Text, "c3-bold");
+            v.style.marginLeft = 6;
+            box.Add(v);
+            return box;
+        }
         box.Add(UIFactory.Label(value, 34, Palette.Text, "c3-bold"));
         box.Add(UIFactory.Label(label, 13, Palette.TextSub));
         return box;

@@ -70,6 +70,17 @@ public static class UIFactory
         return Label(text, fontSize, Palette.Text, classes);
     }
 
+    /// <summary>親の幅いっぱいに広げて、文字を真ん中にそろえた1行（駒の絵の文字や、駒の下の★など）</summary>
+    public static Label CenteredLabel(string text, float fontSize, Color color, params string[] classes)
+    {
+        var label = Label(text, fontSize, color, classes);
+        label.style.alignSelf = Align.Stretch;
+        label.style.unityTextAlign = TextAnchor.MiddleCenter;
+        label.style.marginLeft = label.style.marginRight = 0;
+        label.style.paddingLeft = label.style.paddingRight = 0;
+        return label;
+    }
+
     /// <summary>複数行の文章（日本語の改行ルールで自動改行）</summary>
     public static WrappedLabel Paragraph(string text, float fontSize, Color color, params string[] classes)
     {
@@ -301,8 +312,9 @@ public static class UIFactory
             icon.Add(emblem);
         }
 
+        // 文字の箱は駒の幅いっぱいにして、その中で真ん中にそろえる（文字の幅の箱を真ん中に置くと、少し左に寄って見えた）
         var labels = new VisualElement();
-        labels.style.alignItems = Align.Center;
+        labels.style.alignSelf = Align.Stretch;
         labels.style.marginTop = size * 0.1f;
         labels.pickingMode = PickingMode.Ignore;
         bool vertical = name.Length == 2 && !IsAscii(name);
@@ -310,7 +322,7 @@ public static class UIFactory
         {
             foreach (char ch in name)
             {
-                var l = Label(ch.ToString(), size * 0.27f, ink, "c3-mincho");
+                var l = CenteredLabel(ch.ToString(), size * 0.27f, ink, "c3-mincho");
                 l.style.marginTop = -size * 0.04f;
                 l.style.marginBottom = -size * 0.04f;
                 labels.Add(l);
@@ -318,7 +330,7 @@ public static class UIFactory
         }
         else
         {
-            labels.Add(Label(name, size * (name.Length == 1 ? 0.42f : 0.26f), ink, "c3-mincho"));
+            labels.Add(CenteredLabel(name, size * (name.Length == 1 ? 0.42f : 0.26f), ink, "c3-mincho"));
         }
         icon.Add(labels);
         return icon;
