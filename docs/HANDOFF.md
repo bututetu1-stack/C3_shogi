@@ -49,6 +49,14 @@ PR #16〜#21 はユーザーの指示で順に main にマージした。その�
   - 直した不具合: 髑髏などの「手で動かせない駒」を、AI は上側（Team.Enemy）だけ動かしていた → 対人戦は持ち主が動かせる（`PvpMatch.CanMoveByHand`）。AI の評価の結界・弓兵が上側の分しか見ていなかった → 対人戦は両側。
   - 結果（`BalanceReports/pvp5_final`）: コスト表（`PvpMatch.CostTable`）で、コスト制の札はすべて勝ち点42〜60%、ランダム配布は42〜59%。僕・光春は長い対局ほど効きすぎた（68%・64%）ので、ユーザーの判断で対人戦だけ上限を付けた: 僕の強化は1体3回まで（`PvpBokuBuffCap`）、光春のお土産は1局3回まで（`PvpSouvenirCap`）。そのうえで僕10・光春6・〆鯖8。
   - 先手・後手: AIどうしでは後手が57%（上乗せなし）。同じ編成なら上側51%・下側46%で、残りは AI の読みの細かな差。後手の C3 の上乗せは0にした（人どうしの手ごたえで決め直す）。
+- ブラウザ版（unityroom で限定公開、`feat/webgl`、2026-10-12）:
+  - 作り方: メニュー「C3将棋 > ブラウザ版（unityroom）を作る」（`Editor/WebBuild.cs`。`WebBuild.Build()`）。`Builds/WebGL/Build` の4つ（`.loader.js`・`.data.gz`・`.framework.js.gz`・`.wasm.gz`）を unityroom に上げる。圧縮は Gzip、解凍のフォールバックなし（unityroom は Brotli の .br を読めないことがある）。作るとエディタの向き先が Web のままになる（自動プレイ用のビルドを作れば Windows に戻る）。
+  - ブラウザで動かない所の直し: 対人戦の通信は `Plugins/WebGL/PvpSocket.jslib`（ブラウザの WebSocket。`PvpNet` は `UNITY_WEBGL` のときこちらを使う）。中断データは PlayerPrefs（`RunSave`。ファイルは IndexedDB に書き戻さないと残らないため）。音量は設定を閉じたときに `PlayerPrefs.Save()`。`runInBackground` を入れた（ページの別の所を触っても止まらない）。
+  - 画像: 1254px の画像は辺が4の倍数でないので圧縮されず、データが 112MB になった → ビルドのたびに Web 版だけ Resources/Effects と駒の地を 512px、ほかの Art を 1024px にして圧縮する（`WebBuild.ShrinkTexturesForWeb`。読み込むときに 512px に縮めているので見た目は同じ。Windows 版の設定は変えない）。いまの大きさは `.data.gz` 26MB＋`.wasm.gz` 12MB（明朝のフォント 14MB が大きい）。
+  - 音: ブラウザ版は波形を読めない（`AudioClip.GetData`）ので、長い効果音は頭から鳴らす。音は初めに全部読み込む（読み込み前は長さが0になるため）。
+  - 手元で開く: `node server/web-preview.js` → http://localhost:8090（.gz に Content-Encoding を付けて返す。`.claude/launch.json` の `webgl`）。
+  - 確かめたこと（2026-10-12、内蔵ブラウザ）: タイトル・1人用の対局（AI が指す）・中断データが開き直しても残る。2つのタブで部の中継サーバーにつなぎ、部屋を作る → 入る → ランダム配布（同じ候補）→ 並べ方（後手は盤が回る）→ 先手・後手の手が相手に届く、まで。盤の食い違いなし。
+  - ついでに直した: 対人戦のサーバー・部屋コードの入力欄の文字が見えなかった（生成りの文字が明るい地に乗っていた）→ `Theme.uss` で地を暗くした。
 - 案のページ: https://claude.ai/artifact/LAJyfC8RrBM5g4djYrc95D（ルールの叩き台・作り方・作る順番・4つの質問）。おすすめは「同じ手を両方で再生する」（ミニPCは手を中継するだけの Node.js + WebSocket。ゲームの乱数をゲーム用と演出用に分ける）。
 
 ## いまの状態（2026-10-11 の夜、ノート PC から引き継ぐとき）
