@@ -308,6 +308,9 @@ public static class BalanceTuning
     public static int FleetSpoilsMax = 3;
     /// <summary>歴戦の艦隊（2026-10-12 の相談で入れた）: その周で一度でもS勝利していれば、次からの着任で艦娘が最初から改で出撃する（練度★3と同じ）</summary>
     public static bool FleetVeteranKai = true;
+    /// <summary>対人戦の艦隊: 深海がいないので、着任からこの手数（両軍の合計）で作戦完了・帰投する。艦娘の能力のダメージの増減</summary>
+    public static int PvpFleetMoves = 10;
+    public static int PvpShipDamageDelta = -1;
     /// <summary>艦娘は提督の周り（入渠できるマス）から出撃する（false なら自陣のどこか）</summary>
     public static bool FleetSortieNearTeitoku = true;
 

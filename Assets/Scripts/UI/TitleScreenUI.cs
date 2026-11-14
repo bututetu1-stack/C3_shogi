@@ -10,9 +10,10 @@ public class TitleScreenUI : MonoBehaviour
     private UIDocument uiDocument;
     private Action onStart;
     private Action onContinue;
+    private Action onPvp;
     private VisualElement helpOverlay;
 
-    public static void Show(Action onStart, Action onContinue = null)
+    public static void Show(Action onStart, Action onContinue = null, Action onPvp = null)
     {
         if (instance == null)
         {
@@ -31,6 +32,7 @@ public class TitleScreenUI : MonoBehaviour
         }
         instance.onStart = onStart;
         instance.onContinue = onContinue;
+        instance.onPvp = onPvp;
         instance.Build();
         if (BattleEffects.Instance != null) BattleEffects.Instance.PlayBGM("Title");
     }
@@ -113,6 +115,14 @@ public class TitleScreenUI : MonoBehaviour
         start.style.marginBottom = 14;
         column.Add(start);
 
+        if (onPvp != null)
+        {
+            var pvp = UIFactory.Button("対人戦（2人で）", OnPvpClicked, "c3-button--big");
+            pvp.style.width = 320;
+            pvp.style.marginBottom = 14;
+            column.Add(pvp);
+        }
+
         var catalog = UIFactory.Button("駒一覧", PieceCatalogUI.Open);
         catalog.style.width = 320;
         catalog.style.marginBottom = 14;
@@ -141,6 +151,16 @@ public class TitleScreenUI : MonoBehaviour
         onContinue = null;
         ClearTitle();
         if (resume != null) resume();
+    }
+
+    private void OnPvpClicked()
+    {
+        Action pvp = onPvp;
+        onStart = null;
+        onContinue = null;
+        onPvp = null;
+        ClearTitle();
+        if (pvp != null) pvp();
     }
 
     private void ClearTitle()

@@ -15,6 +15,8 @@
 | `test_fleet3.cs` → `test_fleet3_check.cs` | 艦隊の第三回の仕組み: 対潜（歩兵の攻撃が潜水艦に当たる・金将は当たらない）、基地航空隊、陣形と提督の軽減、制空権。1つ目のあと数秒進めてから2つ目を流す |
 | `test_fleet4.cs` | 盤の外からの攻撃が覚醒前のボスを狙わないこと |
 | `test_ring.cs` → `test_ring_check.cs` | ケッコンカッコカリ（改二の MVP に指輪）: すべての艦種をケッコン済みにして着任させ、数秒進めてから、改二・指輪・体力・能力のダメージ+1 と、GiveRing で艦種を覚えるか（改二でないと覚えない）を見る |
+| `test_pvp.cs` → `ui_press.cs` → `test_pvp_teitoku.cs` → `test_pvp_check.cs` | 対人戦: 2人の編成を入れて対局の準備をし、`ui_press.cs`（TEXT を「準備ができた」「この並びで決める」に置き換えて2回ずつ）で並べ方を終え、後手の物鉄を着任させて、艦娘が後手側に出るか・深海が出ないかを見る。手番を回すのは `test_pvp_pass.cs` |
+| `ui_press.cs` | 画面のボタンを文字で探して押す（TEXT を置き換えて使う） |
 | `test_ai_tactics.cs` | AI の読みの確かめ（ただで取れる駒・C3 を狙う飛車への受け）。工夫なしと全部入りで1手を選び、候補の点も返す（`SimpleAI.dumpRoot`） |
 | `bench_ai.cs` | AI の速さ（評価1回・手の生成・工夫ごとに1手を選ぶ時間と局面数） |
 | `visual_autoplay.cs` | 演出つきで AI どうしに1局指させる（第十局・物鉄★3をすぐ成らせる）。play_mode_step で進め、console_read_logs で演出の側の例外を探す |

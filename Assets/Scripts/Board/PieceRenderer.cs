@@ -81,7 +81,7 @@ public class PieceRenderer : MonoBehaviour
     {
         get
         {
-            if (pieceInstance == null) return Color.white;
+            if (pieceInstance == null || AbilitySystem.IsObstacle(pieceInstance.data.pieceType)) return Color.white;   // 巨岩などの地形は色を変えない
             if (pieceInstance.stunned) return StunnedTint;
             if (AbilitySystem.IsSuppressed(pieceInstance)) return SealedTint;
             return AbilitySystem.IsSubmerged(pieceInstance) ? SubmergedTint : Color.white;
@@ -415,7 +415,7 @@ public class PieceRenderer : MonoBehaviour
     /// <summary>能力が止まっているあいだは鎖を重ね（画像があるとき）、戻った瞬間に鎖が砕ける演出を出す</summary>
     private void UpdateSeal()
     {
-        bool suppressed = pieceInstance.data.pieceType != PieceType.C3 && AbilitySystem.IsSuppressed(pieceInstance);
+        bool suppressed = pieceInstance.data.pieceType != PieceType.C3 && !AbilitySystem.IsObstacle(pieceInstance.data.pieceType) && AbilitySystem.IsSuppressed(pieceInstance);
         if (suppressed != shownSuppressed)
         {
             if (!suppressed && BattleEffects.Instance != null) BattleEffects.Instance.PlaySealBreak(pieceInstance.boardPosition);

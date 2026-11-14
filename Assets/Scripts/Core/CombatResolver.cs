@@ -21,7 +21,7 @@ public static class CombatResolver
     /// <summary>対潜: 敵の歩兵・香車の通常の攻撃は、潜水艦にも当たる</summary>
     public static bool AntiSub(PieceInstance attacker, PieceInstance target)
     {
-        if (!BalanceTuning.EnemyAntiSub || attacker.team == target.team || attacker.team != Team.Enemy) return false;
+        if (!BalanceTuning.EnemyAntiSub || attacker.team == target.team || (attacker.team != Team.Enemy && !PvpMatch.Active)) return false;
         PieceType t = attacker.data.pieceType;
         return (t == PieceType.Pawn || t == PieceType.Lance) && !AbilitySystem.IsSuppressed(attacker);
     }

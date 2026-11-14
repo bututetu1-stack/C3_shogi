@@ -168,6 +168,23 @@ public class BoardManager : MonoBehaviour
         }
     }
 
+    /// <summary>2つのマスの駒を入れ替える（対人戦の並べ方。片方が空でもよい）</summary>
+    public void SwapPieces(Vector2Int a, Vector2Int b)
+    {
+        PieceInstance pa = board[a.x, a.y], pb = board[b.x, b.y];
+        PieceController ca, cb;
+        pieceObjects.TryGetValue(a, out ca);
+        pieceObjects.TryGetValue(b, out cb);
+        board[a.x, a.y] = pb;
+        board[b.x, b.y] = pa;
+        pieceObjects.Remove(a);
+        pieceObjects.Remove(b);
+        if (ca != null) { pieceObjects[b] = ca; ca.SnapTo(b); }
+        else if (pa != null) pa.boardPosition = b;
+        if (cb != null) { pieceObjects[a] = cb; cb.SnapTo(a); }
+        else if (pb != null) pb.boardPosition = a;
+    }
+
     /// <summary>見た目のオブジェクトを盤の管理から外して返す（破棄は呼び出し側で）</summary>
     public PieceController DetachPieceController(Vector2Int pos)
     {

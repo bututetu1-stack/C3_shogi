@@ -115,7 +115,7 @@ public class PieceDetailUI : MonoBehaviour
         chips.style.alignItems = Align.FlexStart;
         chips.style.marginTop = 6;
         chips.style.marginLeft = -3;
-        chips.Add(UIFactory.Chip(piece.team == Team.Player ? "味方" : "敵", Palette.TeamLight(piece.team)));
+        chips.Add(UIFactory.Chip(PvpMatch.Active ? PvpMatch.SideName(piece.team) : piece.team == Team.Player ? "味方" : "敵", Palette.TeamLight(piece.team)));
         chips.Add(UIFactory.Chip(Palette.RarityName(rarity), Palette.RarityLabel(rarity)));
         if (promoted) chips.Add(UIFactory.Chip("成り", Palette.EnemyLight));
         titleCol.Add(chips);

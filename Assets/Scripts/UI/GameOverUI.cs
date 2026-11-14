@@ -38,6 +38,7 @@ public class GameOverUI : MonoBehaviour
     private void ShowGameOver(Team winner)
     {
         if (root == null) return;
+        if (PvpMatch.Active) { ShowPvpResult(winner); return; }
 
         GameManager gm = GameManager.Instance;
         StageManager sm = StageManager.Instance;
@@ -143,6 +144,74 @@ public class GameOverUI : MonoBehaviour
             panel.style.opacity = 1f;
             panel.style.scale = new Scale(Vector3.one);
         }).StartingIn(30);
+    }
+
+    /// <summary>対人戦の決着（先手の勝ち・後手の勝ち・引き分け）</summary>
+    private void ShowPvpResult(Team winner)
+    {
+        GameManager gm = GameManager.Instance;
+        bool draw = gm != null && gm.PvpDraw;
+        root.Clear();
+        root.style.display = DisplayStyle.Flex;
+        root.pickingMode = PickingMode.Position;
+        root.style.alignItems = Align.Center;
+        root.style.justifyContent = Justify.Center;
+        root.style.backgroundColor = new Color(0f, 0f, 0f, 0.6f);
+
+        var panel = UIFactory.Panel();
+        panel.style.alignItems = Align.Center;
+        panel.style.paddingTop = 30;
+        panel.style.paddingBottom = 28;
+        panel.style.paddingLeft = 56;
+        panel.style.paddingRight = 56;
+        panel.style.maxWidth = 720;
+        Color accent = draw ? Palette.GoldLight : winner == Team.Player ? Palette.PlayerLight : Palette.EnemyLight;
+        panel.style.borderTopWidth = panel.style.borderBottomWidth = panel.style.borderLeftWidth = panel.style.borderRightWidth = 2;
+        panel.style.borderTopColor = panel.style.borderBottomColor = panel.style.borderLeftColor = panel.style.borderRightColor = accent;
+
+        var result = UIFactory.Label(draw ? "引き分け" : PvpMatch.SideName(winner) + "の勝ち", 72, accent, "c3-mincho");
+        result.style.letterSpacing = 12;
+        panel.Add(result);
+        var sub = UIFactory.Label("対人戦（" + (PvpMatch.CurrentRule == PvpMatch.Rule.Cost ? "コスト制" : "ランダム配布") + "）・"
+            + (gm != null ? gm.MoveCount + "手" : ""), 20, Palette.TextSub, "c3-mincho");
+        sub.style.marginTop = 2;
+        sub.style.marginBottom = 18;
+        panel.Add(sub);
+
+        // 2人の編成
+        foreach (var side in new[] { PvpMatch.First, PvpMatch.Second })
+        {
+            panel.Add(UIFactory.Label(PvpMatch.SideLong(side.team) + "の編成", 15, side.team == Team.Player ? Palette.PlayerLight : Palette.EnemyLight, "c3-bold"));
+            var row = new VisualElement();
+            row.style.flexDirection = FlexDirection.Row;
+            row.style.flexWrap = Wrap.Wrap;
+            row.style.justifyContent = Justify.Center;
+            row.style.marginTop = 4;
+            row.style.marginBottom = 12;
+            foreach (var data in side.pieces)
+            {
+                var icon = UIFactory.PieceIcon(data, false, 44);
+                icon.style.marginLeft = icon.style.marginRight = 2;
+                row.Add(icon);
+            }
+            panel.Add(row);
+        }
+
+        var buttons = new VisualElement();
+        buttons.style.flexDirection = FlexDirection.Row;
+        buttons.Add(UIFactory.Button("もう一度（同じルール）", () =>
+        {
+            PvpMatch.RestartPending = true;
+            GameManager.SkipTitleOnce = false;
+            ReloadScene();
+        }, "c3-button--primary", "c3-button--big"));
+        buttons.Add(UIFactory.Button("タイトルへ", () =>
+        {
+            PvpMatch.End();
+            OnTitleClicked();
+        }, "c3-button--big"));
+        panel.Add(buttons);
+        root.Add(panel);
     }
 
     private static VisualElement StatBox(string label, string value)

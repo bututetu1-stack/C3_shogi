@@ -53,7 +53,7 @@ public partial class AbilitySystem
         switch (p.data.pieceType)
         {
             case PieceType.Mitsuharu:
-                return GameManager.Instance != null ? "裏金 " + GameManager.Instance.SecretFund + "/" + BalanceTuning.MitsuharuFundMax : null;
+                return GameManager.Instance != null ? "裏金 " + GameManager.Instance.GetFund(p.team) + "/" + BalanceTuning.MitsuharuFundMax : null;
             case PieceType.Niko:
             {
                 List<NikoTask> deck;
@@ -84,14 +84,15 @@ public partial class AbilitySystem
         bool fodder = v == PieceType.Chuka || v == PieceType.Dopa || IsObstacle(v);
 
         // 裏帳簿: 盤にいる光春（成る前）がいれば、味方が敵を倒すたびに裏金がたまる
-        if (victim.team == Team.Enemy && !fodder && GameManager.Instance != null)
+        // （対人戦では後手の光春もいるので、倒した側の光春で数える）
+        Team killerTeam = victim.team == Team.Player ? Team.Enemy : Team.Player;
+        if (!fodder && GameManager.Instance != null)
         {
-            foreach (var m in AlivePieces(Team.Player, PieceType.Mitsuharu))
+            foreach (var m in AlivePieces(killerTeam, PieceType.Mitsuharu))
             {
                 if (IsSuppressed(m)) continue;
-                if (m.isPromoted || GameManager.Instance.SecretFund >= BalanceTuning.MitsuharuFundMax) break;
-                GameManager.Instance.SecretFund += BalanceTuning.MitsuharuFundPerKill;
-                GameManager.Instance.SecretFund = Mathf.Min(GameManager.Instance.SecretFund, BalanceTuning.MitsuharuFundMax);
+                if (m.isPromoted || GameManager.Instance.GetFund(killerTeam) >= BalanceTuning.MitsuharuFundMax) break;
+                GameManager.Instance.SetFund(killerTeam, Mathf.Min(GameManager.Instance.GetFund(killerTeam) + BalanceTuning.MitsuharuFundPerKill, BalanceTuning.MitsuharuFundMax));
                 FloatingText.Spawn(m.boardPosition, "裏金+" + BalanceTuning.MitsuharuFundPerKill, FundGold, 2.8f, 0.2f);
                 SpeechBubble.SayMaybe(m, PieceLines.MitsuharuFund, 0.3f);
                 RunRoster.Feat(m);
@@ -153,7 +154,7 @@ public partial class AbilitySystem
         FloatingText.Spawn(pos, "高飛び", FundGold, 3.8f);
         if (BattleEffects.Instance != null) BattleEffects.Instance.PlayTakeoff(pos);
         if (BattleLogUI.Instance != null)
-            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("光春", m.team) + " は裏金を持って海外旅行へ旅立った（裏金 " + (GameManager.Instance != null ? GameManager.Instance.SecretFund : 0) + "）");
+            BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("光春", m.team) + " は裏金を持って海外旅行へ旅立った（裏金 " + (GameManager.Instance != null ? GameManager.Instance.GetFund(m.team) : 0) + "）");
         CombatResolver.RemoveWithExit(m, PieceController.ExitStyle.Retreat);
         abroad.Add(m);
     }
@@ -161,24 +162,25 @@ public partial class AbilitySystem
     /// <summary>自軍の手番の初めに、旅費（裏金）がたまった光春は海外へ旅立ち、盤外の光春は裏金を使って味方1体にお土産を送る</summary>
     private IEnumerator SendSouvenirs(Team team)
     {
-        if (team != Team.Player || GameManager.Instance == null) yield break;
+        if (GameManager.Instance == null) yield break;
         foreach (var m in AlivePieces(team, PieceType.Mitsuharu))
         {
             if (m.isPromoted || IsSuppressed(m)) continue;
             // 会計の権力: 盤にいるあいだ、手番ごとに裏金がたまる
-            if (GameManager.Instance.SecretFund < BalanceTuning.MitsuharuFundMax && BalanceTuning.MitsuharuFundPerTurn > 0)
+            if (GameManager.Instance.GetFund(team) < BalanceTuning.MitsuharuFundMax && BalanceTuning.MitsuharuFundPerTurn > 0)
             {
-                GameManager.Instance.SecretFund = Mathf.Min(BalanceTuning.MitsuharuFundMax, GameManager.Instance.SecretFund + BalanceTuning.MitsuharuFundPerTurn);
+                GameManager.Instance.SetFund(team, Mathf.Min(BalanceTuning.MitsuharuFundMax, GameManager.Instance.GetFund(team) + BalanceTuning.MitsuharuFundPerTurn));
                 FloatingText.Spawn(m.boardPosition, "裏金+" + BalanceTuning.MitsuharuFundPerTurn, FundGold, 2.6f);
             }
-            if (GameManager.Instance.SecretFund < BalanceTuning.MitsuharuTripCost || !MitsuharuHasCompany(m)) continue;
+            if (GameManager.Instance.GetFund(team) < BalanceTuning.MitsuharuTripCost || !MitsuharuHasCompany(m)) continue;
             FloatingText.Spawn(m.boardPosition, "旅費がたまった", FundGold, 3.2f);
             yield return GameManager.Instance.PromoteRoutine(m);
         }
         if (abroad.Count == 0) yield break;
         foreach (var m in abroad)
         {
-            if (GameManager.Instance.SecretFund <= 0) break;
+            if (m.team != team) continue;
+            if (GameManager.Instance.GetFund(team) <= 0) break;
             // お土産は部員を優先（傷ついた部員 → 部員 → ほかの駒）
             var allies = new List<PieceInstance>();
             var members = new List<PieceInstance>();
@@ -205,7 +207,7 @@ public partial class AbilitySystem
                 allies = hurt;
             }
             if (allies.Count == 0) yield break;
-            GameManager.Instance.SecretFund--;
+            GameManager.Instance.SetFund(team, GameManager.Instance.GetFund(team) - 1);
             int gifts = m.awakened ? BalanceTuning.MitsuharuAwakenedTargets : BalanceTuning.MitsuharuSouvenirTargets;
             if (m.awakened && BattleEffects.Instance != null) BattleEffects.Instance.PlayAwakenBurst("WorldTrip", allies[0].boardPosition, m.data.awakenColor, true);
             for (int g = 0; g < gifts && allies.Count > 0; g++)
@@ -231,15 +233,16 @@ public partial class AbilitySystem
                 FloatingText.Spawn(to.boardPosition, "お土産", FundGold, 3.2f, 0.25f);
                 RunRoster.Feat(m);
                 if (BattleLogUI.Instance != null)
-                    BattleLogUI.Instance.AddLog("海外の" + BattleLogUI.ColorName("光春", m.team) + " から " + BattleLogUI.ColorName(to.DisplayName, to.team) + " にお土産（" + gift + "、裏金 残り" + GameManager.Instance.SecretFund + "）");
+                    BattleLogUI.Instance.AddLog("海外の" + BattleLogUI.ColorName("光春", m.team) + " から " + BattleLogUI.ColorName(to.DisplayName, to.team) + " にお土産（" + gift + "、裏金 残り" + GameManager.Instance.GetFund(team) + "）");
             }
             yield return new WaitForSeconds(0.3f);
         }
 
         // 裏金が尽きたら帰国する（成る前の姿で、自陣に戻ってくる）
-        if (GameManager.Instance.SecretFund > 0 || !BalanceTuning.MitsuharuReturnsWhenBroke) yield break;
+        if (GameManager.Instance.GetFund(team) > 0 || !BalanceTuning.MitsuharuReturnsWhenBroke) yield break;
         foreach (var m in new List<PieceInstance>(abroad))
         {
+            if (m.team != team) continue;
             Vector2Int? home = HomeSquare(team);
             if (!home.HasValue) break;
             abroad.Remove(m);
@@ -374,8 +377,11 @@ public partial class AbilitySystem
     private static List<PieceType> DrawMemberCards(Team team)
     {
         var pool = new List<PieceType>();
-        if (team != Team.Player || GameManager.Instance == null) return pool;
-        foreach (var d in GameManager.Instance.OwnedPieces)
+        if (GameManager.Instance == null) return pool;
+        IEnumerable<PieceData> owned = PvpMatch.Active ? (IEnumerable<PieceData>)PvpMatch.SideOf(team).pieces
+            : team == Team.Player ? GameManager.Instance.OwnedPieces : null;
+        if (owned == null) return pool;
+        foreach (var d in owned)
             if (d != null && HasCard(d.pieceType) && !pool.Contains(d.pieceType)) pool.Add(d.pieceType);
         for (int i = pool.Count - 1; i > 0; i--)
         {
@@ -574,9 +580,9 @@ public partial class AbilitySystem
             }
             case PieceType.Mitsuharu:
             {
-                if (GameManager.Instance == null || GameManager.Instance.SecretFund >= BalanceTuning.MitsuharuFundMax) return false;
+                if (GameManager.Instance == null || GameManager.Instance.GetFund(niko.team) >= BalanceTuning.MitsuharuFundMax) return false;
                 int fund = 1 + CardBonus(niko);
-                GameManager.Instance.SecretFund = Mathf.Min(BalanceTuning.MitsuharuFundMax, GameManager.Instance.SecretFund + fund);
+                GameManager.Instance.SetFund(niko.team, Mathf.Min(BalanceTuning.MitsuharuFundMax, GameManager.Instance.GetFund(niko.team) + fund));
                 FloatingText.Spawn(niko.boardPosition, "裏金+" + fund, FundGold, 3f, 0.3f);
                 return true;
             }

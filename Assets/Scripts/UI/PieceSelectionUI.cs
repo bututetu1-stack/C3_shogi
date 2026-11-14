@@ -14,6 +14,9 @@ public class PieceSelectionUI : MonoBehaviour
     private System.Action<DraftOption> onPieceSelected;
     private DraftOption selectedOption;
     /// <summary>説明に出している姿（ふだん・成り・覚醒）</summary>
+    /// <summary>見出しの上の小さな行を差し替える（対人戦のランダム配布。null ならいつもの「第N局を前に」）</summary>
+    public static string HeaderOverride;
+
     private enum DetailView { Normal, Promoted, Awakened }
     private readonly List<VisualElement> cards = new List<VisualElement>();
     private VisualElement detailPanel;
@@ -68,7 +71,13 @@ public class PieceSelectionUI : MonoBehaviour
 
         // 見出し
         StageManager sm = StageManager.Instance;
-        if (sm != null)
+        if (HeaderOverride != null)
+        {
+            var stage = UIFactory.Label(HeaderOverride, 20, Palette.Gold, "c3-mincho");
+            stage.style.marginBottom = 4;
+            scroll.Add(stage);
+        }
+        else if (sm != null)
         {
             var stage = UIFactory.Label("第" + UIFactory.Kanji(sm.currentStage) + "局「" + sm.GetStageTitle(sm.currentStage) + "」を前に", 20, Palette.Gold, "c3-mincho");
             stage.style.marginBottom = 4;

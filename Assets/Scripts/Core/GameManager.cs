@@ -3,7 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 
-public class GameManager : MonoBehaviour
+public partial class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
@@ -53,6 +53,10 @@ public class GameManager : MonoBehaviour
     public IList<PieceData> OwnedPieces { get { return playerOwnedPieces.AsReadOnly(); } }
     /// <summary>光春の裏帳簿の裏金（周のあいだ残る）</summary>
     public int SecretFund;
+    /// <summary>敵側（対人戦の後手）の光春の裏金（対局のあいだだけ）</summary>
+    public int EnemySecretFund;
+    public int GetFund(Team team) { return team == Team.Player ? SecretFund : EnemySecretFund; }
+    public void SetFund(Team team, int value) { if (team == Team.Player) SecretFund = value; else EnemySecretFund = value; }
     /// <summary>この周で艦隊がS勝利した回数（戦果・歴戦の艦隊に使う）</summary>
     public int FleetSWins;
     /// <summary>ケッコンカッコカリした艦種（周のあいだ残る。その艦種は最初から改二で出撃する）</summary>
@@ -103,15 +107,24 @@ public class GameManager : MonoBehaviour
         stageManager = StageManager.Instance;
         pieceSelectionUI = FindFirstObjectByType<PieceSelectionUI>();
 
-        if (SkipTitleOnce)
+        if (PvpMatch.RestartPending)
+        {
+            // 対人戦の決着画面の「もう一度」: 同じルールで編成から
+            PvpMatch.RestartPending = false;
+            if (BattleEffects.Instance != null) BattleEffects.Instance.PlayBGM("Battle");
+            PvpSetupUI.ShowRule(PvpMatch.CurrentRule, StartPvpBattle, ReturnToTitle);
+        }
+        else if (SkipTitleOnce)
         {
             SkipTitleOnce = false;
+            PvpMatch.End();
             StartNewGame();
         }
         else
         {
+            PvpMatch.End();
             SetPhase(GamePhase.Title);
-            TitleScreenUI.Show(StartNewGame, ContinueRun);
+            TitleScreenUI.Show(StartNewGame, ContinueRun, BeginPvp);
         }
     }
 
@@ -136,6 +149,7 @@ public class GameManager : MonoBehaviour
         RunNoPawns = false;
         PickStageVariants();
         SecretFund = 0;
+        EnemySecretFund = 0;
         FleetSWins = 0;
         RingedClasses.Clear();
         bonusUpgradeStage = 0;
@@ -312,6 +326,7 @@ public class GameManager : MonoBehaviour
     public void ApplySummonBonuses(PieceInstance p)
     {
         if (p == null) return;
+        if (PvpMatch.Active) { ApplyPvpUpgrades(p); return; }   // 対人戦は局の上乗せなし。その陣営の全軍強化だけ
         int stage = stageManager != null ? stageManager.currentStage : 1;
         if (PieceTypes.IsShinkai(p.data.pieceType))
         {
@@ -431,6 +446,7 @@ public class GameManager : MonoBehaviour
 
     private void SaveRun(string phase)
     {
+        if (PvpMatch.Active) return;   // 対人戦は中断しない
         if (GameSim.Headless || stageManager == null) return;
         var owned = new List<string>();
         foreach (var d in playerOwnedPieces) owned.Add(d.pieceType.ToString());
@@ -677,6 +693,7 @@ public class GameManager : MonoBehaviour
         int enemy = Strength(Team.Enemy);
         if (BattleLogUI.Instance != null)
             BattleLogUI.Instance.AddLog("手数が" + MoveLimit + "手に達したため判定（" + player + " 対 " + enemy + "）");
+        if (PvpMatch.Active) { JudgePvp(player, enemy); return; }
         if (player >= enemy) HandleStageWon("判定勝ち");
         else HandleDefeat();
     }
@@ -686,6 +703,7 @@ public class GameManager : MonoBehaviour
         int total = 0;
         foreach (var p in boardManager.GetTeamPieces(team))
         {
+            if (AbilitySystem.IsObstacle(p.data.pieceType)) continue;   // 巨岩などの地形は数えない
             if (p.data.pieceType == PieceType.C3) total += p.currentHP * 4;
             else total += p.ATK * 3 + p.DEF * 2 + Mathf.Min(p.currentHP, 20);
         }
@@ -694,6 +712,7 @@ public class GameManager : MonoBehaviour
 
     private void HandleStageWon(string reason)
     {
+        if (PvpMatch.Active) { EndPvp(Team.Player, reason); return; }
         TotalMoves += MoveCount;
         StagesCleared++;
         var survivors = boardManager.GetTeamPieces(Team.Player);
@@ -722,6 +741,7 @@ public class GameManager : MonoBehaviour
 
     private void HandleDefeat()
     {
+        if (PvpMatch.Active) { EndPvp(Team.Enemy, null); return; }
         TotalMoves += MoveCount;
         isGameOver = true;
         if (!GameSim.Headless) RunSave.Delete();
@@ -961,6 +981,15 @@ public class GameManager : MonoBehaviour
         if (isGameOver) return;
         StopAllCoroutines();
         isTurnProcessing = false;
+        if (PvpMatch.Active)
+        {
+            // 対人戦は手番の側が投了する
+            Team loser = currentTurn;
+            if (BattleLogUI.Instance != null)
+                BattleLogUI.Instance.AddLog(BattleLogUI.ColorName(PvpMatch.SideName(loser), loser) + " は投了した");
+            EndPvp(loser == Team.Player ? Team.Enemy : Team.Player, "投了");
+            return;
+        }
         if (BattleLogUI.Instance != null)
             BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("あなた", Team.Player) + " は投了した");
         HandleDefeat();
