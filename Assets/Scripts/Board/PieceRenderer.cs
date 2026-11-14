@@ -306,6 +306,7 @@ public class PieceRenderer : MonoBehaviour
 
         SetBadge(atkBadge, pieceInstance.ATK);
         SetBadge(defBadge, pieceInstance.DEF);
+        shownDEF = pieceInstance.DEF;
         SetHPBadge();
     }
 
@@ -410,7 +411,20 @@ public class PieceRenderer : MonoBehaviour
         UpdateFleetMarks();
         UpdateStars();
         UpdateBlock();
+        UpdateDefense();
         UpdateRestTint();
+    }
+
+    // 防御は周りの駒で変わることがある（えちち連合の同志）ので、変わったら数字を出し直す
+    private int shownDEF = int.MinValue;
+
+    private void UpdateDefense()
+    {
+        if (defBadge == null || pieceInstance == null || !pieceInstance.isAlive) return;
+        int def = pieceInstance.DEF;
+        if (def == shownDEF) return;
+        shownDEF = def;
+        SetBadge(defBadge, def);
     }
 
     /// <summary>能力が止まっているあいだは鎖を重ね（画像があるとき）、戻った瞬間に鎖が砕ける演出を出す</summary>

@@ -42,11 +42,12 @@ public class PieceInstance
     public bool staggered;          // 無糖（AC）にスタッガーされた（次に受けるダメージが増える）
     public int dailyCount;          // 寝癖のデイリーの進み
     public int dailyRewards;        // 寝癖のデイリーの報酬で上がった攻撃（その局のあいだ）
-    public bool allianceOn;         // 寝癖のえちち連合が効いている（物鉄が同じ盤にいる）
+    public int allianceATK;         // 会長（寝癖）のえちち連合で上がっている攻撃（盤にいる仲間の数で決まる）
     public bool bonfireUsed;        // 覚醒した無糖が篝火で蘇った（1局に1回）
 
     public int ATK { get { return (isPromoted ? data.promotedATK : data.baseATK) + bonusATK; } }
-    public int DEF { get { return (isPromoted ? data.promotedDEF : data.baseDEF) + bonusDEF; } }
+    // 同志（えちち連合）は周りの駒で決まるので、その場で数える
+    public int DEF { get { return (isPromoted ? data.promotedDEF : data.baseDEF) + bonusDEF + AbilitySystem.ComradeDEF(this); } }
     public int MaxHP { get { return (isPromoted ? data.promotedHP : data.baseHP) + bonusMaxHP; } }
     public string DisplayName { get { return isPromoted ? data.promotedDisplayName : data.displayName; } }
     public string FullName
