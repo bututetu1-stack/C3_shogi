@@ -51,6 +51,12 @@ public class CameraFitter : MonoBehaviour
         Apply();
     }
 
+    /// <summary>盤の向き（ViewFlip）が変わったときに合わせ直す</summary>
+    public void Refit()
+    {
+        Apply();
+    }
+
     void LateUpdate()
     {
         if (cam.pixelWidth != lastWidth || cam.pixelHeight != lastHeight)
@@ -90,11 +96,14 @@ public class CameraFitter : MonoBehaviour
         float boardCenter = (boardSize - 1) * 0.5f;
         float availCenterX = left + availW * 0.5f;
         float availCenterY = bottom + availH * 0.5f;
+        // 盤を180度回して見るとき（後手の人の画面）は、画面のずれの向きも逆になる
+        float s = ViewFlip.Flipped ? -1f : 1f;
         HomePosition = new Vector3(
-            boardCenter - (availCenterX - sw * 0.5f) / ppu,
-            boardCenter - (availCenterY - sh * 0.5f) / ppu,
+            boardCenter - s * (availCenterX - sw * 0.5f) / ppu,
+            boardCenter - s * (availCenterY - sh * 0.5f) / ppu,
             -10f);
         transform.position = HomePosition;
+        transform.rotation = Quaternion.Euler(0f, 0f, ViewFlip.Flipped ? 180f : 0f);
     }
 
     /// <summary>UI Toolkitのパネル拡大率（PanelSettingsの設定から計算）</summary>

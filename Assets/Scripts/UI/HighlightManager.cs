@@ -142,6 +142,7 @@ public class HighlightManager : MonoBehaviour
         label.color = color;
         label.fontSize = 3.4f;
         label.transform.position = new Vector3(target.boardPosition.x, target.boardPosition.y - 0.04f, 0f);
+        label.transform.rotation = ViewFlip.Flipped ? Quaternion.Euler(0f, 0f, 180f) : Quaternion.identity;
         label.gameObject.SetActive(true);
     }
 

@@ -766,6 +766,7 @@ public partial class AbilitySystem
             if (p.data.pieceType == PieceType.Monotetsu && p.isPromoted) teitoku = p;
             else if (PieceTypes.IsKanmusu(p.data.pieceType)) ships.Add(p);
         }
+        GameSim.RecordFleet("帰投", GameManager.Instance != null ? GameManager.Instance.MoveCount - fleet.arrivalMove : -1);
         if (BattleLogUI.Instance != null)
             BattleLogUI.Instance.AddLog("作戦完了。" + BattleLogUI.ColorName("提督", fleet.team) + "の艦隊は帰投する");
         if (BattleEffects.Instance != null)

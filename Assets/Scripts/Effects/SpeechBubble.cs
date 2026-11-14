@@ -70,7 +70,8 @@ public class SpeechBubble : MonoBehaviour
         follow = followTarget;
         anchor = boardPos;
         life = duration;
-        offset = new Vector3(0.2f, below ? -0.7f : 0.7f, 0f);
+        offset = ViewFlip.Right * 0.2f + ViewFlip.Up * (below ? -0.7f : 0.7f);
+        ViewFlip.Upright(transform);
 
         // 文字
         var textObj = new GameObject("Text");

@@ -89,6 +89,17 @@ public class TurnIndicatorUI : MonoBehaviour
     {
         // GameManager生成前にStartが走った場合の遅延登録
         if (!isSubscribed) SubscribeEvents();
+
+        // 対人戦: 持ち時間の残り（10秒を切ったら目立たせる）
+        GameManager gm = GameManager.Instance;
+        if (PvpMatch.Active && PvpClock.Instance != null && moveCountLabel != null && gm != null && gm.currentPhase == GamePhase.Battle)
+        {
+            int r = PvpClock.Instance.Remaining;
+            moveCountLabel.text = gm.MoveCount + "手目" + (r >= 0 ? "　残り" + r + "秒" : "");
+            moveCountLabel.style.fontSize = 16;
+            moveCountLabel.style.color = r >= 0 && r <= 10 ? new Color(1f, 0.95f, 0.45f) : new Color(1f, 1f, 1f, 0.85f);
+            moveCountLabel.style.unityFontStyleAndWeight = r >= 0 && r <= 10 ? FontStyle.Bold : FontStyle.Normal;
+        }
     }
 
     private void SubscribeEvents()
@@ -139,7 +150,7 @@ public class TurnIndicatorUI : MonoBehaviour
 
         if (PvpMatch.Active)
         {
-            turnLabel.text = PvpMatch.SideLong(team) + "の番";
+            turnLabel.text = PvpMatch.Online ? (team == PvpMatch.LocalTeam ? "あなたの番" : "相手の番") + "（" + PvpMatch.SideName(team) + "）" : PvpMatch.SideLong(team) + "の番";
             Color c = team == Team.Player ? Palette.Player : Palette.Enemy;
             turnBadge.style.backgroundColor = new Color(c.r, c.g, c.b, 0.9f);
         }
@@ -173,8 +184,9 @@ public class TurnIndicatorUI : MonoBehaviour
         }
         if (BattleLogUI.Instance != null)
             BattleLogUI.Instance.AddLog(PvpMatch.Active
-                ? BattleLogUI.ColorName(PvpMatch.SideName(gm.currentTurn), gm.currentTurn) + " はパスした"
+                ? BattleLogUI.ColorName(PvpMatch.WhoName(gm.currentTurn), gm.currentTurn) + " はパスした"
                 : BattleLogUI.ColorName("あなた", Team.Player) + " はパスした");
+        if (PvpMatch.Online && PvpOnline.Instance != null) PvpOnline.Instance.SendPass();
         gm.EndTurn();
     }
 

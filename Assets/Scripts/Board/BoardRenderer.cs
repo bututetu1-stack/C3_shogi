@@ -174,6 +174,7 @@ public class BoardRenderer : MonoBehaviour
         var obj = new GameObject("Coord_" + text);
         obj.transform.SetParent(boardRoot, false);
         obj.transform.position = pos;
+        ViewFlip.Upright(obj.transform);
         var tmp = obj.AddComponent<TextMeshPro>();
         tmp.text = text;
         tmp.font = font;

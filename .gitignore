@@ -45,3 +45,7 @@ Thumbs.db
 
 # バランステストの出力
 /BalanceReports/
+
+# 中継サーバー（wrangler）の作業フォルダ
+server/.wrangler/
+server/node_modules/

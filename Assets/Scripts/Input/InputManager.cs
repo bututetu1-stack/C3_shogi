@@ -153,7 +153,7 @@ public class InputManager : MonoBehaviour
     private void SelectPiece(PieceInstance piece)
     {
         // 手動操作不可の駒は閲覧のみ
-        if (!piece.data.isManualControllable)
+        if (!PvpMatch.CanMoveByHand(piece.data))
         {
             ViewPiece(piece);
             return;
@@ -200,6 +200,8 @@ public class InputManager : MonoBehaviour
     {
         isExecutingMove = true;
         ClearSelection();
+        // オンラインの対人戦: 相手にも同じ手を送る（相手のゲームで同じ順番に再生する）
+        if (PvpMatch.Online && PvpOnline.Instance != null) PvpOnline.Instance.SendMove(piece.boardPosition, move.position);
 
         yield return CombatResolver.ExecuteMove(piece, move);
 

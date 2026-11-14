@@ -1256,8 +1256,11 @@ public partial class AbilitySystem : MonoBehaviour
                 ally.turnsNearBoku++;
                 // 覚醒した僕のそばなら待たずに毎手番（ただし1体に上限あり）
                 bool awakenedBuff = nearAwakenedBoku && ally.bokuStacks < BalanceTuning.BokuAwakenedCap;
-                if (awakenedBuff || ally.turnsNearBoku >= BalanceTuning.BokuBuffTurns)
+                // 対人戦だけ: 強化は1体 PvpBokuBuffCap 回まで
+                bool capped = PvpMatch.Active && BalanceTuning.PvpBokuBuffCap > 0 && ally.bokuBuffs >= BalanceTuning.PvpBokuBuffCap;
+                if (!capped && (awakenedBuff || ally.turnsNearBoku >= BalanceTuning.BokuBuffTurns))
                 {
+                    ally.bokuBuffs++;
                     int buffAmount = awakenedBuff ? 1 : (nearPromotedBoku ? 2 : 1);
                     bool buffATK = awakenedBuff ? ally.ATK <= ally.DEF : GameRng.value < 0.5f;
                     ally.bokuStacks += buffAmount;
