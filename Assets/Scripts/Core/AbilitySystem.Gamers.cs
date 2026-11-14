@@ -21,21 +21,21 @@ public partial class AbilitySystem
         switch (p.data.pieceType)
         {
             case PieceType.RN:
-                return WithComrade(p, p.block > 0
+                return p.block > 0
                     ? "ブロック " + p.block + "（防御とは別に、受けるダメージをあと" + p.block + "防ぐ。次の自分の手番の初めに消える）"
-                    : "ブロック 0（自分の手番の終わりに" + RnBlockOf(p) + "を得る）");
+                    : "ブロック 0（自分の手番の終わりに" + RnBlockOf(p) + "を得る）";
             case PieceType.Negu:
             {
                 string s = "デイリー " + p.dailyCount + "/" + NeguEveryOf(p) + "（報酬 攻撃+" + p.dailyRewards + "/" + NeguCapOf(p) + "）";
                 if (p.allianceATK > 0) s += "　えちち連合 攻撃+" + p.allianceATK;
-                return WithComrade(p, s);
+                return s;
             }
             case PieceType.Mutou:
             {
                 int learned = GameManager.Instance != null && p.team == Team.Player ? GameManager.Instance.Roster.DeathBonus(PieceType.Mutou) : 0;
                 string s = "死んで覚えた 攻撃+" + learned + "/" + BalanceTuning.MutouDeathCap;
                 if (p.awakened) s += p.bonfireUsed ? "（篝火は使った）" : "（篝火あり）";
-                return WithComrade(p, s);
+                return s;
             }
             default:
             {
@@ -43,18 +43,21 @@ public partial class AbilitySystem
                 if (p.posture > 0) parts.Add("体幹 " + p.posture + "/" + PostureMax(p));
                 if (p.staggered) parts.Add("スタッガー（次に受けるダメージ+" + BalanceTuning.MutouStaggerDamage + "）");
                 if (p.block > 0) parts.Add("ブロック " + p.block + "（受けるダメージをあと" + p.block + "防ぐ。次の自分の手番の初めに消える）");
-                return WithComrade(p, parts.Count > 0 ? string.Join("　", parts) : null);
+                return parts.Count > 0 ? string.Join("　", parts) : null;
             }
         }
     }
 
-    /// <summary>同志が効いていれば、状態の行に足す</summary>
-    private static string WithComrade(PieceInstance p, string s)
+    /// <summary>部員の集まり（えちち連合の同志・運営会議・鯖缶の管理者権限）が効いていれば、状態の行に足す</summary>
+    private static string WithGroups(PieceInstance p, string s)
     {
+        var parts = new List<string>();
+        if (!string.IsNullOrEmpty(s)) parts.Add(s);
         int c = ComradeDEF(p);
-        if (c <= 0) return s;
-        string add = "えちち連合の同志 防御+" + c;
-        return string.IsNullOrEmpty(s) ? add : s + "　" + add;
+        if (c > 0) parts.Add("えちち連合の同志 防御+" + c);
+        if (p.staffATK > 0) parts.Add("運営会議 攻撃+" + p.staffATK);
+        if ((p.isSealed || NearKekkai(p)) && AdminGuarded(p)) parts.Add("管理者権限で能力無効を防いでいる");
+        return parts.Count > 0 ? string.Join("　", parts) : null;
     }
 
     private static int RnBlockOf(PieceInstance p)
@@ -83,6 +86,7 @@ public partial class AbilitySystem
             p.acted = false;
         }
         RefreshAlliance(team);
+        RefreshStaffMeeting(team);
     }
 
     // ============================================================
@@ -128,6 +132,66 @@ public partial class AbilitySystem
         return 0;
     }
 
+    // ============================================================
+    // 運営（物鉄・なこ・光春・李白）と鯖缶（鶏炭・ヲツ・僕）
+    // ============================================================
+
+    /// <summary>部の運営の部員か（物鉄は提督・物鉄・改も）</summary>
+    public static bool IsStaffMember(PieceType t)
+    {
+        return t == PieceType.Monotetsu || t == PieceType.Nako || t == PieceType.Mitsuharu || t == PieceType.Rihaku;
+    }
+
+    /// <summary>鯖缶（サーバー管理者）の部員か</summary>
+    public static bool IsSabakan(PieceType t)
+    {
+        return t == PieceType.Kei || t == PieceType.Wotsu || t == PieceType.Boku;
+    }
+
+    /// <summary>
+    /// 管理者権限: 鯖缶の部員と、その周り（SabakanAdminRange マス）の味方は、能力無効（結界・封印）にかからない。
+    /// 鯖缶自身も止まらないので、権限はいつも効く
+    /// </summary>
+    public static bool AdminGuarded(PieceInstance p)
+    {
+        int range = BalanceTuning.SabakanAdminRange;
+        if (p == null || !p.isAlive || range < 0) return false;
+        if (IsSabakan(p.data.pieceType)) return true;
+        BoardManager bm = BoardManager.Instance;
+        if (bm == null || bm.GetPieceAt(p.boardPosition) != p) return false;
+        for (int dx = -range; dx <= range; dx++)
+            for (int dy = -range; dy <= range; dy++)
+            {
+                if (dx == 0 && dy == 0) continue;
+                PieceInstance q = bm.GetPieceAt(p.boardPosition + new Vector2Int(dx, dy));
+                if (q != null && q.isAlive && q.team == p.team && IsSabakan(q.data.pieceType)) return true;
+            }
+        return false;
+    }
+
+    /// <summary>運営会議: 盤に運営の部員が2人以上いるあいだ、運営の部員はみな攻撃が上がる（能力無効のあいだは止まる）</summary>
+    private void RefreshStaffMeeting(Team team)
+    {
+        var staff = new List<PieceInstance>();
+        foreach (var p in BoardManager.Instance.GetTeamPieces(team))
+            if (p.isAlive && IsStaffMember(p.data.pieceType)) staff.Add(p);
+        bool meeting = staff.Count >= BalanceTuning.StaffMeetingMin;
+        bool changed = false;
+        foreach (var s in staff)
+        {
+            int atk = meeting && !IsSuppressed(s) ? BalanceTuning.StaffMeetingATK : 0;
+            if (atk == s.staffATK) continue;
+            changed = changed || (atk > 0) != (s.staffATK > 0);
+            s.bonusATK += atk - s.staffATK;
+            s.staffATK = atk;
+            CombatResolver.RefreshStats(s);
+        }
+        if (changed && BattleLogUI.Instance != null)
+            BattleLogUI.Instance.AddLog(meeting
+                ? "運営会議（運営の部員" + staff.Count + "人、攻撃+" + BalanceTuning.StaffMeetingATK + "）"
+                : "運営会議はお開きになった");
+    }
+
     /// <summary>会長: 盤にいる連合の仲間1人につき、寝癖の攻撃が上がる（副会長の物鉄は2人分。上限あり）</summary>
     private void RefreshAlliance(Team team)
     {
@@ -155,6 +219,7 @@ public partial class AbilitySystem
     private IEnumerator ExecuteGamers(Team team)
     {
         RefreshAlliance(team);
+        RefreshStaffMeeting(team);
 
         foreach (var rn in AlivePieces(team, PieceType.RN))
         {

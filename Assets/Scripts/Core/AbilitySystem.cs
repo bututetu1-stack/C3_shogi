@@ -312,7 +312,7 @@ public partial class AbilitySystem : MonoBehaviour
             if (!PvpMatch.Active) yield return SupportFleetFire();
         }
 
-        // けい・異端のバグ修正、きぷ・へるの冷笑、小錦（横綱）の押し出し
+        // 鶏炭・異端のバグ修正、きぷ・へるの冷笑、小錦（横綱）の押し出し
         yield return ExecuteKeiAbilities(team);
         yield return ExecuteKipuAbilities(team);
         yield return ExecuteYokozuna(team);
@@ -386,7 +386,7 @@ public partial class AbilitySystem : MonoBehaviour
     }
 
     // ============================================================
-    // けい／異端のバグ修正（自分の手番の終わりに、周囲1マスの敵を2体まで選び、それぞれの数値を1つ1下げる。
+    // 鶏炭／異端のバグ修正（自分の手番の終わりに、周囲1マスの敵を2体まで選び、それぞれの数値を1つ1下げる。
     // 異端は3体まで、それぞれの数値を2つ1ずつ下げる）
     // ============================================================
     private static readonly StatKind[] AllStats = { StatKind.ATK, StatKind.DEF, StatKind.HP };
@@ -415,7 +415,7 @@ public partial class AbilitySystem : MonoBehaviour
         bool strong = kei.isPromoted || kei.awakened;
         SpeechBubble.Say(kei, strong ? PieceLines.ItanBug : PieceLines.KeiBug);
         RunRoster.Feat(kei);
-        // 覚醒（デバッグ完了）は周りの敵すべて、異端は3体、けいは2体
+        // 覚醒（デバッグ完了）は周りの敵すべて、異端は3体、鶏炭は2体
         int targetCount = Mathf.Min(kei.awakened ? targets.Count : strong ? 3 : 2, targets.Count);
         int statCount = strong ? 2 : 1;
         for (int i = 0; i < targetCount; i++)
@@ -443,7 +443,7 @@ public partial class AbilitySystem : MonoBehaviour
         }
     }
 
-    /// <summary>けい（デバッグ完了）: 周りの敵を封印する。雷撃・回復・強化・召喚・自爆・深海の攻撃が止まる</summary>
+    /// <summary>鶏炭（デバッグ完了）: 周りの敵を封印する。雷撃・回復・強化・召喚・自爆・深海の攻撃が止まる</summary>
     private IEnumerator SealAdjacent(PieceInstance kei)
     {
         bool any = false;
@@ -1311,7 +1311,7 @@ public partial class AbilitySystem : MonoBehaviour
     {
         if (piece == null) return;
         if (piece.data.pieceType != PieceType.Dokuro) return;
-        if (piece.isSealed) return;   // けいに封印された髑髏は爆発しない
+        if (piece.isSealed) return;   // 鶏炭に封印された髑髏は爆発しない
 
         // 連鎖爆発防止
         if (explodingPositions.Contains(deathPos)) return;

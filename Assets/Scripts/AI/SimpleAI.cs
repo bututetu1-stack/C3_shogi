@@ -771,7 +771,7 @@ public class SimpleAI : MonoBehaviour
 
     /// <summary>
     /// 能力の噛み合い（team から見て良いほど大きい）: 僕のそばの味方、中華のそばの味方、
-    /// 小錦が組み止めている敵、けい・きぷの隣にいる敵
+    /// 小錦が組み止めている敵、鶏炭・きぷの隣にいる敵
     /// </summary>
     private static int AbilitySynergy(List<PieceInstance> own, Team team)
     {
@@ -868,7 +868,7 @@ public class SimpleAI : MonoBehaviour
         else
             score -= bestPlayerCapture * W(WCapture) / 10 - playerHanging * W(WHanging) / 10;
 
-        // 6. 能力の噛み合い（僕・中華のそばに寄る、小錦・けい・きぷの隣の敵）
+        // 6. 能力の噛み合い（僕・中華のそばに寄る、小錦・鶏炭・きぷの隣の敵）
         if (BalanceTuning.AiAbilityAware)
             score += AbilitySynergy(evalEnemy, Team.Enemy) - AbilitySynergy(evalPlayer, Team.Player);
 

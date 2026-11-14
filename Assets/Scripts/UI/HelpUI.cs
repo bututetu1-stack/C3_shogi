@@ -336,7 +336,7 @@ public static class HelpUI
             new KeyValuePair<string, PieceType>("なこ", PieceType.Nako),
             new KeyValuePair<string, PieceType>("李白", PieceType.Rihaku),
             new KeyValuePair<string, PieceType>("小錦", PieceType.Konishiki),
-            new KeyValuePair<string, PieceType>("けい", PieceType.Kei),
+            new KeyValuePair<string, PieceType>("鶏炭", PieceType.Kei),
             new KeyValuePair<string, PieceType>("きぷ", PieceType.Kipu),
             new KeyValuePair<string, PieceType>("ユウ", PieceType.Yuu),
             new KeyValuePair<string, PieceType>("物鉄", PieceType.Monotetsu),

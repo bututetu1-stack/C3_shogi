@@ -107,7 +107,7 @@ public static class BalanceTuning
     public static int YokozunaWallDamage = 4;
     /// <summary>押し出しで相手を動かす（false なら動かさずに張り手で YokozunaPushDamage+1。組み止めは外れない）</summary>
     public static bool YokozunaPushMoves = true;
-    /// <summary>覚醒したけい（デバッグ完了）が届く距離</summary>
+    /// <summary>覚醒した鶏炭（デバッグ完了）が届く距離</summary>
     public static int KeiAwakenedRange = 2;
     /// <summary>覚醒したなこ: 突撃で倒したときの追加の突撃の回数</summary>
     public static int NakoChainMax = 2;
@@ -131,7 +131,7 @@ public static class BalanceTuning
     public static int RaiteiThunderDamage = 2;
     /// <summary>魔王「真・魔王」の雷撃の数</summary>
     public static int MaouAwakenedStrikes = 2;
-    /// <summary>AI が能力を意識する（支援役を狙う・僕や中華のそばに寄る・けい／きぷ／小錦の隣を避ける）</summary>
+    /// <summary>AI が能力を意識する（支援役を狙う・僕や中華のそばに寄る・鶏炭／きぷ／小錦の隣を避ける）</summary>
     public static bool AiAbilityAware = true;
     /// <summary>AI が覚醒した駒に上乗せする値打ち（守る・狙う重み）</summary>
     public static int AiAwakenedValue = 60;
@@ -231,6 +231,13 @@ public static class BalanceTuning
     public static int NeguAllianceATK = 1;
     public static int NeguAllianceCap = 2;
     public static int AllianceComradeDEF = 1;
+    /// <summary>
+    /// 運営（2026-10-12 ユーザー決定。物鉄・なこ・光春・李白）の運営会議: 盤に運営の部員が StaffMeetingMin 人以上いるあいだ、運営の部員はみな攻撃+StaffMeetingATK。
+    /// 鯖缶（鶏炭・ヲツ・僕）の管理者権限: 鯖缶の部員と、その周り SabakanAdminRange マスの味方は、能力無効（結界・封印）にかからない（-1 で切る、0 なら鯖缶自身だけ）
+    /// </summary>
+    public static int StaffMeetingATK = 1;
+    public static int StaffMeetingMin = 2;
+    public static int SabakanAdminRange = 1;
     /// <summary>外跳: 跳ね飛ばした敵が何かにぶつかったときのダメージの元の値（防御無視）</summary>
     public static int NeguBounceWallDamage = 2;
     /// <summary>無糖: 死んで覚える（倒されるたびに周のあいだ攻撃+1）の上限、ボスへの攻撃の上乗せ</summary>
