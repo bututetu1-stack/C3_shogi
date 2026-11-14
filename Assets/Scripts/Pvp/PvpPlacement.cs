@@ -75,7 +75,7 @@ public class PvpPlacement : MonoBehaviour
         Color c = team == Team.Player ? Palette.PlayerLight : Palette.EnemyLight;
         var text = new VisualElement();
         text.Add(UIFactory.Label(PvpMatch.SideLong(team) + "の並べ方", 24, c, "c3-mincho"));
-        text.Add(UIFactory.Label("自分の駒をクリックしてから、動かしたいマスをクリック（駒があれば入れ替え）", 16, Palette.TextSub));
+        text.Add(UIFactory.Label(MobileUI.Tap("自分の駒をクリックしてから、動かしたいマスをクリック（駒があれば入れ替え）"), 16, Palette.TextSub));
         panel.Add(text);
         var done = UIFactory.Button("この並びで決める", Finish, "c3-button--primary");
         done.style.marginLeft = 18;
@@ -122,9 +122,10 @@ public class PvpPlacement : MonoBehaviour
 
     void Update()
     {
-        if (panel == null || Mouse.current == null || GameManager.Instance == null || GameManager.Instance.currentPhase != GamePhase.Placement) return;
-        if (!Mouse.current.leftButton.wasPressedThisFrame) return;
-        Vector2 mouse = Mouse.current.position.ReadValue();
+        Pointer pointer = Pointer.current;   // マウスでもタッチでも
+        if (panel == null || pointer == null || GameManager.Instance == null || GameManager.Instance.currentPhase != GamePhase.Placement) return;
+        if (!pointer.press.wasPressedThisFrame) return;
+        Vector2 mouse = pointer.position.ReadValue();
         if (OverPanel(mouse) || Camera.main == null) return;
         Vector3 world = Camera.main.ScreenToWorldPoint(new Vector3(mouse.x, mouse.y, 0));
         var pos = new Vector2Int(Mathf.RoundToInt(world.x), Mathf.RoundToInt(world.y));

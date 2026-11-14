@@ -30,12 +30,24 @@ public class BattleLogUI : MonoBehaviour
         if (uiDocument == null) return;
         VisualElement root = UIFactory.SetupRoot(uiDocument);
 
-        var panel = UIFactory.Panel();
+        panel = UIFactory.Panel();
         panel.style.position = Position.Absolute;
-        panel.style.left = 16;
-        panel.style.top = CameraFitter.TopReserve;
+        if (MobileUI.Active)
+        {
+            // スマホの表示: 右の欄で、駒の情報とタブで切り替える
+            panel.style.right = 10;
+            panel.style.top = CameraFitter.TopReserve + MobileUI.TabHeight;
+            panel.style.width = MobileUI.SideWidth;
+            MobileUI.TabChanged += OnTab;
+            OnTab(MobileUI.CurrentTab);
+        }
+        else
+        {
+            panel.style.left = 16;
+            panel.style.width = CameraFitter.LeftReserve - 32;
+            panel.style.top = CameraFitter.TopReserve;
+        }
         panel.style.bottom = CameraFitter.BottomReserve;
-        panel.style.width = CameraFitter.LeftReserve - 32;
         panel.style.paddingLeft = 10;
         panel.style.paddingRight = 6;
         // スクロールできるようにクリックを受け取る（盤とは重ならない位置）
@@ -48,6 +60,18 @@ public class BattleLogUI : MonoBehaviour
         scrollView.style.flexGrow = 1;
         scrollView.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
         panel.Add(scrollView);
+    }
+
+    private VisualElement panel;
+
+    private void OnTab(MobileUI.Tab tab)
+    {
+        if (panel != null) panel.style.display = tab == MobileUI.Tab.Log ? DisplayStyle.Flex : DisplayStyle.None;
+    }
+
+    void OnDestroy()
+    {
+        MobileUI.TabChanged -= OnTab;
     }
 
     public void AddLog(string message)

@@ -20,10 +20,21 @@ public class PieceDetailUI : MonoBehaviour
 
         panel = UIFactory.Panel();
         panel.style.position = Position.Absolute;
-        panel.style.right = 16;
-        panel.style.top = CameraFitter.TopReserve;
+        if (MobileUI.Active)
+        {
+            panel.style.right = 10;
+            panel.style.top = CameraFitter.TopReserve + MobileUI.TabHeight;
+            panel.style.width = MobileUI.SideWidth;
+            root.Add(BuildTabs());
+            MobileUI.TabChanged += OnTab;
+        }
+        else
+        {
+            panel.style.right = 16;
+            panel.style.top = CameraFitter.TopReserve;
+            panel.style.width = CameraFitter.RightReserve - 32;
+        }
         panel.style.bottom = CameraFitter.BottomReserve;
-        panel.style.width = CameraFitter.RightReserve - 32;
         panel.style.paddingRight = 8;
         panel.pickingMode = PickingMode.Position;
         root.Add(panel);
@@ -36,6 +47,47 @@ public class PieceDetailUI : MonoBehaviour
         ShowGuide();
     }
 
+    // ---- スマホの表示: 右の欄のタブ（駒の情報／対局記録） ----
+    private Button detailTab, logTab;
+
+    private VisualElement BuildTabs()
+    {
+        var row = new VisualElement();
+        row.style.position = Position.Absolute;
+        row.style.right = 10;
+        row.style.top = CameraFitter.TopReserve;
+        row.style.width = MobileUI.SideWidth;
+        row.style.height = MobileUI.TabHeight - 4;
+        row.style.flexDirection = FlexDirection.Row;
+        row.pickingMode = PickingMode.Ignore;
+        detailTab = UIFactory.Button("駒の情報", () => MobileUI.ShowTab(MobileUI.Tab.Detail));
+        logTab = UIFactory.Button("対局記録", () => MobileUI.ShowTab(MobileUI.Tab.Log));
+        foreach (var b in new[] { detailTab, logTab })
+        {
+            b.style.flexGrow = 1;
+            b.style.flexBasis = 0;
+            b.style.marginLeft = b.style.marginRight = 2;
+            b.style.fontSize = 18;
+            row.Add(b);
+        }
+        OnTab(MobileUI.CurrentTab);
+        return row;
+    }
+
+    private void OnTab(MobileUI.Tab tab)
+    {
+        if (panel != null) panel.style.display = tab == MobileUI.Tab.Detail ? DisplayStyle.Flex : DisplayStyle.None;
+        if (detailTab == null) return;
+        // 選んでいるタブを明るく
+        detailTab.style.opacity = tab == MobileUI.Tab.Detail ? 1f : 0.55f;
+        logTab.style.opacity = tab == MobileUI.Tab.Log ? 1f : 0.55f;
+    }
+
+    void OnDestroy()
+    {
+        MobileUI.TabChanged -= OnTab;
+    }
+
     void Update()
     {
         if (InputManager.Instance == null || content == null) return;
@@ -46,6 +98,8 @@ public class PieceDetailUI : MonoBehaviour
             lastShownPiece = viewed;
             if (viewed != null)
             {
+                // スマホの表示: 駒を選んだら駒の情報のタブを見せる
+                MobileUI.ShowTab(MobileUI.Tab.Detail);
                 // 成っている駒は成り後の姿を初期表示
                 showingPromoted = viewed.isPromoted;
                 RenderDetail(viewed, showingPromoted);
@@ -244,7 +298,7 @@ public class PieceDetailUI : MonoBehaviour
         content.Clear();
 
         content.Add(UIFactory.PanelTitle("駒の情報"));
-        var hint = UIFactory.Paragraph("駒をクリックすると、ここに詳しい情報が表示されます。自分の駒を選ぶと、動ける場所が盤に表示されます。", 18, Palette.TextSub);
+        var hint = UIFactory.Paragraph(MobileUI.Tap("駒をクリックすると、ここに詳しい情報が表示されます。自分の駒を選ぶと、動ける場所が盤に表示されます。"), 18, Palette.TextSub);
         hint.style.marginBottom = 14;
         content.Add(hint);
 

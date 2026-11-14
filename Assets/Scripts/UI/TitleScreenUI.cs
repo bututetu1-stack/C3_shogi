@@ -83,7 +83,9 @@ public class TitleScreenUI : MonoBehaviour
         column.pickingMode = PickingMode.Ignore;
         root.Add(column);
 
-        var title = UIFactory.Label("C3将棋", 128, Palette.Text, "c3-mincho");
+        // スマホの表示: 文字が大きくなるぶん題字を小さくし、ボタンは2列に並べる（縦に並べると下にはみ出す）
+        bool mobile = MobileUI.Active;
+        var title = UIFactory.Label("C3将棋", mobile ? 84 : 128, Palette.Text, "c3-mincho");
         title.style.letterSpacing = 24;
         column.Add(title);
 
@@ -97,45 +99,56 @@ public class TitleScreenUI : MonoBehaviour
 
         var subtitle = UIFactory.Label("C3部員たちの盤上ローグライク", 22, Palette.Gold, "c3-mincho");
         subtitle.style.letterSpacing = 6;
-        subtitle.style.marginBottom = 48;
+        subtitle.style.marginBottom = mobile ? 20 : 48;
         column.Add(subtitle);
+
+        var buttons = column;
+        float buttonWidth = 320;
+        if (mobile)
+        {
+            buttons = new VisualElement();
+            buttons.style.flexDirection = FlexDirection.Row;
+            buttons.style.flexWrap = Wrap.Wrap;
+            buttons.style.justifyContent = Justify.Center;
+            buttons.style.width = 640;
+            buttons.pickingMode = PickingMode.Ignore;
+            column.Add(buttons);
+            buttonWidth = 300;
+        }
+        System.Action<Button> place = b =>
+        {
+            b.style.width = buttonWidth;
+            if (mobile) { b.style.marginLeft = b.style.marginRight = 6; b.style.marginBottom = 10; }
+            else b.style.marginBottom = 14;
+            buttons.Add(b);
+        };
 
         // 中断した周があれば「続きから」を先に出す
         RunSaveData saved = onContinue != null ? RunSave.Load() : null;
         if (saved != null)
         {
             var resume = UIFactory.Button("続きから（第" + UIFactory.Kanji(Mathf.Max(1, saved.stage)) + "局）", OnContinueClicked, "c3-button--primary", "c3-button--big");
-            resume.style.width = 320;
-            resume.style.marginBottom = 14;
-            column.Add(resume);
+            place(resume);
         }
 
         var start = UIFactory.Button(saved != null ? "はじめから" : "対局を始める", OnStartClicked, saved != null ? "c3-button--big" : "c3-button--primary", "c3-button--big");
-        start.style.width = 320;
-        start.style.marginBottom = 14;
-        column.Add(start);
+        place(start);
 
         if (onPvp != null)
         {
             var pvp = UIFactory.Button("対人戦（2人で）", OnPvpClicked, "c3-button--big");
-            pvp.style.width = 320;
-            pvp.style.marginBottom = 14;
-            column.Add(pvp);
+            place(pvp);
         }
 
         var catalog = UIFactory.Button("駒一覧", PieceCatalogUI.Open);
-        catalog.style.width = 320;
-        catalog.style.marginBottom = 14;
-        column.Add(catalog);
+        place(catalog);
 
         var help = UIFactory.Button("遊び方", ShowHelp);
-        help.style.width = 320;
-        help.style.marginBottom = 14;
-        column.Add(help);
+        place(help);
 
         var settings = UIFactory.Button("設定", SettingsUI.Open);
-        settings.style.width = 320;
-        column.Add(settings);
+        place(settings);
+        if (!mobile) settings.style.marginBottom = 0;
 
         var credit = UIFactory.Label("フォント: しっぽり明朝 B1 / Zen角ゴシック New（SIL Open Font License）", 12, new Color(1f, 1f, 1f, 0.35f));
         credit.style.position = Position.Absolute;

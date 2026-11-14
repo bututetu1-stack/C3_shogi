@@ -231,7 +231,7 @@ public static class HelpUI
             lines = new[]
             {
                 "各局の前に、新しい仲間か全軍の強化を1つ選ぶ。仲間は次の局にも連れて行ける。",
-                "カードをクリックすると、下に説明が出る（成った姿・覚醒した姿も見られる）。",
+                "カードをクリックすると、" + (MobileUI.Active ? "横" : "下") + "に説明が出る（成った姿・覚醒した姿も見られる）。",
                 "引き直しは1局につき1回まで。",
                 "第三局からは「〇〇を鍛える」札も出る（練度が上がる）。",
             }
@@ -320,6 +320,11 @@ public static class HelpUI
                 "対局中は上の「中断」でタイトルに戻れる。タイトルの「続きから」で、その局の初めから再開できる。",
             }
         });
+        foreach (var p in list)
+        {
+            p.caption = MobileUI.Tap(p.caption);
+            if (p.lines != null) p.lines = p.lines.Select(MobileUI.Tap).ToArray();
+        }
         return list;
     }
 

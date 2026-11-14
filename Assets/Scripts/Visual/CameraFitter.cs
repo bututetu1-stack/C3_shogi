@@ -10,11 +10,11 @@ public class CameraFitter : MonoBehaviour
 {
     public static CameraFitter Instance { get; private set; }
 
-    // UIが占める領域（UIの参照解像度でのpx）
-    public const float TopReserve = 84f;
-    public const float BottomReserve = 16f;
-    public const float LeftReserve = 332f;
-    public const float RightReserve = 392f;
+    // UIが占める領域（UIの参照解像度でのpx）。スマホの表示では、盤を左に寄せて、右に1本の欄（駒の情報と対局記録のタブ）
+    public static float TopReserve { get { return MobileUI.Active ? 72f : 84f; } }
+    public static float BottomReserve { get { return MobileUI.Active ? 10f : 16f; } }
+    public static float LeftReserve { get { return MobileUI.Active ? 10f : 332f; } }
+    public static float RightReserve { get { return MobileUI.Active ? MobileUI.SideWidth + 22f : 392f; } }
 
     // 盤の周囲に確保する余白（枠・座標表記）
     private const float BoardMargin = 0.8f;
