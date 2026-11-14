@@ -21,6 +21,8 @@ public class PieceRenderer : MonoBehaviour
     private static readonly Color SealedTint = new Color(0.72f, 1f, 0.78f);
     // 潜航中の潜水艦は青く透かして、海の中にいるように見せる
     private static readonly Color SubmergedTint = new Color(0.62f, 0.82f, 1f, 0.66f);
+    // 亡霊は青白く透けている（通常の攻撃をすり抜ける）
+    private static readonly Color PhantomTint = new Color(0.78f, 0.88f, 1f, 0.62f);
     // RN のブロック（防御の盾の下に、鋼色の盾で残りの量を出す）
     private static readonly Color BlockSteel = new Color(0.27f, 0.36f, 0.48f);
 
@@ -84,6 +86,7 @@ public class PieceRenderer : MonoBehaviour
             if (pieceInstance == null || AbilitySystem.IsObstacle(pieceInstance.data.pieceType)) return Color.white;   // 巨岩などの地形は色を変えない
             if (pieceInstance.stunned) return StunnedTint;
             if (AbilitySystem.IsSuppressed(pieceInstance)) return SealedTint;
+            if (AbilitySystem.IsPhantom(pieceInstance)) return PhantomTint;
             return AbilitySystem.IsSubmerged(pieceInstance) ? SubmergedTint : Color.white;
         }
     }

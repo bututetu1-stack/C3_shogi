@@ -30,7 +30,7 @@ public class PieceCatalogUI : MonoBehaviour
             PieceType.Kishou, PieceType.Kagenin, PieceType.Teppeki, PieceType.Tengu, PieceType.Fujin, PieceType.Raitei,
             PieceType.Ryuujin, PieceType.Enmashi, PieceType.Gundaishou, PieceType.Yomigaeru, PieceType.Dokuro, PieceType.Maou,
             PieceType.Kekkai, PieceType.Yumihei, PieceType.Ootate, PieceType.Chototsu, PieceType.Youko, PieceType.Kitsunebi,
-            PieceType.Kugutsu, PieceType.Kyogan),
+            PieceType.Bourei, PieceType.Souhei, PieceType.Kugutsu, PieceType.Kyogan),
         new Group("将棋の駒",
             PieceType.Pawn, PieceType.Lance, PieceType.Knight, PieceType.Silver, PieceType.Gold, PieceType.Bishop, PieceType.Rook, PieceType.C3)
     };

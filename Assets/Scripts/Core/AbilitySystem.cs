@@ -123,7 +123,7 @@ public partial class AbilitySystem : MonoBehaviour
                 int used = 0;
                 if (yomigaeruSpawnCount.ContainsKey(yomi))
                     used = yomigaeruSpawnCount[yomi];
-                if (used >= 2) continue; // max 2 spawns per Yomigaeru
+                if (used >= (yomi.isPromoted ? BalanceTuning.YomigaeruPromotedSummons : BalanceTuning.YomigaeruSummons)) continue; // 黄泉は2回まで、黄泉大王は3回まで
 
                 int boardSize = bm.CurrentBoardSize;
                 int halfBoard = boardSize / 2;
@@ -249,7 +249,9 @@ public partial class AbilitySystem : MonoBehaviour
             foreach (var enmashi in enmashiList)
             {
                 if (!enmashi.isAlive || enmashi.isSealed) continue;
-                HealAdjacentAllies(enmashi, 1);
+                // 閻魔大王（成った閻魔）は周り2マスまで、多く治す
+                if (enmashi.isPromoted) HealAdjacentAllies(enmashi, BalanceTuning.EnmashiPromotedHeal, false, BalanceTuning.EnmashiPromotedRange);
+                else HealAdjacentAllies(enmashi, 1);
             }
         }
 
@@ -268,9 +270,10 @@ public partial class AbilitySystem : MonoBehaviour
                 if (!gun.isAlive || gun.isSealed) continue;
                 Vector2Int center = gun.boardPosition;
                 bool buffed = false;
-                for (int dx = -1; dx <= 1; dx++)
+                int reach = gun.isPromoted ? BalanceTuning.GundaishouPromotedRange : 1;   // 大将軍は周り2マスまで
+                for (int dx = -reach; dx <= reach; dx++)
                 {
-                    for (int dy = -1; dy <= 1; dy++)
+                    for (int dy = -reach; dy <= reach; dy++)
                     {
                         if (dx == 0 && dy == 0) continue;
                         Vector2Int pos = new Vector2Int(center.x + dx, center.y + dy);
@@ -378,7 +381,7 @@ public partial class AbilitySystem : MonoBehaviour
             {
                 if (dx == 0 && dy == 0) continue;
                 PieceInstance target = bm.GetPieceAt(new Vector2Int(center.boardPosition.x + dx, center.boardPosition.y + dy));
-                if (target != null && target.team != center.team && target.isAlive && target.data.pieceType != PieceType.C3)
+                if (target != null && target.team != center.team && target.isAlive && !ResistsAbilities(target))
                     list.Add(target);
             }
         }
@@ -786,7 +789,7 @@ public partial class AbilitySystem : MonoBehaviour
             {
                 PieceInstance target = bm.GetPieceAt(pos);
                 if (target != null && target.team != nako.team && target.isAlive
-                    && target.data.pieceType != PieceType.C3)
+                    && !ResistsAbilities(target))
                 {
                     hitAny = true;
                     if (BattleLogUI.Instance != null)
@@ -823,7 +826,7 @@ public partial class AbilitySystem : MonoBehaviour
             foreach (var pos in GetBresenhamLine(nako.boardPosition, c))
             {
                 PieceInstance t = bm.GetPieceAt(pos);
-                if (t != null && t.isAlive && t.team != nako.team && t.data.pieceType != PieceType.C3) hits++;
+                if (t != null && t.isAlive && t.team != nako.team && !ResistsAbilities(t)) hits++;
             }
             if (hits < bestHits) continue;
             if (hits > bestHits) { bestHits = hits; best.Clear(); }
@@ -918,7 +921,7 @@ public partial class AbilitySystem : MonoBehaviour
                 if (!bm.IsInBounds(pos)) continue;
                 PieceInstance piece = bm.GetPieceAt(pos);
                 if (piece != null && piece.team == enemyTeam && piece.isAlive && piece != exclude
-                    && piece.data.pieceType != PieceType.C3)
+                    && !ResistsAbilities(piece))
                     result.Add(piece);
             }
         }
@@ -1044,15 +1047,15 @@ public partial class AbilitySystem : MonoBehaviour
     }
 
     /// <summary>周りの味方を回復する。feed=true（中華）なら食べた味方は「満腹」で攻撃+1（C3・中華を除く、1体に上限あり）</summary>
-    private void HealAdjacentAllies(PieceInstance chuka, int amount, bool feed = false)
+    private void HealAdjacentAllies(PieceInstance chuka, int amount, bool feed = false, int range = 1)
     {
         BoardManager bm = BoardManager.Instance;
         Vector2Int center = chuka.boardPosition;
         bool helped = false;
 
-        for (int dx = -1; dx <= 1; dx++)
+        for (int dx = -range; dx <= range; dx++)
         {
-            for (int dy = -1; dy <= 1; dy++)
+            for (int dy = -range; dy <= range; dy++)
             {
                 if (dx == 0 && dy == 0) continue;
                 Vector2Int pos = new Vector2Int(center.x + dx, center.y + dy);
@@ -1319,7 +1322,7 @@ public partial class AbilitySystem : MonoBehaviour
 
         BoardManager bm = BoardManager.Instance;
 
-        int blast = CombatResolver.AbilityDamage(piece, 1);
+        int blast = CombatResolver.AbilityDamage(piece, 1 + (piece.isPromoted ? BalanceTuning.DokuroPromotedBonus : 0));   // がしゃ髑髏は強く爆ぜる
         if (BattleEffects.Instance != null)
             BattleEffects.Instance.PlayExplosionEffect(deathPos);
         if (BattleLogUI.Instance != null)
@@ -1335,7 +1338,7 @@ public partial class AbilitySystem : MonoBehaviour
                 Vector2Int pos = new Vector2Int(deathPos.x + dx, deathPos.y + dy);
                 if (!bm.IsInBounds(pos)) continue;
                 PieceInstance target = bm.GetPieceAt(pos);
-                if (target != null && target.isAlive && target.data.pieceType != PieceType.C3)
+                if (target != null && target.isAlive && !ResistsAbilities(target))
                     victims.Add(target);
             }
         }

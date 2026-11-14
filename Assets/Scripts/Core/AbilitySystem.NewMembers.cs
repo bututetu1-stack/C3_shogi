@@ -667,7 +667,7 @@ public partial class AbilitySystem
         foreach (var e in BoardManager.Instance.GetTeamPieces(foe))
         {
             PieceType t = e.data.pieceType;
-            if (!e.isAlive || t == PieceType.C3 || t == PieceType.Chuka || t == PieceType.Dopa) continue;
+            if (!e.isAlive || ResistsAbilities(e) || t == PieceType.Chuka || t == PieceType.Dopa) continue;
             if (best == null || e.currentHP > best.currentHP || (e.currentHP == best.currentHP && e.ATK > best.ATK)) best = e;
         }
         return best;

@@ -263,6 +263,27 @@ public static class BalanceTuning
     /// <summary>妖狐: 倒されたとき残す狐火の数</summary>
     public static int YoukoFoxfires = 2;
 
+    // ---- 敵の成りと新しい敵（2026-10-12 ユーザー決定） ----
+
+    /// <summary>亡霊: 通常の攻撃でダメージを受けず、1マス押し返される（false なら押し返さない）</summary>
+    public static bool BoureiPushBack = true;
+    /// <summary>成った敵: 閻魔大王の回復（量と届く範囲）、大将軍の強化の範囲、がしゃ髑髏の爆発の上乗せ、猛猪の助走（1マスごと）、
+    /// 九尾の狐火の数、弩兵の射撃の上乗せ、鉄大盾の正面と横の軽減、黄泉大王の呼び出しの回数</summary>
+    public static int EnmashiPromotedHeal = 2;
+    public static int EnmashiPromotedRange = 2;
+    public static int GundaishouPromotedRange = 2;
+    public static int DokuroPromotedBonus = 1;
+    public static int ChototsuPromotedRunUp = 2;
+    public static int YoukoPromotedFoxfires = 3;
+    public static int YumiheiPromotedBonus = 1;
+    public static int OotatePromotedGuard = 3;
+    public static int OotatePromotedSideGuard = 1;
+    public static int YomigaeruSummons = 2;
+    public static int YomigaeruPromotedSummons = 3;
+    /// <summary>敵の AI: 動いた駒がただで取られる手は選ばない（取り返せない、または取り返しても損が AiFreeLossThreshold 点以上）</summary>
+    public static bool AiAvoidFreeLoss = true;
+    public static int AiFreeLossThreshold = 40;
+
     // ---- 局の合間のできごと（部の時間） ----
 
     /// <summary>できごとがあるか（false なら勝ったらすぐ仲間選び）</summary>

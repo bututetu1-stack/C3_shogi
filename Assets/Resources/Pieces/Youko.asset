@@ -46,15 +46,39 @@ MonoBehaviour:
   - direction: {x: -1, y: -1}
     maxDistance: 1
     canJump: 0
-  canPromote: 0
-  promotedDisplayName: 
-  promotedName: 
+  canPromote: 1
+  promotedDisplayName: "\u4E5D\u5C3E"
+  promotedName: "\u4E5D\u5C3E"
   promotedFlavor: 
-  promotedDescription: 
-  promotedATK: 0
-  promotedDEF: 0
-  promotedHP: 0
-  promotedMoveDirections: []
+  promotedDescription: "\u5012\u3055\u308C\u308B\u3068\u3001\u96A3\u306B\u72D0\u706B\u30923\u3064\u6B8B\u3059\u3002\u653B\u6483\u304C\u3055\u3089\u306B\u9AD8\u3044\u3002"
+  promotedATK: 3
+  promotedDEF: 1
+  promotedHP: 2
+  promotedMoveDirections:
+  - direction: {x: 0, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 0, y: -1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 1, y: 0}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: -1, y: 0}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 1, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: 1, y: -1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: -1, y: 1}
+    maxDistance: 1
+    canJump: 0
+  - direction: {x: -1, y: -1}
+    maxDistance: 1
+    canJump: 0
   canAwaken: 0
   awakenedName: 
   awakenedDescription: 

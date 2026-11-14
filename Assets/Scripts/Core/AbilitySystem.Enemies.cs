@@ -27,6 +27,36 @@ public partial class AbilitySystem
         return !AdminGuarded(p);
     }
 
+    /// <summary>
+    /// 能力を受けない駒: C3 と、僧兵（法師）。相手の能力のダメージや効果（弱体・冷笑・押し出し・裏返し・挑発・組み止めなど）を受けない。
+    /// 僧兵のは自分の能力なので、能力無効のあいだは受けるようになる
+    /// </summary>
+    public static bool ResistsAbilities(PieceInstance p)
+    {
+        if (p == null) return false;
+        if (p.data.pieceType == PieceType.C3) return true;
+        return p.data.pieceType == PieceType.Souhei && !IsSuppressed(p);
+    }
+
+    /// <summary>亡霊（怨霊）: 通常の攻撃をすり抜ける（能力のダメージは受ける）。能力無効のあいだは攻撃が当たる</summary>
+    public static bool IsPhantom(PieceInstance p)
+    {
+        return p != null && p.data.pieceType == PieceType.Bourei && !IsSuppressed(p);
+    }
+
+    /// <summary>亡霊が通常の攻撃をすり抜けたとき: 攻撃してきた向きへ1マス押し返す（空いていれば）</summary>
+    public static void PushBackPhantom(PieceInstance ghost, PieceInstance attacker)
+    {
+        if (!BalanceTuning.BoureiPushBack || ghost == null || attacker == null || !ghost.isAlive) return;
+        BoardManager bm = BoardManager.Instance;
+        Vector2Int d = ghost.boardPosition - attacker.boardPosition;
+        Vector2Int step = new Vector2Int(System.Math.Sign(d.x), System.Math.Sign(d.y));
+        Vector2Int to = ghost.boardPosition + step;
+        if (step == Vector2Int.zero || !bm.IsInBounds(to) || !bm.IsEmpty(to)) return;
+        CombatResolver.MovePieceTo(ghost, to);
+        if (GameManager.Instance != null) GameManager.Instance.CheckPromotion(ghost);
+    }
+
     /// <summary>周りに相手の結界がいる（封印ではなく、結界で止まっている）</summary>
     public static bool NearKekkai(PieceInstance p)
     {
@@ -71,11 +101,12 @@ public partial class AbilitySystem
             {
                 PieceInstance p = bm.GetPieceAt(new Vector2Int(archer.boardPosition.x, y));
                 if (p == null || IsSubmerged(p)) continue;   // 潜った潜水艦の上は矢が越えていく
-                if (p.team != team && p.isAlive && p.data.pieceType != PieceType.C3) target = p;
-                break;   // 味方や C3 に当たると、そこで矢は止まる
+                if (p.team != team && p.isAlive && !ResistsAbilities(p)) target = p;
+                break;   // 味方や C3（能力を受けない駒）に当たると、そこで矢は止まる
             }
             if (target == null) continue;
-            int damage = CombatResolver.AbilityDamage(archer, BalanceTuning.YumiheiDamage);
+            // 弩兵（成った弓兵）は強く射る
+            int damage = CombatResolver.AbilityDamage(archer, BalanceTuning.YumiheiDamage + (archer.isPromoted ? BalanceTuning.YumiheiPromotedBonus : 0));
             if (BattleEffects.Instance != null) BattleEffects.Instance.PlayArrow(archer.boardPosition, target.boardPosition);
             if (BattleLogUI.Instance != null)
                 BattleLogUI.Instance.AddLog(BattleLogUI.ColorName("弓兵", team) + " が " + BattleLogUI.ColorName(target.DisplayName, target.team) + " を射た");
@@ -103,7 +134,7 @@ public partial class AbilitySystem
                 var p = new Vector2Int(pos.x + dx, pos.y + dy);
                 if (bm.IsInBounds(p) && bm.IsEmpty(p)) spots.Add(p);
             }
-        int count = Mathf.Min(BalanceTuning.YoukoFoxfires, spots.Count);
+        int count = Mathf.Min(fox.isPromoted ? BalanceTuning.YoukoPromotedFoxfires : BalanceTuning.YoukoFoxfires, spots.Count);   // 九尾は多く残す
         for (int i = 0; i < count; i++)
         {
             int idx = GameRng.Range(0, spots.Count);

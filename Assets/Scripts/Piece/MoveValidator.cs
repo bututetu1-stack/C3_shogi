@@ -68,7 +68,7 @@ public static class MoveValidator
         // 翡翠: 誘うと来てくれる（味方の部員の隣へ）
         if (includeInvite && piece.data.pieceType == PieceType.Kawasemi && !AbilitySystem.IsSuppressed(piece)) AbilitySystem.AddInviteMoves(piece, results);
 
-        ApplyTaunt(results, bm);
+        if (!AbilitySystem.ResistsAbilities(piece)) ApplyTaunt(results, bm);   // 僧兵は挑発にも乗らない
         if (BalanceTuning.KonishikiGrapple) ApplyGrapple(piece, results, bm);
     }
 
@@ -78,7 +78,7 @@ public static class MoveValidator
     /// </summary>
     private static void ApplyGrapple(PieceInstance piece, List<MoveResult> results, BoardManager bm)
     {
-        if (piece.data.pieceType == PieceType.C3) return;
+        if (AbilitySystem.ResistsAbilities(piece)) return;   // C3・僧兵は組み止められない
         Vector2Int from = piece.boardPosition;
         PieceInstance holder = null;
         for (int dx = -1; dx <= 1 && holder == null; dx++)

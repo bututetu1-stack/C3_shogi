@@ -63,7 +63,10 @@ public enum PieceType
     Chototsu,   // 猪突（助走）
     Youko,      // 妖狐（倒すと狐火）
     Kitsunebi,  // 狐火（妖狐が残す）
-    Kekkai      // 結界（能力無効）
+    Kekkai,     // 結界（能力無効）
+    // 2026-10-12 の敵駒
+    Bourei,     // 亡霊（通常の攻撃を受けない。成ると怨霊）
+    Souhei      // 僧兵（能力を受けない。成ると法師）
 }
 
 /// <summary>駒の種類のまとまり</summary>

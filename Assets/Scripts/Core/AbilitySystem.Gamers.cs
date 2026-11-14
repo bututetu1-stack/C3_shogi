@@ -293,7 +293,7 @@ public partial class AbilitySystem
     public void OnPostureHit(PieceInstance rn, PieceInstance attacker, int blocked, bool parried)
     {
         if (rn == null || attacker == null || rn.data.pieceType != PieceType.RN || !RnMultiPlay(rn) || !rn.isAlive || !attacker.isAlive) return;
-        if (attacker.team == rn.team || attacker.data.pieceType == PieceType.C3) return;
+        if (attacker.team == rn.team || ResistsAbilities(attacker)) return;   // 僧兵は体幹も崩れない
         int gain = blocked + (parried ? BalanceTuning.RnPostureParryBonus : 0);
         attacker.posture += gain;
         int max = PostureMax(attacker);
@@ -350,7 +350,7 @@ public partial class AbilitySystem
     public void OnHitAndSurvived(PieceInstance attacker, PieceInstance target)
     {
         if (attacker == null || target == null || !attacker.isAlive || !target.isAlive || IsSuppressed(attacker)) return;
-        if (target.data.pieceType == PieceType.C3) return;   // C3 は能力の影響を受けない
+        if (ResistsAbilities(target)) return;   // C3・僧兵は能力の影響を受けない
         if (attacker.data.pieceType == PieceType.Mutou && attacker.isPromoted)
         {
             if (target.staggered) return;
