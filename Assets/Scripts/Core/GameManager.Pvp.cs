@@ -135,7 +135,7 @@ public partial class GameManager
                 int hp = PiecePool.RecruitBonusHP(data);
                 int atk = PiecePool.RecruitBonusATK(data);
                 if (hp > 0) p.AddMaxHP(hp);
-                p.bonusATK += atk;
+                p.AddATK(atk, "仲間入り");
                 PvpPiecesOf(side.team).Add(p);
                 next++;
             }
@@ -184,7 +184,7 @@ public partial class GameManager
             }
             switch (u)
             {
-                case UpgradeKind.AllATK: p.bonusATK += 1; break;
+                case UpgradeKind.AllATK: p.AddATK(1, "全軍強化"); break;
                 case UpgradeKind.AllDEF: p.bonusDEF += 1; break;
                 case UpgradeKind.AllHP: p.AddMaxHP(2); break;
             }

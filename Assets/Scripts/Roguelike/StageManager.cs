@@ -609,7 +609,7 @@ public class StageManager : MonoBehaviour
             int late = Mathf.Max(0, stage - BalanceTuning.EnemyScaleFromStage + 1);
             enemy.AddMaxHP(late / Mathf.Max(1, BalanceTuning.EnemyLateHpDivisor));
             enemy.stageBonusATK = Mathf.FloorToInt(late / Mathf.Max(0.5f, BalanceTuning.EnemyLateAtkDivisor));
-            enemy.bonusATK += enemy.stageBonusATK;
+            enemy.AddATK(enemy.stageBonusATK, "局の強化");
         }
         CombatResolver.RefreshStats(enemy);
     }
@@ -634,7 +634,7 @@ public class StageManager : MonoBehaviour
         if (p.data.pieceType != PieceType.C3)
         {
             p.bonusDEF += (stage - 1) / BalanceTuning.PlayerDefDivisor;
-            if (BalanceTuning.PlayerAtkDivisor > 0) p.bonusATK += (stage - 1) / BalanceTuning.PlayerAtkDivisor;
+            if (BalanceTuning.PlayerAtkDivisor > 0) p.AddATK((stage - 1) / BalanceTuning.PlayerAtkDivisor, "局の強化");
         }
         CombatResolver.RefreshStats(p);
     }

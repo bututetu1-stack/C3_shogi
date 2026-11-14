@@ -12,7 +12,7 @@ public static class Awakening
     {
         if (p == null || !p.isAlive || p.awakened || p.data == null || !p.data.canAwaken) return false;
         p.awakened = true;
-        p.bonusATK += p.data.awakenedATK;
+        p.AddATK(p.data.awakenedATK, "覚醒");
         p.bonusDEF += p.data.awakenedDEF;
         p.AddMaxHP(p.data.awakenedHP);
         return true;

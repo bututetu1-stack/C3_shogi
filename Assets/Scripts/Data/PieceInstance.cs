@@ -10,7 +10,9 @@ public class PieceInstance
     public bool isAlive;
     public bool isPromoted;
     public int linkedGroupId = -1;  // 提督・深海・艦娘のリンクグループID
-    public int bonusATK;            // 僕バフ・軍将バフ・ステージ強化
+    public int bonusATK;            // 僕バフ・軍将バフ・ステージ強化（増やすときは AddATK で出どころも残す）
+    /// <summary>攻撃の上乗せ（bonusATK）の出どころごとの量。駒の情報に出す（能力のダメージにも足されるので）</summary>
+    [System.NonSerialized] public System.Collections.Generic.Dictionary<string, int> atkSources;
     public int bonusDEF;            // 僕バフ・ステージ強化
     public int bonusMaxHP;          // ステージ強化による最大HP増加
     public int turnsNearBoku;       // 僕の近くにいたターン数
@@ -45,6 +47,34 @@ public class PieceInstance
     public int allianceATK;         // 会長（寝癖）のえちち連合で上がっている攻撃（盤にいる仲間の数で決まる）
     public int staffATK;            // 運営会議で上がっている攻撃（運営の部員が盤に2人以上いるあいだ）
     public bool bonfireUsed;        // 覚醒した無糖が篝火で蘇った（1局に1回）
+
+    /// <summary>攻撃の上乗せを足す（引くときは負の数）。source は駒の情報に出す出どころの名前</summary>
+    public void AddATK(int amount, string source)
+    {
+        if (amount == 0) return;
+        bonusATK += amount;
+        if (atkSources == null) atkSources = new System.Collections.Generic.Dictionary<string, int>();
+        int v;
+        atkSources.TryGetValue(source, out v);
+        v += amount;
+        if (v == 0) atkSources.Remove(source); else atkSources[source] = v;
+    }
+
+    /// <summary>攻撃の上乗せの内訳（「局の強化 +1・僕の面倒見 +1」。記録のない分は「そのほか」）</summary>
+    public string AtkBonusBreakdown()
+    {
+        var parts = new System.Collections.Generic.List<string>();
+        int known = 0;
+        if (atkSources != null)
+            foreach (var kv in atkSources)
+            {
+                parts.Add(kv.Key + " " + (kv.Value > 0 ? "+" : "") + kv.Value);
+                known += kv.Value;
+            }
+        int rest = bonusATK - known;
+        if (rest != 0) parts.Add("そのほか " + (rest > 0 ? "+" : "") + rest);
+        return string.Join("・", parts);
+    }
 
     public int ATK { get { return (isPromoted ? data.promotedATK : data.baseATK) + bonusATK; } }
     // 同志（えちち連合）は周りの駒で決まるので、その場で数える
@@ -158,7 +188,7 @@ public class PieceInstance
         if (!CanLower(stat)) return;
         switch (stat)
         {
-            case StatKind.ATK: bonusATK--; break;
+            case StatKind.ATK: AddATK(-1, "鶏炭の弱体"); break;
             case StatKind.DEF: bonusDEF--; break;
             default:
                 currentHP--;

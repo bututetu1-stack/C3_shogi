@@ -523,7 +523,7 @@ public partial class AbilitySystem
         teitoku.Demote();
         teitoku.linkedGroupId = -1;
         teitoku.promotionSpent = true;
-        teitoku.bonusATK += 1;
+        teitoku.AddATK(1, "生還");
         teitoku.AddMaxHP(1);
         CombatResolver.PlayFlip(teitoku);
         CombatResolver.RefreshStats(teitoku);
@@ -663,7 +663,7 @@ public partial class AbilitySystem
         if (!ship.kai2)
         {
             ship.kai2 = true;
-            ship.bonusATK += 1;
+            ship.AddATK(1, "改二");
             ship.bonusDEF += 1;
         }
         ship.ringed = true;
@@ -681,7 +681,7 @@ public partial class AbilitySystem
         if (!InEnemyCamp(ship.team, from.y, size) || InEnemyCamp(ship.team, ship.boardPosition.y, size)) return;
 
         ship.kai2 = true;
-        ship.bonusATK += 1;
+        ship.AddATK(1, "改二");
         ship.bonusDEF += 1;
         CombatResolver.Heal(ship, 1);
         CombatResolver.PlayFlip(ship);
